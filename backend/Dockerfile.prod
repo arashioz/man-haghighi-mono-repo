@@ -1,7 +1,5 @@
 FROM node:18-slim
 
-WORKDIR /app
-
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     openssl \
@@ -10,6 +8,12 @@ RUN apt-get update && apt-get install -y \
     g++ \
     curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user first
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -32,9 +36,12 @@ RUN npm run build
 # Create uploads directory with proper permissions
 RUN mkdir -p uploads && chmod 755 uploads
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
+# Change ownership of specific directories only (more efficient)
+RUN chown -R appuser:appuser /app/uploads
+RUN chown -R appuser:appuser /app/dist
+RUN chown -R appuser:appuser /app/node_modules
+
+# Switch to non-root user
 USER appuser
 
 # Expose port
