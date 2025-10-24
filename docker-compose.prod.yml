@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: haghighi_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-haghighi_db}
+      POSTGRES_USER: ${POSTGRES_USER:-haghighi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-haghighi_password}
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - haghighi_network_prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-haghighi_user} -d ${POSTGRES_DB:-haghighi_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: haghighi_redis_prod
+    ports:
+      - "6379:6379"
+    networks:
+      - haghighi_network_prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: haghighi_backend_prod
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-haghighi_user}:${POSTGRES_PASSWORD:-haghighi_password}@postgres:5432/${POSTGRES_DB:-haghighi_db}?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      REDIS_HOST: "redis"
+      REDIS_PORT: 6379
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
+      PORT: 3000
+      NODE_ENV: "production"
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
+      UPLOAD_PATH: "/app/uploads"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - haghighi_network_prod
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile.prod
+    container_name: haghighi_admin_prod
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3000}
+    ports:
+      - "3001:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - haghighi_network_prod
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: haghighi_frontend_prod
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3000}
+    ports:
+      - "3002:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - haghighi_network_prod
+    restart: unless-stopped
+
+volumes:
+  postgres_data_prod:
+
+networks:
+  haghighi_network_prod:
+    driver: bridge

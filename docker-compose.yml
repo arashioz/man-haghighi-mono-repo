@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    container_name: haghighi_postgres
+    environment:
+      POSTGRES_DB: haghighi_db
+      POSTGRES_USER: haghighi_user
+      POSTGRES_PASSWORD: haghighi_password
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - haghighi_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: haghighi_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - haghighi_network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haghighi_backend
+    environment:
+      DATABASE_URL: "postgresql://haghighi_user:haghighi_password@postgres:5432/haghighi_db?schema=public"
+      JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production"
+      JWT_EXPIRES_IN: "7d"
+      REDIS_HOST: "redis"
+      REDIS_PORT: 6379
+      API_BASE_URL: "http://localhost:3000"
+      PORT: 3000
+      NODE_ENV: "development"
+      MAX_FILE_SIZE: 10485760
+      UPLOAD_PATH: "/app/uploads"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    ports:
+      - "3000:3000"
+      - "5555:5555"
+    networks:
+      - haghighi_network
+    restart: unless-stopped
+    command: >
+      sh -c "npm run prisma:generate && npm run start:dev"
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+    container_name: haghighi_admin
+    environment:
+      REACT_APP_API_URL: http://backend:3000
+      CHOKIDAR_USEPOLLING: true
+      WATCHPACK_POLLING: true
+      WDS_SOCKET_PORT: 0
+      FAST_REFRESH: false
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./admin-panel:/app
+      - /app/node_modules
+    networks:
+      - haghighi_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: haghighi_frontend
+    environment:
+      REACT_APP_API_URL: http://backend:3000
+      CHOKIDAR_USEPOLLING: true
+      WATCHPACK_POLLING: true
+      WDS_SOCKET_PORT: 0
+      FAST_REFRESH: false
+    ports:
+      - "3002:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - haghighi_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  haghighi_network:
+    driver: bridge

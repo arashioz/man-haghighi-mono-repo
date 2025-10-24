@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  phone     String?  @unique
+  username  String   @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  isOld     Boolean  @default(false) // Flag for old imported users
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  purchasedCourses CourseEnrollment[]
+  videoAccess      VideoAccess[]
+  audioAccess      AudioAccess[]
+  parent           User?   @relation("UserHierarchy", fields: [parentId], references: [id])
+  children         User[]  @relation("UserHierarchy")
+  createdWorkshops Workshop[]
+  participants     WorkshopParticipant[]
+  salesPersonWorkshopAccess SalesPersonWorkshopAccess[]
+  grantedWorkshopAccess     SalesPersonWorkshopAccess[] @relation("WorkshopAccessGranter")
+  managedTeams     SalesTeam[] @relation("SalesTeamManager")
+  teamMemberships  SalesTeamMember[] @relation("SalesTeamMember")
+
+  @@map("users")
+}
+
+model Slider {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  image       String
+  videoFile   String?  // ویدیو اسلایدر
+  link        String?  // لینک اسلایدر
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("sliders")
+}
+
+model Article {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  content     String
+  excerpt     String?
+  featuredImage String?
+  published   Boolean     @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("articles")
+}
+
+model Podcast {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  audioFile   String
+  duration    Int?     // in seconds
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("podcasts")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  price       Decimal  @db.Decimal(15, 2)
+  thumbnail   String?
+  videoFile   String?  // ویدیو معرفی دوره
+  attachments String[] // فایل‌های ضمیمه (PDF, DOC, etc.)
+  courseVideos String[] // لیست ویدیوهای دوره (تا 20 ویدیو)
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  videos      Video[]
+  audios      Audio[]
+  enrollments CourseEnrollment[]
+
+  @@map("courses")
+}
+
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  videoFile   String
+  thumbnail   String?
+  duration    Int?     // in seconds
+  order       Int      @default(0)
+  courseId    String
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  access      VideoAccess[]
+
+  @@map("videos")
+}
+
+model Audio {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  audioFile   String   @map("audioFile")
+  thumbnail   String?
+  duration    Int?     // in seconds
+  order       Int      @default(0)
+  courseId    String   @map("course_id")
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  access      AudioAccess[]
+
+  @@map("audios")
+}
+
+model CourseEnrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  enrolledAt DateTime @default(now())
+
+  // Relations
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("course_enrollments")
+}
+
+model VideoAccess {
+  id      String @id @default(cuid())
+  userId  String
+  videoId String
+
+  // Relations
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@map("video_access")
+}
+
+model AudioAccess {
+  id      String @id @default(cuid())
+  userId  String
+  audioId String
+
+  // Relations
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audio   Audio @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, audioId])
+  @@map("audio_access")
+}
+
+model Workshop {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  date            String   // Persian date as string (e.g., "1403/08/15 14:30")
+  location        String?
+  maxParticipants Int?
+  price           Decimal  @db.Decimal(15, 2)
+  thumbnail       String?
+  isActive        Boolean  @default(true)
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  creator     User                  @relation(fields: [createdBy], references: [id])
+  participants WorkshopParticipant[]
+  salesPersonAccess SalesPersonWorkshopAccess[]
+
+  @@map("workshops")
+}
+
+model WorkshopParticipant {
+  id                String   @id @default(cuid())
+  workshopId        String
+  customerPhone     String
+  customerName      String
+  prepaymentAmount  Decimal  @db.Decimal(10, 2)
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentLink       String?
+  invitationCard    String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [createdBy], references: [id])
+
+  @@map("workshop_participants")
+}
+
+model SalesPersonWorkshopAccess {
+  id          String   @id @default(cuid())
+  salesPersonId String
+  workshopId    String
+  isActive      Boolean  @default(true)
+  grantedBy     String   // مدیر فروشی که این دسترسی را داده
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  salesPerson User     @relation(fields: [salesPersonId], references: [id], onDelete: Cascade)
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  granter     User     @relation("WorkshopAccessGranter", fields: [grantedBy], references: [id])
+
+  @@unique([salesPersonId, workshopId])
+  @@map("sales_person_workshop_access")
+}
+
+model SalesTeam {
+  id          String   @id @default(cuid())
+  name        String   // نام تیم فروش
+  managerId   String   // مدیر تیم فروش
+  description String?  // توضیحات تیم
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  manager     User           @relation("SalesTeamManager", fields: [managerId], references: [id])
+  members     SalesTeamMember[]
+
+  @@map("sales_teams")
+}
+
+model SalesTeamMember {
+  id          String   @id @default(cuid())
+  teamId      String   // شناسه تیم فروش
+  salesPersonId String // شناسه فروشنده
+  joinedAt    DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  // Relations
+  team        SalesTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  salesPerson User      @relation("SalesTeamMember", fields: [salesPersonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, salesPersonId])
+  @@map("sales_team_members")
+}
+
+enum UserRole {
+  ADMIN
+  SALES_MANAGER
+  SALES_PERSON
+  USER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}

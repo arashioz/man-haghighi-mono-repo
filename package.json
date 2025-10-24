@@ -1,0 +1,25 @@
+{
+  "name": "haghighi-platform",
+  "version": "1.0.0",
+  "description": "Complete platform with NestJS backend, React admin panel and user frontend",
+  "scripts": {
+    "dev": "docker-compose up --build",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:admin": "cd admin-panel && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "docker-compose build",
+    "start": "docker-compose up",
+    "stop": "docker-compose down"
+  },
+  "keywords": [
+    "nestjs",
+    "react",
+    "postgresql",
+    "docker"
+  ],
+  "author": "Arash Haghighi",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.12.2"
+  }
+}
