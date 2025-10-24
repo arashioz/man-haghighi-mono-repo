@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  direction: rtl;
+  font-family: 'Dirooz', 'IranianSans', 'Tahoma', 'Arial', sans-serif;
+  font-weight: normal;
+}
+
+body {
+  direction: rtl;
+  text-align: right;
+  font-weight: normal;
+}
+
+/* Ensure no bold styling is applied globally */
+* {
+  font-weight: normal !important;
+}
+
+/* Override any bold classes */
+.font-bold, .font-semibold, .font-medium {
+  font-weight: normal !important;
+}
+
+/* Custom font loading */
+@font-face {
+  font-family: 'Dirooz';
+  src: url('./fonts/Dirooz.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IranianSans';
+  src: url('./fonts/-IranianSans.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
