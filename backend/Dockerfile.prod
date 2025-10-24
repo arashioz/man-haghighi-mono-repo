@@ -39,7 +39,6 @@ RUN mkdir -p uploads && chmod 755 uploads
 # Change ownership of specific directories only (more efficient)
 RUN chown -R appuser:appuser /app/uploads
 RUN chown -R appuser:appuser /app/dist
-RUN chown -R appuser:appuser /app/node_modules
 
 # Switch to non-root user
 USER appuser
