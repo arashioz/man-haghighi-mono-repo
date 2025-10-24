@@ -5,9 +5,9 @@ services:
     image: postgres:14
     container_name: haghighi_postgres
     environment:
-      POSTGRES_DB: haghighi_db
-      POSTGRES_USER: haghighi_user
-      POSTGRES_PASSWORD: haghighi_password
+      POSTGRES_DB: ${POSTGRES_DB:-haghighi_db}
+      POSTGRES_USER: ${POSTGRES_USER:-haghighi_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-haghighi_password}
       POSTGRES_INITDB_ARGS: "--auth-host=md5"
     ports:
       - "5432:5432"
@@ -32,15 +32,15 @@ services:
       dockerfile: Dockerfile
     container_name: haghighi_backend
     environment:
-      DATABASE_URL: "postgresql://haghighi_user:haghighi_password@postgres:5432/haghighi_db?schema=public"
-      JWT_SECRET: "your-super-secret-jwt-key-change-this-in-production"
-      JWT_EXPIRES_IN: "7d"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-haghighi_user}:${POSTGRES_PASSWORD:-haghighi_password}@postgres:5432/${POSTGRES_DB:-haghighi_db}?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-local-dev-jwt-secret-key-not-for-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       REDIS_HOST: "redis"
       REDIS_PORT: 6379
-      API_BASE_URL: "http://localhost:3000"
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
       PORT: 3000
-      NODE_ENV: "development"
-      MAX_FILE_SIZE: 10485760
+      NODE_ENV: ${NODE_ENV:-development}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       UPLOAD_PATH: "/app/uploads"
       CHOKIDAR_USEPOLLING: true
       CHOKIDAR_INTERVAL: 1000
@@ -66,7 +66,7 @@ services:
       dockerfile: Dockerfile
     container_name: haghighi_admin
     environment:
-      REACT_APP_API_URL: http://backend:3000
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://backend:3000}
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
       WATCHPACK_POLLING: "true"
@@ -89,7 +89,7 @@ services:
       dockerfile: Dockerfile
     container_name: haghighi_frontend
     environment:
-      REACT_APP_API_URL: http://backend:3000
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://backend:3000}
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
       WATCHPACK_POLLING: true
