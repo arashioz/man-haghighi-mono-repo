@@ -42,6 +42,8 @@ services:
       NODE_ENV: "development"
       MAX_FILE_SIZE: 10485760
       UPLOAD_PATH: "/app/uploads"
+      CHOKIDAR_USEPOLLING: true
+      CHOKIDAR_INTERVAL: 1000
     depends_on:
       - postgres
       - redis
