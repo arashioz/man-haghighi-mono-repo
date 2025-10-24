@@ -20,6 +20,10 @@
   "author": "Arash Haghighi",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.12.2"
+    "axios": "^1.12.2",
+    "csv-parser": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1"
   }
 }

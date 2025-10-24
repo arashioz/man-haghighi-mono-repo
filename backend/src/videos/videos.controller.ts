@@ -64,7 +64,7 @@ export class VideosController {
     }
 
     const video = await this.videosService.findOne(id);
-    const streamUrl = `${process.env.API_BASE_URL || 'http://localhost:3000'}/videos/${id}/stream`;
+    const streamUrl = `${process.env.API_BASE_URL || 'http://194.180.11.193:3000'}/videos/${id}/stream`;
     
     return {
       videoId: video.id,

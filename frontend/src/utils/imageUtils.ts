@@ -2,7 +2,7 @@
  * Utility functions for handling image URLs
  */
 
-const API_BASE_URL = 'http://194.180.11.193:3000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://194.180.11.193:3000';
 
 /**
  * Convert a file path to a full image URL

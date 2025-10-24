@@ -88,7 +88,7 @@ export class AudiosService {
       throw new BadRequestException('Audio is not published');
     }
 
-    const streamUrl = `http://localhost:3000/uploads/audios/${audio.audioFile}`;
+    const streamUrl = `${process.env.API_BASE_URL || 'http://194.180.11.193:3000'}/uploads/audios/${audio.audioFile}`;
 
     return {
       ...audio,
