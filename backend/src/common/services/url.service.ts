@@ -5,9 +5,9 @@ export class UrlService {
   private readonly baseUrl: string;
 
   constructor() {
-    // Prefer explicit API_BASE_URL, otherwise fall back to localhost
+    // Prefer explicit API_BASE_URL, otherwise fall back to server IP
     // Ensure no trailing slash
-    const rawBase = process.env.API_BASE_URL || 'http://localhost:3000';
+    const rawBase = process.env.API_BASE_URL || 'http://194.180.11.193:3000';
     this.baseUrl = rawBase.replace(/\/$/, '');
   }
 
