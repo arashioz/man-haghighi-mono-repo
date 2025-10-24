@@ -241,6 +241,14 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+# Frontend images and assets
+frontend/public/assets/
+frontend/public/images/
+
+# Admin panel images and assets  
+admin-panel/public/assets/
+admin-panel/public/images/
+
 # Misc
 *.tgz
 *.tar.gz
