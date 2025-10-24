@@ -370,7 +370,7 @@ const UserDashboard: React.FC = () => {
                           </span>
                           <button
                             onClick={() => {
-                              const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
+                              const audioUrl = `http://194.180.11.193:3000/uploads/${audio.audioFile}`;
                               window.open(audioUrl, '_blank');
                             }}
                             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"

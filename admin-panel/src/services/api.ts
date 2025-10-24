@@ -3,9 +3,9 @@ import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, Course,
 
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    return 'http://localhost:3000'
+    return 'http://194.180.11.193:3000'
   }
-  return process.env.REACT_APP_API_URL || 'http://localhost:3000'
+  return process.env.REACT_APP_API_URL || 'http://194.180.11.193:3000'
 };
 
 const API_BASE_URL = getApiBaseUrl();
