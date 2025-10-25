@@ -60,7 +60,7 @@ if [ -f "setup-database.sh" ]; then
 else
     echo -e "${YELLOW}⚠️ setup-database.sh not found, running manual database setup...${NC}"
     docker-compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
-    docker-compose -f docker-compose.prod.yml exec backend npm run prisma:seed
+    docker-compose -f docker-compose.prod.yml exec backend node prisma/seed.js
 fi
 
 # Check service health

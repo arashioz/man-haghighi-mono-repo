@@ -34,7 +34,7 @@ docker-compose exec backend npx prisma generate
 
 # Run seed (main data)
 echo -e "${YELLOW}🌱 Seeding main data (users, courses, sliders)...${NC}"
-docker-compose exec backend npm run prisma:seed
+docker-compose exec backend node prisma/seed.js
 
 # Ask if user wants to seed old data
 echo -e "${YELLOW}❓ Do you want to import old data from previous system? (y/n)${NC}"
