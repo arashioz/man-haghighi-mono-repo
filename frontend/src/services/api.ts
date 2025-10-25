@@ -3,9 +3,10 @@ import { AuthResponse, LoginCredentials, RegisterCredentials, User, Slider, Arti
 
 // Use dynamic API URL based on environment
 const getApiBaseUrl = () => {
-  // If running in browser, use localhost
+  // If running in browser, use environment variable or current origin
   if (typeof window !== 'undefined') {
-    return 'http://localhost:3000';
+    // Use environment variable if available, otherwise use current origin
+    return process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
   }
   // If running in server-side (SSR), use environment variable
   return process.env.REACT_APP_API_URL || 'http://localhost:3000';
