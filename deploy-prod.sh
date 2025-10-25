@@ -24,11 +24,11 @@ echo -e "${GREEN}🚀 Starting production deployment for IP: $SERVER_IP${NC}"
 
 # Update production.env with server IP
 echo -e "${YELLOW}📝 Updating production.env with server IP...${NC}"
-sed -i '' "s/YOUR_SERVER_IP/$SERVER_IP/g" production.env
+sed -i "s/YOUR_SERVER_IP/$SERVER_IP/g" production.env
 
 # Update nginx configuration with server IP
 echo -e "${YELLOW}📝 Updating nginx configuration with server IP...${NC}"
-sed -i '' "s/YOUR_SERVER_IP/$SERVER_IP/g" nginx.conf
+sed -i "s/YOUR_SERVER_IP/$SERVER_IP/g" nginx.conf
 
 # Create SSL directory if it doesn't exist
 echo -e "${YELLOW}📁 Creating SSL directory...${NC}"
