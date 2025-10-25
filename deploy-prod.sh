@@ -28,7 +28,7 @@ sed -i '' "s/YOUR_SERVER_IP/$SERVER_IP/g" production.env
 
 # Update nginx configuration with server IP
 echo -e "${YELLOW}📝 Updating nginx configuration with server IP...${NC}"
-sed -i '' "s/YOUR_SERVER_IP/$SERVER_IP/g" nginx/conf.d/default.conf
+sed -i '' "s/YOUR_SERVER_IP/$SERVER_IP/g" nginx.conf
 
 # Create SSL directory if it doesn't exist
 echo -e "${YELLOW}📁 Creating SSL directory...${NC}"
