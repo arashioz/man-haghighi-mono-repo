@@ -77,31 +77,35 @@ async function main() {
 
   console.log('👤 Regular User created:', regularUser.phone);
 
-  // Create sample sliders
-  const sliders = await Promise.all([
-    prisma.slider.create({
-      data: {
-        title: 'به بزرگترین مرکز آموزشی کوچینگ توسعه فردی و کسب و کار خوش آمدید',
-        description: 'با منی حقیقی و فراز قورچیان، سفر خود را به سوی موفقیت آغاز کنید',
-        image: 'Header-Site-1.jpg',
-        link: '/courses',
-        order: 1,
-        isActive: true,
-      },
-    }),
-    prisma.slider.create({
-      data: {
-        title: 'انرژی پول - فراز قورچیان',
-        description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت',
-        image: 'book.png',
-        link: '/courses',
-        order: 2,
-        isActive: true,
-      },
-    }),
-  ]);
-
-  console.log('🎠 Sliders created:', sliders.length);
+  // Create sample sliders (with error handling)
+  let sliders = [];
+  try {
+    sliders = await Promise.all([
+      prisma.slider.create({
+        data: {
+          title: 'به بزرگترین مرکز آموزشی کوچینگ توسعه فردی و کسب و کار خوش آمدید',
+          description: 'با منی حقیقی و فراز قورچیان، سفر خود را به سوی موفقیت آغاز کنید',
+          image: 'Header-Site-1.jpg',
+          link: '/courses',
+          order: 1,
+          isActive: true,
+        },
+      }),
+      prisma.slider.create({
+        data: {
+          title: 'انرژی پول - فراز قورچیان',
+          description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت',
+          image: 'book.png',
+          link: '/courses',
+          order: 2,
+          isActive: true,
+        },
+      }),
+    ]);
+    console.log('🎠 Sliders created:', sliders.length);
+  } catch (error) {
+    console.log('⚠️ Sliders table not found, skipping slider creation');
+  }
 
   // Create sample course
   const course = await prisma.course.create({
@@ -146,34 +150,42 @@ async function main() {
 
   console.log('🎥 Videos created:', videos.length);
 
-  // Create sample article
-  const article = await prisma.article.create({
-    data: {
-      title: 'رازهای موفقیت مالی',
-      slug: `secrets-of-financial-success-${Date.now()}`,
-      content: 'این راهنمای جامعی برای رسیدن به موفقیت مالی و استقلال اقتصادی است. در این مقاله با اصول اولیه مدیریت پول، سرمایه‌گذاری هوشمند و ایجاد درآمدهای متعدد آشنا می‌شوید...',
-      excerpt: 'اصول موفقیت مالی را یاد بگیرید و سفر خود را به سوی استقلال اقتصادی آغاز کنید.',
-      featuredImage: 'book.png',
-      published: true,
-      publishedAt: new Date(),
-    },
-  });
+  // Create sample article (with error handling)
+  let article = null;
+  try {
+    article = await prisma.article.create({
+      data: {
+        title: 'رازهای موفقیت مالی',
+        slug: `secrets-of-financial-success-${Date.now()}`,
+        content: 'این راهنمای جامعی برای رسیدن به موفقیت مالی و استقلال اقتصادی است. در این مقاله با اصول اولیه مدیریت پول، سرمایه‌گذاری هوشمند و ایجاد درآمدهای متعدد آشنا می‌شوید...',
+        excerpt: 'اصول موفقیت مالی را یاد بگیرید و سفر خود را به سوی استقلال اقتصادی آغاز کنید.',
+        featuredImage: 'book.png',
+        published: true,
+        publishedAt: new Date(),
+      },
+    });
+    console.log('📝 Article created:', article.title);
+  } catch (error) {
+    console.log('⚠️ Articles table not found, skipping article creation');
+  }
 
-  console.log('📝 Article created:', article.title);
-
-  // Create sample podcast
-  const podcast = await prisma.podcast.create({
-    data: {
-      title: 'انرژی پول - قسمت اول',
-      description: 'نکات ضروری برای تغییر ذهنیت مالی و ایجاد انرژی مثبت برای کسب ثروت',
-      audioFile: 'enerzhi-pool-episode-1.mp3',
-      duration: 1800,
-      published: true,
-      publishedAt: new Date(),
-    },
-  });
-
-  console.log('🎧 Podcast created:', podcast.title);
+  // Create sample podcast (with error handling)
+  let podcast = null;
+  try {
+    podcast = await prisma.podcast.create({
+      data: {
+        title: 'انرژی پول - قسمت اول',
+        description: 'نکات ضروری برای تغییر ذهنیت مالی و ایجاد انرژی مثبت برای کسب ثروت',
+        audioFile: 'enerzhi-pool-episode-1.mp3',
+        duration: 1800,
+        published: true,
+        publishedAt: new Date(),
+      },
+    });
+    console.log('🎧 Podcast created:', podcast.title);
+  } catch (error) {
+    console.log('⚠️ Podcasts table not found, skipping podcast creation');
+  }
 
   // Create sample workshops
   const workshops = await Promise.all([
