@@ -27,9 +27,11 @@ COPY . .
 
 # Generate Prisma client
 RUN npm run prisma:generate
+RUN npx prisma generate
 
 # Create uploads directory with proper permissions
 RUN mkdir -p uploads && chmod 755 uploads
+RUN mkdir -p /app/dist && chmod -R 777 /app/dist
 
 # Expose port
 EXPOSE 3000
