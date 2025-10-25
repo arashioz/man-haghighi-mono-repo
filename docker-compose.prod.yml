@@ -48,7 +48,7 @@ services:
       dockerfile: Dockerfile.prod
     container_name: haghighi_admin_prod
     environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://YOUR_SERVER_IP:3000}
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://YOUR_SERVER_IP/api}
     ports:
       - "3001:80"
     depends_on:
@@ -63,7 +63,7 @@ services:
       dockerfile: Dockerfile.prod
     container_name: haghighi_frontend_prod
     environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://YOUR_SERVER_IP:3000}
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://YOUR_SERVER_IP/api}
     ports:
       - "3002:80"
     depends_on:
