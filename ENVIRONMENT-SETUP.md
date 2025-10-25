@@ -10,7 +10,7 @@ docker-compose --env-file local.env up -d
 ```
 
 ### تنظیمات پیش‌فرض لوکال:
-- **Database:** PostgreSQL با کاربر `haghighi_user` و رمز `haghighi_password`
+- **Database:** PostgreSQL با کاربر `haghighi_user` و رمز `haghighiPassword`
 - **JWT Secret:** `local-dev-jwt-secret-key-not-for-production`
 - **API URL:** `http://localhost:3000`
 
