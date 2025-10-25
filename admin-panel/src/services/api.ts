@@ -3,9 +3,10 @@ import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, Course,
 
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    return 'http://localhost:3000'
+    // Use environment variable if available, otherwise use current origin
+    return process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
   }
-  return process.env.REACT_APP_API_URL || 'http://localhost:3000'
+  return process.env.REACT_APP_API_URL || 'http://localhost:3000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
