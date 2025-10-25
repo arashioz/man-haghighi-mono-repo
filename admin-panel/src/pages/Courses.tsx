@@ -64,7 +64,7 @@ const Courses: React.FC = () => {
 
       const token = localStorage.getItem('token');
       
-      const response = await fetch('http://194.180.11.193:3000/courses', {
+      const response = await fetch('http://localhost:3000/courses', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -92,7 +92,7 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append('thumbnail', newCourse.thumbnail);
         
-        await fetch(`http://194.180.11.193:3000/courses/${createdCourse.id}/thumbnail`, {
+        await fetch(`http://localhost:3000/courses/${createdCourse.id}/thumbnail`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -108,7 +108,7 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append('video', newCourse.video);
         
-        await fetch(`http://194.180.11.193:3000/courses/${createdCourse.id}/video`, {
+        await fetch(`http://localhost:3000/courses/${createdCourse.id}/video`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -124,7 +124,7 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append('attachments', attachment);
         
-        await fetch(`http://194.180.11.193:3000/courses/${createdCourse.id}/attachments`, {
+        await fetch(`http://localhost:3000/courses/${createdCourse.id}/attachments`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -140,7 +140,7 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append('courseVideos', video);
         
-        await fetch(`http://194.180.11.193:3000/courses/${createdCourse.id}/courseVideos`, {
+        await fetch(`http://localhost:3000/courses/${createdCourse.id}/courseVideos`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -156,7 +156,7 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append('courseAudios', audio);
         
-        await fetch(`http://194.180.11.193:3000/courses/${createdCourse.id}/courseAudios`, {
+        await fetch(`http://localhost:3000/courses/${createdCourse.id}/courseAudios`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${token}`,
