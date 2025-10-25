@@ -81,8 +81,10 @@ async function main() {
   let sliders = [];
   try {
     sliders = await Promise.all([
-      prisma.slider.create({
-        data: {
+      prisma.slider.upsert({
+        where: { order: 1 },
+        update: {},
+        create: {
           title: 'به بزرگترین مرکز آموزشی کوچینگ توسعه فردی و کسب و کار خوش آمدید',
           description: 'با منی حقیقی و فراز قورچیان، سفر خود را به سوی موفقیت آغاز کنید',
           image: 'Header-Site-1.jpg',
@@ -91,8 +93,10 @@ async function main() {
           isActive: true,
         },
       }),
-      prisma.slider.create({
-        data: {
+      prisma.slider.upsert({
+        where: { order: 2 },
+        update: {},
+        create: {
           title: 'انرژی پول - فراز قورچیان',
           description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت',
           image: 'book.png',
@@ -108,8 +112,10 @@ async function main() {
   }
 
   // Create sample course
-  const course = await prisma.course.create({
-    data: {
+  const course = await prisma.course.upsert({
+    where: { title: 'انرژی پول - فراز قورچیان' },
+    update: {},
+    create: {
       title: 'انرژی پول - فراز قورچیان',
       description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت و رسیدن به استقلال مالی',
       price: 299.99,
@@ -194,8 +200,10 @@ async function main() {
 
   // Create sample articles
   const articles = await Promise.all([
-    prisma.article.create({
-      data: {
+    prisma.article.upsert({
+      where: { slug: 'financial-success-secrets' },
+      update: {},
+      create: {
         title: 'رازهای موفقیت مالی از زبان فراز قورچیان',
         slug: 'financial-success-secrets',
         content: `
@@ -219,8 +227,10 @@ async function main() {
         publishedAt: new Date(),
       },
     }),
-    prisma.article.create({
-      data: {
+    prisma.article.upsert({
+      where: { slug: 'positive-energy-success' },
+      update: {},
+      create: {
         title: 'انرژی مثبت و تأثیر آن بر موفقیت',
         slug: 'positive-energy-success',
         content: `
