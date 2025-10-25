@@ -30,6 +30,26 @@ sed -i "s/YOUR_SERVER_IP/$SERVER_IP/g" production.env
 if [ -f "nginx.conf" ]; then
     echo -e "${YELLOW}📝 Updating nginx configuration with server IP...${NC}"
     sed -i "s/YOUR_SERVER_IP/$SERVER_IP/g" nginx.conf
+    
+    # Copy nginx config to system
+    echo -e "${YELLOW}📋 Copying nginx configuration...${NC}"
+    sudo cp nginx.conf /etc/nginx/nginx.conf
+    
+    # Test nginx configuration
+    echo -e "${YELLOW}🧪 Testing nginx configuration...${NC}"
+    if sudo nginx -t; then
+        echo -e "${GREEN}✅ Nginx configuration is valid${NC}"
+        
+        # Restart nginx
+        echo -e "${YELLOW}🔄 Restarting nginx...${NC}"
+        sudo systemctl restart nginx
+        sudo systemctl enable nginx
+        
+        echo -e "${GREEN}✅ Nginx restarted successfully${NC}"
+    else
+        echo -e "${RED}❌ Nginx configuration is invalid${NC}"
+        exit 1
+    fi
 fi
 
 # Create SSL directory if it doesn't exist
