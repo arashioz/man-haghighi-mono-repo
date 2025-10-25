@@ -1,3 +1,21 @@
+#!/bin/bash
+
+# Final Fix Script - Complete Nginx Configuration
+# This script fixes all routing issues and ensures proper static file serving
+
+echo "🔧 Final Fix - Complete Nginx Configuration..."
+
+# Stop Nginx
+echo "⏹️ Stopping Nginx..."
+sudo systemctl stop nginx
+
+# Backup current config
+echo "💾 Backing up current config..."
+sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+
+# Create final config
+echo "📝 Creating final config..."
+sudo tee /etc/nginx/nginx.conf > /dev/null << 'EOF'
 events {
     worker_connections 1024;
 }
@@ -132,7 +150,7 @@ http {
             }
         }
 
-        # Admin Panel static files
+        # Admin Panel static files - باید قبل از location /admin باشد
         location /admin/static/ {
             proxy_pass http://admin-panel/static/;
             proxy_http_version 1.1;
@@ -204,3 +222,37 @@ http {
         }
     }
 }
+EOF
+
+# Test configuration
+echo "🧪 Testing configuration..."
+sudo nginx -t
+
+if [ $? -eq 0 ]; then
+    echo "✅ Configuration is valid"
+    
+    # Start Nginx
+    echo "🚀 Starting Nginx..."
+    sudo systemctl start nginx
+    
+    # Enable Nginx
+    echo "🔧 Enabling Nginx..."
+    sudo systemctl enable nginx
+    
+    # Check status
+    echo "📊 Checking Nginx status..."
+    sudo systemctl status nginx --no-pager
+    
+    echo "🎉 All issues fixed successfully!"
+    echo "🌐 Frontend: http://185.231.112.84/"
+    echo "🔧 Admin Panel: http://185.231.112.84/admin"
+    echo "📚 API: http://185.231.112.84/api/"
+    echo "📁 Uploads: http://185.231.112.84/uploads/"
+    
+else
+    echo "❌ Configuration is invalid"
+    echo "🔄 Restoring backup..."
+    sudo cp /etc/nginx/nginx.conf.backup /etc/nginx/nginx.conf
+    sudo systemctl start nginx
+    exit 1
+fi
