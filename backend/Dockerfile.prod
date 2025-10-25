@@ -5,13 +5,9 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-COPY yarn.lock ./
-
-# Remove package-lock.json to avoid conflicts
-RUN rm -f package-lock.json
 
 # Install dependencies
-RUN yarn install --frozen-lockfile
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -20,7 +16,7 @@ COPY . .
 RUN npx prisma generate
 
 # Build the application
-RUN yarn build
+RUN npm run build
 
 # Stage 2: Production stage
 FROM node:18-alpine AS production
@@ -36,10 +32,9 @@ RUN adduser -S nextjs -u 1001
 
 # Copy package files
 COPY package*.json ./
-COPY yarn.lock ./
 
 # Install only production dependencies
-RUN yarn install --frozen-lockfile --production && yarn cache clean
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
