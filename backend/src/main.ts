@@ -27,11 +27,11 @@ async function bootstrap() {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "http://localhost:*", "http://194.180.11.193:*"],
-        connectSrc: ["'self'", "http://localhost:*", "http://194.180.11.193:*"],
+        imgSrc: ["'self'", "data:", "http://localhost:*"],
+        connectSrc: ["'self'", "http://localhost:*"],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
-        mediaSrc: ["'self'", "http://localhost:*", "http://194.180.11.193:*"],
+        mediaSrc: ["'self'", "http://localhost:*"],
         frameSrc: ["'none'"],
       },
     },
@@ -44,13 +44,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:3003',
-      'http://localhost:3004',
-      'http://localhost:3005',
-      'http://194.180.11.193:3000',
-      'http://194.180.11.193:3001',
-      'http://194.180.11.193:3002'
+      'http://localhost:3002'
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -96,8 +90,8 @@ async function bootstrap() {
   
   await app.listen(port);
   
-  logger.log(`✅ Application is running on: http://194.180.11.193:${port}`)
-  logger.log(`📚 Swagger docs available at: http://194.180.11.193:${port}/api/docs`)
+  logger.log(`✅ Application is running on: http://localhost:${port}`)
+  logger.log(`📚 Swagger docs available at: http://localhost:${port}/api/docs`)
   logger.log(`📁 Static files served from: /uploads/`);
   logger.log('🎉 Haghighi Platform API is ready!');
 }

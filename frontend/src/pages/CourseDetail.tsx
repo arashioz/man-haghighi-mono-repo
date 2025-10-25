@@ -188,7 +188,7 @@ const CourseDetail: React.FC = () => {
                       }`}
                       onClick={isEnrolled ? () => {
                         // Navigate to audio player or play directly
-                        const audioUrl = `http://194.180.11.193:3000/uploads/${audio.audioFile}`;
+                        const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
                         window.open(audioUrl, '_blank');
                       } : undefined}
                     >

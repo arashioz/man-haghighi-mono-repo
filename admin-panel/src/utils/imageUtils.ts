@@ -1,6 +1,6 @@
 
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://194.180.11.193:3000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
 export const getImageUrl = (imagePath: string | null | undefined): string | null => {
   if (!imagePath) {
