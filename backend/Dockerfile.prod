@@ -7,6 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 COPY yarn.lock ./
 
+# Remove package-lock.json to avoid conflicts
+RUN rm -f package-lock.json
+
 # Install dependencies
 RUN yarn install --frozen-lockfile
 
