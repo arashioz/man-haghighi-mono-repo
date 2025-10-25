@@ -63,6 +63,9 @@ async function bootstrap() {
     transform: true,
   }));
 
+  // Set global prefix for all routes (after CORS setup)
+  app.setGlobalPrefix('api');
+
   const config = new DocumentBuilder()
     .setTitle('Haghighi Platform API')
     .setDescription('Complete platform API with NestJS')
@@ -93,8 +96,8 @@ async function bootstrap() {
   
   await app.listen(port);
   
-  logger.log(`✅ Application is running on: http://localhost:${port}`)
-  logger.log(`📚 Swagger docs available at: http://localhost:${port}/api/docs`)
+  logger.log(`✅ Application is running on: http://194.180.11.193:${port}`)
+  logger.log(`📚 Swagger docs available at: http://194.180.11.193:${port}/api/docs`)
   logger.log(`📁 Static files served from: /uploads/`);
   logger.log('🎉 Haghighi Platform API is ready!');
 }

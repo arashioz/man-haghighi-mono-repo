@@ -22,8 +22,8 @@ RUN npm install --os=linux --cpu=arm64 sharp
 # Copy source code
 COPY . .
 
-# Make start script executable
-RUN chmod +x start.sh
+# Make start script executable (if exists)
+# RUN chmod +x start.sh
 
 # Generate Prisma client
 RUN npm run prisma:generate

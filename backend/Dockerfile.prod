@@ -28,7 +28,7 @@ RUN npm install --os=linux --cpu=arm64 sharp
 COPY . .
 
 # Copy and setup startup script
-COPY startup.sh /app/startup.sh
+COPY backend/startup.sh /app/startup.sh
 RUN chmod +x /app/startup.sh
 
 # Generate Prisma client
