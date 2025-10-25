@@ -33,8 +33,14 @@ RUN npm run prisma:generate
 # Build the application
 RUN npm run build
 
+# Verify dist directory exists
+RUN ls -la dist/
+
 # Remove dev dependencies to reduce image size
 RUN npm prune --production
+
+# Verify dist directory still exists after prune
+RUN ls -la dist/
 
 # Create uploads directory with proper permissions
 RUN mkdir -p uploads && chmod 755 uploads

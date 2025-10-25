@@ -18,9 +18,11 @@ import { VideosModule } from './videos/videos.module';
 import { AudiosModule } from './audios/audios.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { HealthController } from './health/health.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
