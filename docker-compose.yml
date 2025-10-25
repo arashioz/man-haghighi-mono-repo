@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     container_name: haghighi_backend
     environment:
-      DATABASE_URL: "postgresql://haghighi_user:123456@postgres:5432/haghighi_db?schema=public"
+      DATABASE_URL: "postgresql://haghighi_user:mysecretpassword@postgres:5432/haghighi_db?schema=public"
       JWT_SECRET: simple-jwt-secret
       JWT_EXPIRES_IN: 7d
       API_BASE_URL: http://localhost:3000
