@@ -40,8 +40,8 @@ docker-compose exec backend node prisma/seed.js
 echo -e "${YELLOW}❓ Do you want to import old data from previous system? (y/n)${NC}"
 read -r response
 if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-    echo -e "${YELLOW}🌱 Seeding old data...${NC}"
-    docker-compose exec backend npm run prisma:seed-old-data
+        echo -e "${YELLOW}🌱 Seeding old data...${NC}"
+        docker-compose exec backend node prisma/seed-old-data.js
 else
     echo -e "${YELLOW}⏭️ Skipping old data import${NC}"
 fi
