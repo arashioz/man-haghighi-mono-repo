@@ -81,10 +81,8 @@ async function main() {
   let sliders = [];
   try {
     sliders = await Promise.all([
-      prisma.slider.upsert({
-        where: { order: 1 },
-        update: {},
-        create: {
+      prisma.slider.create({
+        data: {
           title: 'به بزرگترین مرکز آموزشی کوچینگ توسعه فردی و کسب و کار خوش آمدید',
           description: 'با منی حقیقی و فراز قورچیان، سفر خود را به سوی موفقیت آغاز کنید',
           image: 'Header-Site-1.jpg',
@@ -93,10 +91,8 @@ async function main() {
           isActive: true,
         },
       }),
-      prisma.slider.upsert({
-        where: { order: 2 },
-        update: {},
-        create: {
+      prisma.slider.create({
+        data: {
           title: 'انرژی پول - فراز قورچیان',
           description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت',
           image: 'book.png',
@@ -108,23 +104,37 @@ async function main() {
     ]);
     console.log('🎠 Sliders created:', sliders.length);
   } catch (error) {
-    console.log('⚠️ Sliders table not found, skipping slider creation');
+    if (error.code === 'P2002') {
+      console.log('⚠️ Sliders already exist, skipping creation');
+      sliders = await prisma.slider.findMany();
+    } else {
+      console.log('⚠️ Sliders table not found, skipping slider creation');
+    }
   }
 
   // Create sample course
-  const course = await prisma.course.upsert({
-    where: { title: 'انرژی پول - فراز قورچیان' },
-    update: {},
-    create: {
-      title: 'انرژی پول - فراز قورچیان',
-      description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت و رسیدن به استقلال مالی',
-      price: 299.99,
-      thumbnail: 'book.png',
-      published: true,
-    },
-  });
-
-  console.log('📚 Course created:', course.title);
+  let course;
+  try {
+    course = await prisma.course.create({
+      data: {
+        title: 'انرژی پول - فراز قورچیان',
+        description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت و رسیدن به استقلال مالی',
+        price: 299.99,
+        thumbnail: 'book.png',
+        published: true,
+      },
+    });
+    console.log('📚 Course created:', course.title);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      console.log('⚠️ Course already exists, skipping creation');
+      course = await prisma.course.findFirst({
+        where: { title: 'انرژی پول - فراز قورچیان' }
+      });
+    } else {
+      throw error;
+    }
+  }
 
   // Create sample videos
   const videos = await Promise.all([
