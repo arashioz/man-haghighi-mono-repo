@@ -22,7 +22,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
-    "prisma:seed-old-data": "ts-node prisma/seed-old-data.ts",
+    "prisma:seed-old-data": "node prisma/seed-old-data.js",
     "import:old-users": "ts-node scripts/import-old-users.ts",
     "import:old-users-csv": "ts-node scripts/import-old-users-csv.ts"
   },
