@@ -30,11 +30,11 @@ RUN npm run prisma:generate
 RUN npx prisma generate
 
 # Create uploads directory with proper permissions
-RUN mkdir -p uploads && chmod 755 uploads
+RUN mkdir -p uploads && chmod 777 uploads
 RUN mkdir -p /app/dist && chmod -R 777 /app/dist
 
 # Expose port
 EXPOSE 3000
 
 # Start the application
-CMD ["sh", "-c", "npm run prisma:generate && npm run start:dev"]
+CMD ["sh", "-c", "chmod -R 777 /app/uploads && npm run prisma:generate && npm run start:dev"]
