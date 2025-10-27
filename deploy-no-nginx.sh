@@ -31,25 +31,36 @@ echo "5️⃣ Creating uploads directory..."
 mkdir -p uploads
 chmod -R 777 uploads
 
+# Remove homepage from admin-panel package.json (for no-nginx deployment)
+echo "6️⃣ Preparing admin-panel for direct access..."
+if grep -q '"homepage":' admin-panel/package.json; then
+    sed -i.bak '/"homepage":/d' admin-panel/package.json || true
+fi
+
 # Build images
-echo "6️⃣ Building Docker images..."
+echo "7️⃣ Building Docker images..."
 docker-compose -f docker-compose-no-nginx.yml --env-file production-no-nginx.env build --no-cache
 
 # Start services
-echo "7️⃣ Starting services..."
+echo "8️⃣ Starting services..."
 docker-compose -f docker-compose-no-nginx.yml --env-file production-no-nginx.env up -d
 
+# Restore admin-panel package.json if backup exists
+if [ -f admin-panel/package.json.bak ]; then
+    mv admin-panel/package.json.bak admin-panel/package.json
+fi
+
 # Wait for services
-echo "8️⃣ Waiting for services to start..."
+echo "9️⃣ Waiting for services to start..."
 sleep 25
 
 # Apply database schema
-echo "9️⃣ Applying database schema..."
+echo "🔟 Applying database schema..."
 sleep 5
 docker exec haghighi_backend_prod npx prisma db push 2>/dev/null || echo "Schema already applied"
 
 # Fix permissions
-echo "🔟 Fixing permissions..."
+echo "1️⃣1️⃣ Fixing permissions..."
 chmod -R 777 uploads
 docker exec haghighi_backend_prod chmod -R 777 /app/uploads 2>/dev/null || true
 
