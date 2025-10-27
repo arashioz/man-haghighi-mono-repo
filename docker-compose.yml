@@ -51,6 +51,8 @@ services:
       - uploads:/app/uploads
     networks:
       - haghighi_network
+    ports:
+      - "127.0.0.1:3000:3000"
     restart: unless-stopped
 
   admin-panel:
@@ -64,6 +66,8 @@ services:
       - backend
     networks:
       - haghighi_network
+    ports:
+      - "127.0.0.1:3001:80"
     restart: unless-stopped
 
   frontend:
@@ -77,6 +81,8 @@ services:
       - backend
     networks:
       - haghighi_network
+    ports:
+      - "127.0.0.1:3002:80"
     restart: unless-stopped
 
 volumes:
