@@ -1,12 +1,16 @@
 #!/bin/bash
 
-# Simple deployment script without complex error handling
+# Deployment script WITHOUT Nginx
 
-echo "🚀 Starting deployment..."
+echo "🚀 Starting deployment (No Nginx)..."
+echo "====================================="
 echo ""
+
+SERVER_IP="185.231.112.84"
 
 # Clean up old containers
 echo "1️⃣ Stopping old containers..."
+docker-compose -f docker-compose-no-nginx.yml down 2>/dev/null || true
 docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
 
 # Remove old containers
@@ -29,15 +33,15 @@ chmod -R 777 uploads
 
 # Build images
 echo "6️⃣ Building Docker images..."
-docker-compose -f docker-compose.prod.yml --env-file production.env build --no-cache
+docker-compose -f docker-compose-no-nginx.yml --env-file production-no-nginx.env build --no-cache
 
 # Start services
 echo "7️⃣ Starting services..."
-docker-compose -f docker-compose.prod.yml --env-file production.env up -d
+docker-compose -f docker-compose-no-nginx.yml --env-file production-no-nginx.env up -d
 
 # Wait for services
 echo "8️⃣ Waiting for services to start..."
-sleep 20
+sleep 25
 
 # Apply database schema
 echo "9️⃣ Applying database schema..."
@@ -52,17 +56,24 @@ docker exec haghighi_backend_prod chmod -R 777 /app/uploads 2>/dev/null || true
 # Show status
 echo ""
 echo "📊 Service Status:"
-docker-compose -f docker-compose.prod.yml ps
+docker-compose -f docker-compose-no-nginx.yml ps
 
 echo ""
-echo "✅ Deployment complete!"
+echo "✅ Deployment complete (No Nginx)!"
 echo ""
 echo "🌐 Access your app at:"
-echo "   http://185.231.112.84/"
-echo "   http://185.231.112.84/admin/"
-echo "   http://185.231.112.84/api/"
+echo "   Frontend:    http://${SERVER_IP}:3002/"
+echo "   Admin Panel: http://${SERVER_IP}:3001/"
+echo "   Backend API: http://${SERVER_IP}:3000/api/"
+echo "   API Docs:    http://${SERVER_IP}:3000/api/docs/"
+echo "   Uploads:     http://${SERVER_IP}:3000/uploads/"
+echo ""
+echo "⚠️  Note: You need to open these ports in firewall:"
+echo "   sudo ufw allow 3000/tcp"
+echo "   sudo ufw allow 3001/tcp"
+echo "   sudo ufw allow 3002/tcp"
 echo ""
 echo "📝 View logs with:"
-echo "   docker-compose -f docker-compose.prod.yml logs -f"
+echo "   docker-compose -f docker-compose-no-nginx.yml logs -f"
 echo ""
 
