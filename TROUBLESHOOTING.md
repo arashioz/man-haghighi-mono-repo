@@ -1,5 +1,37 @@
 # 🔧 عیب‌یابی - Troubleshooting
 
+## ❌ خطای PostgreSQL Version Incompatible
+
+### علت:
+```
+FATAL: database files are incompatible with server
+PostgreSQL version 14 is not compatible with version 15
+```
+
+دیتابیس قدیمی با PostgreSQL 14 ساخته شده و الان میخوای از 15 استفاده کنی.
+
+### راه‌حل سریع:
+```bash
+# روش 1: اسکریپت اختصاصی
+./fix-postgres-version.sh
+./simple-deploy.sh
+
+# روش 2: دستی
+docker-compose -f docker-compose.prod.yml down
+docker volume rm postgres_data_prod
+docker volume rm new-haghighi_postgres_data_prod
+docker volume prune -f
+./simple-deploy.sh
+
+# روش 3: پاک کردن کامل
+./cleanup-docker.sh
+./simple-deploy.sh
+```
+
+⚠️ **نکته**: دیتای دیتابیس پاک میشه! اگر backup میخوای اول بگیر.
+
+---
+
 ## ❌ خطای RC(1) در اسکریپت‌ها
 
 ### علت:

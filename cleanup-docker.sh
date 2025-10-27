@@ -15,8 +15,13 @@ docker rm -f $(docker ps -aq) 2>/dev/null || echo "No containers to remove"
 echo "🖼️  Removing all images..."
 docker rmi -f $(docker images -q) 2>/dev/null || echo "No images to remove"
 
+# Remove project-specific volumes first
+echo "💾 Removing project volumes..."
+docker volume rm postgres_data_prod 2>/dev/null || true
+docker volume rm new-haghighi_postgres_data_prod 2>/dev/null || true
+
 # Remove all volumes
-echo "💾 Removing all volumes..."
+echo "💾 Removing all remaining volumes..."
 docker volume rm $(docker volume ls -q) 2>/dev/null || echo "No volumes to remove"
 
 # Remove all networks (except default ones)
