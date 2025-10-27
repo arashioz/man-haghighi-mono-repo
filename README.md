@@ -2,6 +2,59 @@
 
 یک پلتفرم کامل آموزشی با NestJS، React و PostgreSQL که شامل پنل مدیریت و فرانت‌اند کاربری می‌باشد.
 
+## 🚀 راه‌اندازی سریع (توسعه محلی)
+
+### پیش‌نیازها
+- Docker و Docker Compose
+- Node.js 18+ و npm
+
+### 🚀 راه‌اندازی سریع (توسعه محلی)
+
+```bash
+npm run dev:simple  # راه‌اندازی ساده با Docker
+# یا
+npm run dev         # راه‌اندازی پیشرفته با Docker (بدون nginx)
+```
+
+### 🏭 راه‌اندازی تولید (Production)
+
+```bash
+npm run start:prod  # راه‌اندازی تولید با nginx در Docker
+# یا
+npm run setup:nginx # راه‌اندازی nginx روی سیستم (بدون Docker)
+```
+
+### دستورات کامل
+
+```bash
+# Development (توسعه)
+npm run dev              # راه‌اندازی پیشرفته (بدون nginx)
+npm run dev:simple       # راه‌اندازی ساده (با nginx)
+npm run stop:dev         # توقف سرویس‌های توسعه
+npm run logs:dev         # لاگ‌های توسعه
+
+# Production (تولید)
+npm run start:prod       # راه‌اندازی تولید کامل
+npm run setup:nginx      # راه‌اندازی nginx روی سیستم
+npm run build:prod       # ساخت برای تولید
+npm run logs             # لاگ‌های تولید
+
+# General (عمومی)
+npm run stop             # توقف تمام سرویس‌ها
+npm run build            # ساخت تمام سرویس‌ها
+npm run test             # تست تمام سرویس‌ها
+```
+
+### دسترسی به سرویس‌ها
+
+- **وبسایت اصلی:** http://localhost
+- **پنل مدیریت:** http://localhost/admin
+- **مستندات API:** http://localhost/api/docs
+
+### آپلود فایل‌ها
+
+فایل‌ها در پوشه `backend/uploads/` ذخیره می‌شن و از طریق `http://localhost/uploads/` قابل دسترسی هستن.
+
 ## ویژگی‌ها
 
 ### فرانت‌اند کاربری
@@ -32,76 +85,83 @@
 - 📚 مستندات API با Swagger
 - 🐳 Docker Compose
 
-## نصب و راه‌اندازی
+## ساختار پروژه
 
-### پیش‌نیازها
-- Node.js 18+
-- Docker و Docker Compose
-- Git
-
-### راه‌اندازی با Docker
-
-1. کلون کردن پروژه:
-```bash
-git clone <repository-url>
-cd haghighi-platform
+```
+├── backend/          # NestJS Backend
+├── frontend/         # React Frontend
+├── admin-panel/      # React Admin Panel
+├── uploads/          # File uploads
+├── docker-compose.yml # Docker services
+└── nginx.conf        # Web server config
 ```
 
-2. راه‌اندازی با Docker Compose:
+## 🚢 Production Deployment (راه‌اندازی تولید)
+
+### روش 1: Docker Complete (توصیه شده)
+
 ```bash
-docker-compose up --build
+# 1. تنظیم متغیرهای محیطی
+cp production.env .env
+# ویرایش .env با مقادیر واقعی
+
+# 2. راه‌اندازی تولید
+npm run start:prod
 ```
 
-3. دسترسی به سرویس‌ها:
-- Backend API: http://localhost:3000
-- Admin Panel: http://localhost:3001
-- Frontend: http://localhost:3002
-- Swagger Docs: http://localhost:3000/api/docs
+این روش تمام سرویس‌ها رو داخل Docker راه‌اندازی می‌کنه (شامل nginx).
 
-### راه‌اندازی دستی
+### روش 2: Nginx روی سیستم
 
-1. نصب وابستگی‌ها:
 ```bash
-# Backend
-cd backend
-npm install
-npx prisma generate
-npx prisma migrate dev
-npx prisma db seed
+# 1. راه‌اندازی سرویس‌ها (بدون nginx)
+npm run dev
 
-# Admin Panel
-cd ../admin-panel
-npm install
-
-# Frontend
-cd ../frontend
-npm install
+# 2. تنظیم nginx
+npm run setup:nginx
 ```
 
-2. راه‌اندازی دیتابیس:
-```bash
-# ایجاد دیتابیس PostgreSQL
-createdb haghighi_db
+این روش nginx رو روی سیستم نصب و تنظیم می‌کنه.
 
-# اجرای migration ها
-cd backend
-npx prisma migrate dev
-npx prisma db seed
+### تنظیمات تولید
+
+#### متغیرهای محیطی (production.env):
+```bash
+# Database
+POSTGRES_PASSWORD=your-secure-password
+
+# Security
+JWT_SECRET=your-super-secure-jwt-secret
+
+# Domain
+DOMAIN_NAME=your-domain.com
+API_BASE_URL=http://your-domain.com/api
+REACT_APP_API_URL=http://your-domain.com/api
 ```
 
-3. اجرای پروژه‌ها:
+#### قبل از دیپلوی:
+1. `.env` رو با مقادیر واقعی پر کنید
+2. `DOMAIN_NAME` رو به دامنه واقعی تغییر بدید
+3. `JWT_SECRET` رو به یک رمز قوی تغییر بدید
+4. `POSTGRES_PASSWORD` رو به یک رمز قوی تغییر بدید
+
+### بعد از دیپلوی:
+- 🌐 **وبسایت:** http://your-domain.com
+- 👨‍💼 **ادمین:** http://your-domain.com/admin
+- 📚 **API:** http://your-domain.com/api
+- 📁 **آپلودها:** http://your-domain.com/uploads/
+
+## عیب‌یابی
+
+**مشکل اتصال به دیتابیس:**
 ```bash
-# Backend
-cd backend
-npm run start:dev
+npm run stop
+npm start  # راه‌اندازی مجدد همه چیز
+```
 
-# Admin Panel (ترمینال جدید)
-cd admin-panel
-npm start
-
-# Frontend (ترمینال جدید)
-cd frontend
-npm start
+**نیاز به بازسازی:**
+```bash
+npm run dev  # بازسازی و راه‌اندازی تمام سرویس‌ها
 ```
 
 ## ساختار پروژه
