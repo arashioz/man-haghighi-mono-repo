@@ -37,7 +37,7 @@ async function main() {
   console.log('');
 
   // Read the JSON file
-  const jsonPath = path.join(process.cwd(), '..', 'moc-old-data', 'final_merged_data.json');
+  const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
   
   if (!fs.existsSync(jsonPath)) {
     console.error('❌ File not found:', jsonPath);
