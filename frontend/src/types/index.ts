@@ -145,6 +145,7 @@ export interface RegisterCredentials {
   password: string;
   firstName: string;
   lastName: string;
+  role: 'ADMIN' | 'USER';
 }
 
 export interface Workshop {

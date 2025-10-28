@@ -10,6 +10,7 @@ const Register: React.FC = () => {
     password: '',
     firstName: '',
     lastName: '',
+    role: 'USER', 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
