@@ -6,26 +6,37 @@
 
 ### پیش‌نیازها
 - Docker و Docker Compose
+- Node.js (اختیاری - فقط برای npm scripts)
 
 ### نصب و اجرا
 
-1. کپی کردن فایل environment:
+**روش 1: با npm (توصیه می‌شه!) ⭐**
+
 ```bash
-cp .env.example .env
+# نصب و راه‌اندازی
+npm run setup
+
+# اجرای برنامه
+npm start
 ```
 
-2. ویرایش `.env` و تنظیم مقادیر:
-```bash
-nano .env
-```
+**همین! یک دستور و همه چی آماده است** 🎉
 
-3. اجرای پروژه:
+---
+
+**روش 2: دستی با Docker Compose**
+
 ```bash
+# 1. کپی کردن فایل environment
+cp local.env .env
+
+# 2. ساخت پوشه uploads
+mkdir -p uploads && chmod 777 uploads
+
+# 3. اجرای پروژه
 docker-compose up -d
-```
 
-4. چک کردن وضعیت:
-```bash
+# 4. چک کردن وضعیت
 docker-compose ps
 ```
 
@@ -38,42 +49,59 @@ docker-compose ps
 
 ## 🛠️ دستورات مفید
 
-### مشاهده لاگ‌ها
-```bash
-# همه سرویس‌ها
-docker-compose logs -f
+### دستورات اصلی
 
-# یک سرویس خاص
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f admin
+```bash
+npm start              # شروع برنامه (docker-compose up)
+npm run docker:down    # متوقف کردن
+npm run docker:restart # ری‌استارت همه سرویس‌ها
+npm run docker:logs    # مشاهده لاگ‌های همه سرویس‌ها
+npm run docker:ps      # وضعیت containers
 ```
 
-### ری‌استارت
-```bash
-# همه
-docker-compose restart
+### دستورات Build
 
-# یک سرویس
-docker-compose restart backend
+```bash
+npm run docker:build    # Build کردن images
+npm run docker:rebuild  # Build مجدد بدون cache
+npm run fresh:start     # پاک کردن همه چیز و شروع از صفر
 ```
 
-### متوقف و حذف
-```bash
-# متوقف کردن
-docker-compose down
+### مشاهده لاگ‌های جداگانه
 
-# حذف با volumes
-docker-compose down -v
+```bash
+npm run backend:logs   # لاگ backend
+npm run frontend:logs  # لاگ frontend
+npm run admin:logs     # لاگ admin panel
+npm run postgres:logs  # لاگ database
 ```
 
-### Rebuild
-```bash
-# Build مجدد بدون cache
-docker-compose build --no-cache
+### دسترسی به Shell
 
-# Build و اجرا
-docker-compose up -d --build
+```bash
+npm run backend:shell   # Shell backend container
+npm run postgres:shell  # PostgreSQL shell
+```
+
+### دیتابیس
+
+```bash
+npm run db:push    # اعمال schema به database
+npm run db:seed    # Seed کردن دیتا
+npm run db:studio  # باز کردن Prisma Studio
+```
+
+### تست
+
+```bash
+npm run test:api   # تست سریع API endpoints
+```
+
+### پاک‌سازی
+
+```bash
+npm run docker:clean  # پاک کردن volumes و containers
+npm run clean:all     # پاک کردن کامل (images هم پاک میشه)
 ```
 
 ## 📁 ساختار پروژه
