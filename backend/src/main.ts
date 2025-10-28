@@ -82,7 +82,7 @@ async function bootstrap() {
     next();
   });
   app.enableCors({
-    origin: ['http://185.231.112.84:3001', 'http://185.231.112.84:3002'],
+    origin: ['http://185.231.112.84:8081', 'http://185.231.112.84:8082'],
     credentials: true,
   });
   
