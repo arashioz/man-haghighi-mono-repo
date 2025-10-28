@@ -70,10 +70,16 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { login, password } = loginDto;
 
-    const isEmail = login.includes('@');
-    
+    // Try to find user by email OR phone OR username
+    // This allows old users to login with either email or phone if they have both
     const user = await this.prisma.user.findFirst({
-      where: isEmail ? { email: login } : { phone: login },
+      where: {
+        OR: [
+          { email: login },
+          { phone: login },
+          { username: login },
+        ],
+      },
     });
 
     if (!user) {
