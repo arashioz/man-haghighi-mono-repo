@@ -136,6 +136,25 @@ docker-compose restart frontend admin
 docker-compose logs frontend admin
 ```
 
+## 🚀 Deploy روی سرور
+
+برای deploy کردن روی سرور با IP:
+
+```bash
+# روی سرور
+git clone <repository-url>
+cd new-haghighi
+
+# تنظیم environment
+cp server.env .env
+nano .env  # IP سرور و پسوردها رو تغییر بدید
+
+# Deploy
+./deploy.sh
+```
+
+راهنمای کامل در فایل [DEPLOY.md](./DEPLOY.md)
+
 ## 📞 پشتیبانی
 
 برای گزارش مشکل یا سوال، یک Issue باز کنید.
