@@ -1,308 +1,288 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting seed...');
+  console.log('🌱 Starting database seed...');
 
-  // Create admin user
-  const adminPassword = await bcrypt.hash('admin123', 10);
-  const admin = await prisma.user.upsert({
+  // ✅ 1. Create Admin User
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const adminUser = await prisma.user.upsert({
     where: { email: 'admin@haghighi.com' },
     update: {},
     create: {
       email: 'admin@haghighi.com',
       username: 'admin',
-      password: adminPassword,
-      firstName: 'مدیر',
+      password: hashedPassword,
+      firstName: 'ادمین',
       lastName: 'سیستم',
       role: 'ADMIN',
+      isActive: true,
     },
   });
+  console.log('✅ Admin user created:', adminUser.email);
 
-  console.log('👤 Admin user created:', admin.email);
-
-  // Create sales manager
-  const salesManagerPassword = await bcrypt.hash('sales123', 10);
-  const salesManager = await prisma.user.upsert({
-    where: { phone: '09123456789' },
-    update: {},
-    create: {
-      email: 'sales_manager@haghighi.com', // Add email for sales manager
-      phone: '09123456789',
-      username: 'sales_manager',
-      password: salesManagerPassword,
-      firstName: 'مدیر',
-      lastName: 'فروش',
-      role: 'SALES_MANAGER',
-    },
-  });
-
-  console.log('👤 Sales Manager created:', salesManager.phone);
-
-  // Create sales person
-  const salesPersonPassword = await bcrypt.hash('sales123', 10);
-  const salesPerson = await prisma.user.upsert({
-    where: { phone: '09123456790' },
-    update: {},
-    create: {
-      email: 'sales_person@haghighi.com', // Add email for sales person
-      phone: '09123456790',
-      username: 'sales_person',
-      password: salesPersonPassword,
-      firstName: 'فروشنده',
-      lastName: 'نمونه',
-      role: 'SALES_PERSON',
-      parentId: salesManager.id,
-    },
-  });
-
-  console.log('👤 Sales Person created:', salesPerson.phone);
-
-  // Create regular user
-  const regularUserPassword = await bcrypt.hash('user123', 10);
-  const regularUser = await prisma.user.upsert({
-    where: { phone: '09123456791' },
-    update: {},
-    create: {
-      phone: '09123456791',
-      username: 'regular_user',
-      password: regularUserPassword,
-      firstName: 'کاربر',
-      lastName: 'نمونه',
-      role: 'USER',
-    },
-  });
-
-  console.log('👤 Regular User created:', regularUser.phone);
-
-  // Create sample sliders (with error handling)
-  let sliders = [];
-  try {
-    sliders = await Promise.all([
-      prisma.slider.create({
-        data: {
-          title: 'به بزرگترین مرکز آموزشی کوچینگ توسعه فردی و کسب و کار خوش آمدید',
-          description: 'با منی حقیقی و فراز قورچیان، سفر خود را به سوی موفقیت آغاز کنید',
-          image: 'Header-Site-1.jpg',
-          link: '/courses',
-          order: 1,
-          isActive: true,
-        },
-      }),
-      prisma.slider.create({
-        data: {
-          title: 'انرژی پول - فراز قورچیان',
-          description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت',
-          image: 'book.png',
-          link: '/courses',
-          order: 2,
-          isActive: true,
-        },
-      }),
-    ]);
-    console.log('🎠 Sliders created:', sliders.length);
-  } catch (error) {
-    console.log('⚠️ Sliders table not found, skipping slider creation');
+  // ✅ 2. Create Sample Users
+  const users = [];
+  for (let i = 1; i <= 5; i++) {
+    const user = await prisma.user.upsert({
+      where: { email: `user${i}@test.com` },
+      update: {},
+      create: {
+        email: `user${i}@test.com`,
+        username: `user${i}`,
+        password: hashedPassword,
+        firstName: `کاربر`,
+        lastName: `تست ${i}`,
+        role: 'USER',
+        isActive: true,
+      },
+    });
+    users.push(user);
   }
+  console.log(`✅ ${users.length} sample users created`);
 
-  // Create sample course
-  const course = await prisma.course.create({
-    data: {
-      title: 'انرژی پول - فراز قورچیان',
-      description: 'رازهای موفقیت مالی و انرژی مثبت برای کسب ثروت و رسیدن به استقلال مالی',
-      price: 299.99,
-      thumbnail: 'book.png',
+  // ✅ 3. Create Sliders
+  const sliders = [
+    {
+      title: 'خوش آمدید به پلتفرم آموزشی',
+      description: 'بهترین دوره‌های آموزشی را با ما تجربه کنید',
+      image: '/images/slider1.jpg',
+      order: 1,
+      isActive: true,
+    },
+    {
+      title: 'دوره‌های جدید',
+      description: 'دوره‌های جدید و به‌روز برای شما',
+      image: '/images/slider2.jpg',
+      order: 2,
+      isActive: true,
+    },
+    {
+      title: 'مشاوره رایگان',
+      description: 'مشاوره رایگان با بهترین اساتید',
+      image: '/images/slider3.jpg',
+      order: 3,
+      isActive: true,
+    },
+  ];
+
+  for (const slider of sliders) {
+    await prisma.slider.create({ data: slider });
+  }
+  console.log(`✅ ${sliders.length} sliders created`);
+
+  // ✅ 4. Create Articles
+  const articles = [
+    {
+      title: 'راهنمای شروع کسب و کار اینترنتی',
+      slug: 'online-business-guide',
+      content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
+      excerpt: 'در این مقاله به بررسی نکات کلیدی برای شروع کسب و کار اینترنتی می‌پردازیم',
+      published: true,
+      publishedAt: new Date(),
+    },
+    {
+      title: 'استراتژی‌های موفق در بازاریابی دیجیتال',
+      slug: 'digital-marketing-strategies',
+      content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
+      excerpt: 'بهترین استراتژی‌ها برای موفقیت در بازاریابی دیجیتال',
+      published: true,
+      publishedAt: new Date(),
+    },
+    {
+      title: 'چگونه یک برند قوی بسازیم؟',
+      slug: 'building-strong-brand',
+      content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
+      excerpt: 'نکات طلایی برای ساخت یک برند قدرتمند',
+      published: true,
+      publishedAt: new Date(),
+    },
+  ];
+
+  for (const article of articles) {
+    await prisma.article.create({ data: article });
+  }
+  console.log(`✅ ${articles.length} articles created`);
+
+  // ✅ 5. Create Podcasts
+  const podcasts = [
+    {
+      title: 'راز موفقیت در فروش',
+      description: 'در این قسمت به بررسی راز موفقیت در فروش می‌پردازیم',
+      audioFile: '/audios/podcast1.mp3',
+      duration: 1800,
+      published: true,
+      publishedAt: new Date(),
+    },
+    {
+      title: 'مدیریت زمان برای کارآفرینان',
+      description: 'نکات کلیدی مدیریت زمان برای کارآفرینان',
+      audioFile: '/audios/podcast2.mp3',
+      duration: 2400,
+      published: true,
+      publishedAt: new Date(),
+    },
+  ];
+
+  for (const podcast of podcasts) {
+    await prisma.podcast.create({ data: podcast });
+  }
+  console.log(`✅ ${podcasts.length} podcasts created`);
+
+  // ✅ 6. Create Courses
+  const courses = [
+    {
+      title: 'دوره جامع بازاریابی دیجیتال',
+      description: 'آموزش کامل بازاریابی دیجیتال از صفر تا صد',
+      price: 2500000,
+      thumbnail: '/images/course1.jpg',
+      courseVideos: ['/videos/course1-1.mp4', '/videos/course1-2.mp4'],
+      attachments: ['/files/course1-material.pdf'],
       published: true,
     },
-  });
+    {
+      title: 'آموزش فروش حرفه‌ای',
+      description: 'تکنیک‌های پیشرفته فروش',
+      price: 1800000,
+      thumbnail: '/images/course2.jpg',
+      courseVideos: ['/videos/course2-1.mp4'],
+      attachments: [],
+      published: true,
+    },
+    {
+      title: 'راه‌اندازی استارتاپ',
+      description: 'همه چیز درباره راه‌اندازی استارتاپ',
+      price: 3500000,
+      thumbnail: '/images/course3.jpg',
+      courseVideos: ['/videos/course3-1.mp4', '/videos/course3-2.mp4', '/videos/course3-3.mp4'],
+      attachments: ['/files/course3-guide.pdf'],
+      published: true,
+    },
+  ];
 
-  console.log('📚 Course created:', course.title);
-
-  // Create sample videos
-  const videos = await Promise.all([
-    prisma.video.create({
-      data: {
-        title: 'مقدمه‌ای بر انرژی پول',
-        description: 'درک مفاهیم اولیه انرژی پول و تأثیر آن بر موفقیت مالی',
-        videoFile: 'enerzhi-pool-intro.mp4',
-        thumbnail: 'book.png',
-        duration: 1800,
-        order: 1,
-        courseId: course.id,
-        published: true,
-      },
-    }),
-    prisma.video.create({
-      data: {
-        title: 'رازهای ذهنیت ثروت',
-        description: 'تغییر ذهنیت و ایجاد باورهای مثبت برای کسب ثروت',
-        videoFile: 'wealth-mindset.mp4',
-        thumbnail: 'book.png',
-        duration: 2100,
-        order: 2,
-        courseId: course.id,
-        published: true,
-      },
-    }),
-  ]);
-
-  console.log('🎥 Videos created:', videos.length);
-
-  // Create sample article (with error handling)
-  let article = null;
-  try {
-    article = await prisma.article.create({
-      data: {
-        title: 'رازهای موفقیت مالی',
-        slug: `secrets-of-financial-success-${Date.now()}`,
-        content: 'این راهنمای جامعی برای رسیدن به موفقیت مالی و استقلال اقتصادی است. در این مقاله با اصول اولیه مدیریت پول، سرمایه‌گذاری هوشمند و ایجاد درآمدهای متعدد آشنا می‌شوید...',
-        excerpt: 'اصول موفقیت مالی را یاد بگیرید و سفر خود را به سوی استقلال اقتصادی آغاز کنید.',
-        featuredImage: 'book.png',
-        published: true,
-        publishedAt: new Date(),
-      },
-    });
-    console.log('📝 Article created:', article.title);
-  } catch (error) {
-    console.log('⚠️ Articles table not found, skipping article creation');
+  for (const course of courses) {
+    await prisma.course.create({ data: course });
   }
+  console.log(`✅ ${courses.length} courses created`);
 
-  // Create sample podcast (with error handling)
-  let podcast = null;
-  try {
-    podcast = await prisma.podcast.create({
-      data: {
-        title: 'انرژی پول - قسمت اول',
-        description: 'نکات ضروری برای تغییر ذهنیت مالی و ایجاد انرژی مثبت برای کسب ثروت',
-        audioFile: 'enerzhi-pool-episode-1.mp3',
-        duration: 1800,
-        published: true,
-        publishedAt: new Date(),
-      },
-    });
-    console.log('🎧 Podcast created:', podcast.title);
-  } catch (error) {
-    console.log('⚠️ Podcasts table not found, skipping podcast creation');
+  // ✅ 7. Create Workshops
+  const workshops = [
+    {
+      title: 'کارگاه عملی فروش',
+      description: 'کارگاه عملی تکنیک‌های فروش حرفه‌ای',
+      startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+      endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000), // 2 hours
+      capacity: 30,
+      price: 500000,
+      location: 'سالن همایش تهران',
+      creatorId: adminUser.id,
+      published: true,
+    },
+    {
+      title: 'وبینار بازاریابی محتوا',
+      description: 'آموزش بازاریابی محتوا به صورت آنلاین',
+      startTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
+      endTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000), // 3 hours
+      capacity: 100,
+      price: 300000,
+      location: 'آنلاین',
+      creatorId: adminUser.id,
+      published: true,
+    },
+  ];
+
+  for (const workshop of workshops) {
+    await prisma.workshop.create({ data: workshop });
   }
+  console.log(`✅ ${workshops.length} workshops created`);
 
-  // Create sample workshops
-  const workshops = await Promise.all([
-    prisma.workshop.create({
-      data: {
-        title: 'کارگاه انرژی پول و موفقیت مالی',
-        description: 'در این کارگاه با اصول اولیه انرژی پول، ذهنیت ثروت و راهکارهای عملی برای رسیدن به استقلال مالی آشنا می‌شوید.',
-        date: '1403/09/30 10:00',
-        location: 'تهران - سالن همایش‌های پارک فناوری',
-        maxParticipants: 50,
-        price: 500000,
-        isActive: true,
-        createdBy: salesManager.id,
-      },
-    }),
-    prisma.workshop.create({
-      data: {
-        title: 'کارگاه کوچینگ توسعه فردی',
-        description: 'آموزش تکنیک‌های کوچینگ برای توسعه فردی و رسیدن به اهداف شخصی و حرفه‌ای.',
-        date: '1403/10/05 14:00',
-        location: 'تهران - مرکز آموزش‌های تخصصی',
-        maxParticipants: 30,
-        price: 750000,
-        isActive: true,
-        createdBy: salesManager.id,
-      },
-    }),
-    prisma.workshop.create({
-      data: {
-        title: 'کارگاه رهبری و مدیریت تیم',
-        description: 'مهارت‌های ضروری برای رهبری مؤثر و مدیریت تیم‌های کاری موفق.',
-        date: '1403/10/16 09:00',
-        location: 'تهران - هتل اسپیناس پالاس',
-        maxParticipants: 40,
-        price: 600000,
-        isActive: true,
-        createdBy: admin.id,
-      },
-    }),
-    prisma.workshop.create({
-      data: {
-        title: 'کارگاه ارتباطات مؤثر',
-        description: 'تکنیک‌های برقراری ارتباط مؤثر در محیط کار و زندگی شخصی.',
-        date: '1403/10/26 16:00',
-        location: 'تهران - مرکز همایش‌های بین‌المللی',
-        maxParticipants: 60,
-        price: 400000,
-        isActive: false, // غیرفعال برای تست
-        createdBy: salesManager.id,
-      },
-    }),
-  ]);
-
-  console.log('🎓 Workshops created:', workshops.length);
-
-  // Grant sales person access to some workshops
-  await prisma.salesPersonWorkshopAccess.create({
-    data: {
-      salesPersonId: salesPerson.id,
-      workshopId: workshops[0].id,
-      grantedBy: salesManager.id,
-      isActive: true,
+  // ✅ 8. Create Videos
+  const videos = [
+    {
+      title: 'معرفی پلتفرم',
+      description: 'ویدیو معرفی پلتفرم آموزشی',
+      videoFile: '/videos/intro.mp4',
+      thumbnail: '/images/video1.jpg',
+      duration: 600,
+      category: 'INTRO',
+      isFree: true,
+      published: true,
+      publishedAt: new Date(),
     },
-  });
-
-  await prisma.salesPersonWorkshopAccess.create({
-    data: {
-      salesPersonId: salesPerson.id,
-      workshopId: workshops[1].id,
-      grantedBy: salesManager.id,
-      isActive: true,
+    {
+      title: 'اصول فروش',
+      description: 'آموزش اصول فروش حرفه‌ای',
+      videoFile: '/videos/sales-basics.mp4',
+      thumbnail: '/images/video2.jpg',
+      duration: 1200,
+      category: 'TRAINING',
+      isFree: false,
+      published: true,
+      publishedAt: new Date(),
     },
-  });
-
-  console.log('🔐 Sales person access granted to workshops');
-
-  // Create some workshop participants
-  await prisma.workshopParticipant.create({
-    data: {
-      workshopId: workshops[0].id,
-      customerPhone: '09123456792',
-      customerName: 'علی احمدی',
-      prepaymentAmount: 100000,
-      paymentStatus: 'PENDING',
-      createdBy: salesPerson.id,
+    {
+      title: 'مدیریت تیم فروش',
+      description: 'مدیریت حرفه‌ای تیم فروش',
+      videoFile: '/videos/sales-team.mp4',
+      thumbnail: '/images/video3.jpg',
+      duration: 900,
+      category: 'TRAINING',
+      isFree: false,
+      published: true,
+      publishedAt: new Date(),
     },
-  });
+  ];
 
-  await prisma.workshopParticipant.create({
-    data: {
-      workshopId: workshops[0].id,
-      customerPhone: '09123456793',
-      customerName: 'فاطمه محمدی',
-      prepaymentAmount: 150000,
-      paymentStatus: 'PAID',
-      createdBy: salesPerson.id,
+  for (const video of videos) {
+    await prisma.video.create({ data: video });
+  }
+  console.log(`✅ ${videos.length} videos created`);
+
+  // ✅ 9. Create Audios
+  const audios = [
+    {
+      title: 'تله‌های فروش',
+      description: 'شناخت تله‌های رایج در فروش',
+      audioFile: '/audios/sales-traps.mp3',
+      thumbnail: '/images/audio1.jpg',
+      duration: 1500,
+      category: 'TRAINING',
+      isFree: true,
+      published: true,
+      publishedAt: new Date(),
     },
-  });
-
-  console.log('👥 Workshop participants created');
-
-  // Enroll sales person in course
-  await prisma.courseEnrollment.create({
-    data: {
-      userId: salesPerson.id,
-      courseId: course.id,
+    {
+      title: 'روانشناسی مشتری',
+      description: 'درک روانشناسی مشتری',
+      audioFile: '/audios/customer-psychology.mp3',
+      thumbnail: '/images/audio2.jpg',
+      duration: 1800,
+      category: 'TRAINING',
+      isFree: false,
+      published: true,
+      publishedAt: new Date(),
     },
-  });
+  ];
 
-  console.log('✅ Sales person enrolled in course');
+  for (const audio of audios) {
+    await prisma.audio.create({ data: audio });
+  }
+  console.log(`✅ ${audios.length} audios created`);
 
-  console.log('🎉 Seed completed successfully!');
+  console.log('');
+  console.log('🎉 Database seeded successfully!');
+  console.log('');
+  console.log('📝 Login credentials:');
+  console.log('   Email: admin@haghighi.com');
+  console.log('   Password: admin123');
+  console.log('');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('❌ Error seeding database:', e);
     process.exit(1);
   })
   .finally(async () => {
