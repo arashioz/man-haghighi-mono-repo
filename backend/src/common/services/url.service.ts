@@ -5,10 +5,21 @@ export class UrlService {
   private readonly baseUrl: string;
 
   constructor() {
-    // Prefer explicit API_BASE_URL, otherwise fall back to server IP
+    // Prefer explicit API_BASE_URL, otherwise build from current server
     // Ensure no trailing slash
-    const rawBase = process.env.API_BASE_URL || 'http://194.180.11.193:3000';
+    const rawBase = process.env.API_BASE_URL || this.buildDefaultUrl();
     this.baseUrl = rawBase.replace(/\/$/, '');
+  }
+
+  private buildDefaultUrl(): string {
+    // Get server IP from environment or use localhost
+    const serverIp = process.env.SERVER_IP || '194.180.11.193';
+    
+    // Get port from environment (backend port exposed to outside)
+    // For docker-compose-alt-ports.yml: backend is on 8080
+    const port = process.env.EXTERNAL_PORT || process.env.PORT || '3000';
+    
+    return `http://${serverIp}:${port}`;
   }
 
   
