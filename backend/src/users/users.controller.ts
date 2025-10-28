@@ -70,6 +70,16 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  @Get(':id/products')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user with old products and purchased courses (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User data retrieved successfully' })
+  async getUserWithProducts(@Param('id') id: string) {
+    return this.usersService.getUserWithProducts(id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -108,6 +118,26 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'Courses assigned successfully' })
   async assignCourses(@Param('id') userId: string, @Body() body: { courseIds: string[] }) {
     return this.usersService.assignCourses(userId, body.courseIds);
+  }
+
+  @Post(':id/courses/:courseId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Assign single course to user (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Course assigned successfully' })
+  async assignCourse(@Param('id') userId: string, @Param('courseId') courseId: string) {
+    return this.usersService.assignCourse(userId, courseId);
+  }
+
+  @Delete(':id/courses/:courseId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove course from user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Course removed successfully' })
+  async removeCourse(@Param('id') userId: string, @Param('courseId') courseId: string) {
+    return this.usersService.removeCourse(userId, courseId);
   }
 
   @Post(':id/video-access/:videoId')
