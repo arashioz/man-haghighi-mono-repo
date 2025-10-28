@@ -81,6 +81,10 @@ async function bootstrap() {
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
   });
+  app.enableCors({
+    origin: ['http://185.231.112.84:3001', 'http://185.231.112.84:3002'],
+    credentials: true,
+  });
   
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
