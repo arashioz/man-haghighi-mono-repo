@@ -7,14 +7,14 @@ async function main() {
   console.log('🌱 Starting database seed...');
 
   // ✅ 1. Create Admin User
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const hashedAdminPassword = await bcrypt.hash('admin123', 10);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@haghighi.com' },
     update: {},
     create: {
       email: 'admin@haghighi.com',
       username: 'admin',
-      password: hashedPassword,
+      password: hashedAdminPassword,
       firstName: 'ادمین',
       lastName: 'سیستم',
       role: 'ADMIN',
@@ -23,7 +23,10 @@ async function main() {
   });
   console.log('✅ Admin user created:', adminUser.email);
 
-  // ✅ 2. Create Sample Users
+  // Hash password for regular users
+  const hashedUserPassword = await bcrypt.hash('user123', 10);
+
+  // ✅ 2. Create Sample Users with Email
   const users = [];
   for (let i = 1; i <= 5; i++) {
     const user = await prisma.user.upsert({
@@ -32,7 +35,7 @@ async function main() {
       create: {
         email: `user${i}@test.com`,
         username: `user${i}`,
-        password: hashedPassword,
+        password: hashedUserPassword,
         firstName: `کاربر`,
         lastName: `تست ${i}`,
         role: 'USER',
@@ -41,9 +44,36 @@ async function main() {
     });
     users.push(user);
   }
-  console.log(`✅ ${users.length} sample users created`);
+  console.log(`✅ ${users.length} sample users with email created`);
 
-  // ✅ 3. Create Sliders
+  // ✅ 3. Create Sample Users with Phone Number
+  const phoneUsers = [
+    { phone: '09123456789', username: 'phone_user1', firstName: 'علی', lastName: 'احمدی' },
+    { phone: '09123456790', username: 'phone_user2', firstName: 'محمد', lastName: 'محمدی' },
+    { phone: '09123456791', username: 'phone_user3', firstName: 'رضا', lastName: 'رضایی' },
+    { phone: '09123456792', username: 'phone_user4', firstName: 'حسین', lastName: 'حسینی' },
+    { phone: '09123456793', username: 'phone_user5', firstName: 'مهدی', lastName: 'مهدوی' },
+  ];
+
+  for (const phoneUser of phoneUsers) {
+    const user = await prisma.user.upsert({
+      where: { phone: phoneUser.phone },
+      update: {},
+      create: {
+        phone: phoneUser.phone,
+        username: phoneUser.username,
+        password: hashedUserPassword, // password: user123
+        firstName: phoneUser.firstName,
+        lastName: phoneUser.lastName,
+        role: 'USER',
+        isActive: true,
+      },
+    });
+    users.push(user);
+  }
+  console.log(`✅ ${phoneUsers.length} sample users with phone created`);
+
+  // ✅ 4. Create Sliders
   const sliders = [
     {
       title: 'خوش آمدید به پلتفرم آموزشی',
@@ -73,7 +103,7 @@ async function main() {
   }
   console.log(`✅ ${sliders.length} sliders created`);
 
-  // ✅ 4. Create Articles
+  // ✅ 5. Create Articles
   const articles = [
     {
       title: 'راهنمای شروع کسب و کار اینترنتی',
@@ -109,7 +139,7 @@ async function main() {
   }
   console.log(`✅ ${articles.length} articles created`);
 
-  // ✅ 5. Create Podcasts
+  // ✅ 6. Create Podcasts
   const podcasts = [
     {
       title: 'راز موفقیت در فروش',
@@ -134,7 +164,7 @@ async function main() {
   }
   console.log(`✅ ${podcasts.length} podcasts created`);
 
-  // ✅ 6. Create Courses
+  // ✅ 7. Create Courses
   const coursesData = [
     {
       title: 'دوره جامع بازاریابی دیجیتال',
@@ -172,7 +202,7 @@ async function main() {
   }
   console.log(`✅ ${courses.length} courses created`);
 
-  // ✅ 7. Create Workshops
+  // ✅ 8. Create Workshops
   const workshops = [
     {
       title: 'کارگاه عملی فروش',
@@ -201,7 +231,7 @@ async function main() {
   }
   console.log(`✅ ${workshops.length} workshops created`);
 
-  // ✅ 8. Create Videos (linked to courses)
+  // ✅ 9. Create Videos (linked to courses)
   const videos = [
     {
       title: 'معرفی پلتفرم',
@@ -240,7 +270,7 @@ async function main() {
   }
   console.log(`✅ ${videos.length} videos created`);
 
-  // ✅ 9. Create Audios (linked to courses)
+  // ✅ 10. Create Audios (linked to courses)
   const audios = [
     {
       title: 'تله‌های فروش',
