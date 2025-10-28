@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -48,21 +48,21 @@ async function main() {
     {
       title: 'خوش آمدید به پلتفرم آموزشی',
       description: 'بهترین دوره‌های آموزشی را با ما تجربه کنید',
-      image: '/images/slider1.jpg',
+      image: 'https://via.placeholder.com/1200x400/4F46E5/FFFFFF?text=Welcome+to+Haghighi+Platform',
       order: 1,
       isActive: true,
     },
     {
       title: 'دوره‌های جدید',
       description: 'دوره‌های جدید و به‌روز برای شما',
-      image: '/images/slider2.jpg',
+      image: 'https://via.placeholder.com/1200x400/10B981/FFFFFF?text=New+Courses',
       order: 2,
       isActive: true,
     },
     {
       title: 'مشاوره رایگان',
       description: 'مشاوره رایگان با بهترین اساتید',
-      image: '/images/slider3.jpg',
+      image: 'https://via.placeholder.com/1200x400/F59E0B/FFFFFF?text=Free+Consultation',
       order: 3,
       isActive: true,
     },
@@ -80,6 +80,7 @@ async function main() {
       slug: 'online-business-guide',
       content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
       excerpt: 'در این مقاله به بررسی نکات کلیدی برای شروع کسب و کار اینترنتی می‌پردازیم',
+      featuredImage: 'https://via.placeholder.com/800x450/3B82F6/FFFFFF?text=Online+Business',
       published: true,
       publishedAt: new Date(),
     },
@@ -88,6 +89,7 @@ async function main() {
       slug: 'digital-marketing-strategies',
       content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
       excerpt: 'بهترین استراتژی‌ها برای موفقیت در بازاریابی دیجیتال',
+      featuredImage: 'https://via.placeholder.com/800x450/10B981/FFFFFF?text=Marketing+Strategies',
       published: true,
       publishedAt: new Date(),
     },
@@ -96,6 +98,7 @@ async function main() {
       slug: 'building-strong-brand',
       content: 'محتوای کامل مقاله در اینجا قرار می‌گیرد...',
       excerpt: 'نکات طلایی برای ساخت یک برند قدرتمند',
+      featuredImage: 'https://via.placeholder.com/800x450/F59E0B/FFFFFF?text=Strong+Brand',
       published: true,
       publishedAt: new Date(),
     },
@@ -132,22 +135,22 @@ async function main() {
   console.log(`✅ ${podcasts.length} podcasts created`);
 
   // ✅ 6. Create Courses
-  const courses = [
+  const coursesData = [
     {
       title: 'دوره جامع بازاریابی دیجیتال',
       description: 'آموزش کامل بازاریابی دیجیتال از صفر تا صد',
       price: 2500000,
-      thumbnail: '/images/course1.jpg',
-      courseVideos: ['/videos/course1-1.mp4', '/videos/course1-2.mp4'],
-      attachments: ['/files/course1-material.pdf'],
+      thumbnail: 'https://via.placeholder.com/400x300/6366F1/FFFFFF?text=Digital+Marketing',
+      courseVideos: [],
+      attachments: [],
       published: true,
     },
     {
       title: 'آموزش فروش حرفه‌ای',
       description: 'تکنیک‌های پیشرفته فروش',
       price: 1800000,
-      thumbnail: '/images/course2.jpg',
-      courseVideos: ['/videos/course2-1.mp4'],
+      thumbnail: 'https://via.placeholder.com/400x300/EC4899/FFFFFF?text=Professional+Sales',
+      courseVideos: [],
       attachments: [],
       published: true,
     },
@@ -155,15 +158,17 @@ async function main() {
       title: 'راه‌اندازی استارتاپ',
       description: 'همه چیز درباره راه‌اندازی استارتاپ',
       price: 3500000,
-      thumbnail: '/images/course3.jpg',
-      courseVideos: ['/videos/course3-1.mp4', '/videos/course3-2.mp4', '/videos/course3-3.mp4'],
-      attachments: ['/files/course3-guide.pdf'],
+      thumbnail: 'https://via.placeholder.com/400x300/14B8A6/FFFFFF?text=Startup+Launch',
+      courseVideos: [],
+      attachments: [],
       published: true,
     },
   ];
 
-  for (const course of courses) {
-    await prisma.course.create({ data: course });
+  const courses = [];
+  for (const course of coursesData) {
+    const created = await prisma.course.create({ data: course });
+    courses.push(created);
   }
   console.log(`✅ ${courses.length} courses created`);
 
@@ -172,24 +177,22 @@ async function main() {
     {
       title: 'کارگاه عملی فروش',
       description: 'کارگاه عملی تکنیک‌های فروش حرفه‌ای',
-      startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
-      endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000), // 2 hours
-      capacity: 30,
+      date: '1403/10/15 14:00',
+      maxParticipants: 30,
       price: 500000,
       location: 'سالن همایش تهران',
-      creatorId: adminUser.id,
-      published: true,
+      createdBy: adminUser.id,
+      isActive: true,
     },
     {
       title: 'وبینار بازاریابی محتوا',
       description: 'آموزش بازاریابی محتوا به صورت آنلاین',
-      startTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks from now
-      endTime: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000), // 3 hours
-      capacity: 100,
+      date: '1403/10/22 16:00',
+      maxParticipants: 100,
       price: 300000,
       location: 'آنلاین',
-      creatorId: adminUser.id,
-      published: true,
+      createdBy: adminUser.id,
+      isActive: true,
     },
   ];
 
@@ -198,40 +201,37 @@ async function main() {
   }
   console.log(`✅ ${workshops.length} workshops created`);
 
-  // ✅ 8. Create Videos
+  // ✅ 8. Create Videos (linked to courses)
   const videos = [
     {
       title: 'معرفی پلتفرم',
       description: 'ویدیو معرفی پلتفرم آموزشی',
-      videoFile: '/videos/intro.mp4',
-      thumbnail: '/images/video1.jpg',
+      videoFile: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      thumbnail: 'https://via.placeholder.com/640x360/8B5CF6/FFFFFF?text=Platform+Intro',
       duration: 600,
-      category: 'INTRO',
-      isFree: true,
+      courseId: courses[0].id,
+      order: 1,
       published: true,
-      publishedAt: new Date(),
     },
     {
       title: 'اصول فروش',
       description: 'آموزش اصول فروش حرفه‌ای',
-      videoFile: '/videos/sales-basics.mp4',
-      thumbnail: '/images/video2.jpg',
+      videoFile: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      thumbnail: 'https://via.placeholder.com/640x360/EF4444/FFFFFF?text=Sales+Basics',
       duration: 1200,
-      category: 'TRAINING',
-      isFree: false,
+      courseId: courses[1].id,
+      order: 1,
       published: true,
-      publishedAt: new Date(),
     },
     {
       title: 'مدیریت تیم فروش',
       description: 'مدیریت حرفه‌ای تیم فروش',
-      videoFile: '/videos/sales-team.mp4',
-      thumbnail: '/images/video3.jpg',
+      videoFile: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      thumbnail: 'https://via.placeholder.com/640x360/06B6D4/FFFFFF?text=Team+Management',
       duration: 900,
-      category: 'TRAINING',
-      isFree: false,
+      courseId: courses[2].id,
+      order: 1,
       published: true,
-      publishedAt: new Date(),
     },
   ];
 
@@ -240,29 +240,27 @@ async function main() {
   }
   console.log(`✅ ${videos.length} videos created`);
 
-  // ✅ 9. Create Audios
+  // ✅ 9. Create Audios (linked to courses)
   const audios = [
     {
       title: 'تله‌های فروش',
       description: 'شناخت تله‌های رایج در فروش',
-      audioFile: '/audios/sales-traps.mp3',
-      thumbnail: '/images/audio1.jpg',
+      audioFile: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      thumbnail: 'https://via.placeholder.com/400x400/F97316/FFFFFF?text=Sales+Traps',
       duration: 1500,
-      category: 'TRAINING',
-      isFree: true,
+      courseId: courses[0].id,
+      order: 1,
       published: true,
-      publishedAt: new Date(),
     },
     {
       title: 'روانشناسی مشتری',
       description: 'درک روانشناسی مشتری',
-      audioFile: '/audios/customer-psychology.mp3',
-      thumbnail: '/images/audio2.jpg',
+      audioFile: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      thumbnail: 'https://via.placeholder.com/400x400/22C55E/FFFFFF?text=Customer+Psychology',
       duration: 1800,
-      category: 'TRAINING',
-      isFree: false,
+      courseId: courses[1].id,
+      order: 1,
       published: true,
-      publishedAt: new Date(),
     },
   ];
 
