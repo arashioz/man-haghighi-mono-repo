@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
 import { WorkshopsService } from './workshops.service';
 import { CreateWorkshopDto, UpdateWorkshopDto } from './dto/workshop.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -60,6 +63,70 @@ export class WorkshopsController {
   @ApiResponse({ status: 200, description: 'Workshop updated successfully' })
   async update(@Param('id') id: string, @Body() updateWorkshopDto: UpdateWorkshopDto) {
     return this.workshopsService.update(id, updateWorkshopDto);
+  }
+
+  @Patch(':id/videos')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_MANAGER')
+  @UseInterceptors(FilesInterceptor('videos', 20, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `workshopVideo-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(mp4|webm|mov|avi|mkv)$/)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only video files are allowed'), false);
+      }
+    },
+    limits: { fileSize: 100 * 1024 * 1024 },
+  }))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload workshop videos (Admin/Sales Manager only)' })
+  @ApiResponse({ status: 200, description: 'Videos uploaded successfully' })
+  async uploadVideos(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.workshopsService.uploadVideos(id, files);
+  }
+
+  @Patch(':id/audios')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_MANAGER')
+  @UseInterceptors(FilesInterceptor('audios', 20, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `workshopAudio-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(mp3|wav|ogg|m4a|aac)$/)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only audio files are allowed'), false);
+      }
+    },
+    limits: { fileSize: 50 * 1024 * 1024 },
+  }))
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload workshop audios (Admin/Sales Manager only)' })
+  @ApiResponse({ status: 200, description: 'Audios uploaded successfully' })
+  async uploadAudios(@Param('id') id: string, @UploadedFiles() files: Express.Multer.File[]) {
+    return this.workshopsService.uploadAudios(id, files);
   }
 
   @Delete(':id')

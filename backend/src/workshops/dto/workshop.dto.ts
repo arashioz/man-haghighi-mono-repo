@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsNumber, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsNumber, IsBoolean, IsArray } from 'class-validator';
 
 export class CreateWorkshopDto {
   @IsString()
@@ -21,6 +21,20 @@ export class CreateWorkshopDto {
 
   @IsNumber()
   price: number;
+
+  @IsOptional()
+  @IsString()
+  thumbnail?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  videoLinks?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  audioLinks?: string[];
 
   @IsOptional()
   @IsBoolean()
@@ -54,6 +68,20 @@ export class UpdateWorkshopDto {
   @IsOptional()
   @IsNumber()
   price?: number;
+
+  @IsOptional()
+  @IsString()
+  thumbnail?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  videoLinks?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  audioLinks?: string[];
 
   @IsOptional()
   @IsBoolean()
