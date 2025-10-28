@@ -30,6 +30,7 @@ services:
       - "8080:3000"  # Changed to 8080 (common HTTP alternative)
     volumes:
       - ./uploads:/app/uploads
+      - ./moc-old-data:/app/moc-old-data
     depends_on:
       postgres:
         condition: service_healthy
