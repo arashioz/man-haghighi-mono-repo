@@ -3,6 +3,7 @@ import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import ProgressBar from '../components/ProgressBar';
 import PersianDatePicker from '../components/PersianDatePicker';
 import WorkshopTemplate from '../components/WorkshopTemplate';
 import { workshopsService, usersService } from '../services/api';
@@ -40,7 +41,11 @@ const Workshops: React.FC = () => {
     price: 0,
     isActive: true,
     createdBy: '',
+    videos: [] as File[],
+    audios: [] as File[],
   });
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     const fetchWorkshops = async () => {
@@ -59,13 +64,42 @@ const Workshops: React.FC = () => {
 
   const handleAddWorkshop = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsUploading(true);
+    setUploadProgress(0);
+    setError('');
+
     try {
       const workshopData = {
-        ...newWorkshop,
+        title: newWorkshop.title,
+        description: newWorkshop.description,
+        date: newWorkshop.date,
+        location: newWorkshop.location,
+        maxParticipants: newWorkshop.maxParticipants,
+        price: newWorkshop.price,
+        isActive: newWorkshop.isActive,
         createdBy: user?.id || '',
       };
       
       const createdWorkshop = await workshopsService.create(workshopData);
+      
+      let totalFiles = 0;
+      let uploadedFiles = 0;
+      
+      totalFiles += newWorkshop.videos.length;
+      totalFiles += newWorkshop.audios.length;
+
+      if (newWorkshop.videos.length > 0) {
+        await workshopsService.uploadVideos(createdWorkshop.id, newWorkshop.videos);
+        uploadedFiles += newWorkshop.videos.length;
+        setUploadProgress((uploadedFiles / totalFiles) * 100);
+      }
+
+      if (newWorkshop.audios.length > 0) {
+        await workshopsService.uploadAudios(createdWorkshop.id, newWorkshop.audios);
+        uploadedFiles += newWorkshop.audios.length;
+        setUploadProgress((uploadedFiles / totalFiles) * 100);
+      }
+
       setWorkshops([...workshops, createdWorkshop]);
       setIsModalOpen(false);
       setNewWorkshop({
@@ -77,9 +111,14 @@ const Workshops: React.FC = () => {
         price: 0,
         isActive: true,
         createdBy: '',
+        videos: [],
+        audios: [],
       });
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ایجاد کارگاه');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -440,6 +479,16 @@ const Workshops: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title="کارگاه جدید"
       >
+        {isUploading && (
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-600">در حال آپلود...</span>
+              <span className="text-sm text-gray-600">{Math.round(uploadProgress)}%</span>
+            </div>
+            <ProgressBar progress={uploadProgress} />
+          </div>
+        )}
+
         <form onSubmit={handleAddWorkshop} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -509,6 +558,40 @@ const Workshops: React.FC = () => {
               min="0"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ویدیوهای کارگاه
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="video/*"
+              onChange={(e) => setNewWorkshop({...newWorkshop, videos: Array.from(e.target.files || [])})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {newWorkshop.videos.length > 0 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {newWorkshop.videos.length} ویدیو انتخاب شده
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              فایل‌های صوتی کارگاه
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="audio/*"
+              onChange={(e) => setNewWorkshop({...newWorkshop, audios: Array.from(e.target.files || [])})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {newWorkshop.audios.length > 0 && (
+              <p className="text-sm text-gray-500 mt-1">
+                {newWorkshop.audios.length} فایل صوتی انتخاب شده
+              </p>
+            )}
+          </div>
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -524,15 +607,25 @@ const Workshops: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={isUploading}
+              className={`px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
+                isUploading 
+                  ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed' 
+                  : 'text-gray-700 bg-gray-100 border-gray-300 hover:bg-gray-200'
+              }`}
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={isUploading}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg transition-colors ${
+                isUploading 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              ایجاد کارگاه
+              {isUploading ? 'در حال آپلود...' : 'ایجاد کارگاه'}
             </button>
           </div>
         </form>

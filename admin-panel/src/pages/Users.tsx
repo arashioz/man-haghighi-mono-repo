@@ -30,6 +30,12 @@ const Users: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [roleFilter, setRoleFilter] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -46,19 +52,48 @@ const Users: React.FC = () => {
   });
   const [editingUserCourses, setEditingUserCourses] = useState<string[]>([]);
 
+  // Debounce search term
   useEffect(() => {
-    const fetchData = async () => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch courses once on mount
+  useEffect(() => {
+    const fetchCourses = async () => {
       try {
-        const [usersData, coursesData] = await Promise.all([
-          usersService.getAll(),
-          coursesService.getAll(),
-        ]);
-        setUsers(usersData);
+        const coursesData = await coursesService.getAll();
         setCourses(coursesData);
+      } catch (err: any) {
+        console.error('Failed to fetch courses:', err);
+      }
+    };
+
+    fetchCourses();
+  }, []);
+
+  // Fetch users when pagination/filter changes
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        const usersResponse = await usersService.getAll({ 
+          page: currentPage, 
+          limit: itemsPerPage, 
+          search: debouncedSearchTerm,
+          role: roleFilter || undefined 
+        });
+        
+        setUsers(usersResponse.data);
+        setTotalPages(usersResponse.meta.totalPages);
+        setTotalUsers(usersResponse.meta.total);
         
         // Fetch courses for each user
         const userCoursesData: {[userId: string]: Course[]} = {};
-        for (const user of usersData) {
+        for (const user of usersResponse.data) {
           try {
             const userCoursesResponse = await usersService.getUserCourses(user.id);
             userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course);
@@ -75,8 +110,8 @@ const Users: React.FC = () => {
       }
     };
 
-    fetchData();
-  }, []);
+    fetchUsers();
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, roleFilter]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
@@ -211,12 +246,16 @@ const Users: React.FC = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone?.includes(searchTerm) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Search is now handled by the backend
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleRoleFilterChange = (value: string) => {
+    setRoleFilter(value);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
@@ -273,14 +312,14 @@ const Users: React.FC = () => {
         </div>
       )}
 
-      {}
-      <div className="mb-6">
-        <div className="relative">
+      {/* Search and Filter */}
+      <div className="mb-6 flex gap-4">
+        <div className="relative flex-1">
           <input
             type="text"
             placeholder="جستجو در کاربران..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -289,6 +328,17 @@ const Users: React.FC = () => {
             </svg>
           </div>
         </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => handleRoleFilterChange(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">همه نقش‌ها</option>
+          <option value="USER">کاربر</option>
+          <option value="SALES_PERSON">فروشنده</option>
+          <option value="SALES_MANAGER">مدیر فروش</option>
+          <option value="ADMIN">مدیر</option>
+        </select>
       </div>
 
       {}
@@ -318,7 +368,7 @@ const Users: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -397,7 +447,7 @@ const Users: React.FC = () => {
           </table>
         </div>
         
-        {filteredUsers.length === 0 && (
+        {users.length === 0 && (
           <EmptyState
             icon={
               <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,8 +455,8 @@ const Users: React.FC = () => {
               </svg>
             }
             title="کاربری یافت نشد"
-            description={searchTerm ? 'هیچ کاربری با این مشخصات یافت نشد.' : 'هنوز کاربری ثبت نشده است.'}
-            action={!searchTerm ? (
+            description={searchTerm || roleFilter ? 'هیچ کاربری با این مشخصات یافت نشد.' : 'هنوز کاربری ثبت نشده است.'}
+            action={!searchTerm && !roleFilter ? (
               <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
                 <AddIcon />
                 <span className="mr-2">کاربر جدید</span>
@@ -415,6 +465,93 @@ const Users: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Pagination */}
+      {users.length > 0 && (
+        <div className="mt-6 flex items-center justify-between bg-white px-4 py-3 border border-gray-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700">
+              نمایش {((currentPage - 1) * itemsPerPage) + 1} تا {Math.min(currentPage * itemsPerPage, totalUsers)} از {totalUsers} کاربر
+            </span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-sm text-gray-700">در هر صفحه</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              اولین
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              قبلی
+            </button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`px-3 py-1 border rounded text-sm ${
+                      currentPage === pageNum
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              بعدی
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              آخرین
+            </button>
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={isModalOpen}

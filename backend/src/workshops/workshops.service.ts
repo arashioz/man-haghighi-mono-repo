@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateWorkshopDto, UpdateWorkshopDto } from './dto/workshop.dto';
+import { UrlService } from '../common/services/url.service';
 
 @Injectable()
 export class WorkshopsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private urlService: UrlService,
+  ) {}
 
   async create(createWorkshopDto: CreateWorkshopDto) {
     return this.prisma.workshop.create({
@@ -168,6 +172,80 @@ export class WorkshopsService {
     return this.prisma.workshop.delete({
       where: { id },
     });
+  }
+
+  async uploadVideos(id: string, files: Express.Multer.File[]) {
+    const workshop = await this.findOne(id);
+    
+    const existingVideos = workshop.videoLinks || [];
+    const newVideoLinks = files.map(file => this.urlService.getFileUrl(file.filename));
+    const allVideoLinks = [...existingVideos, ...newVideoLinks.filter(Boolean) as string[]];
+    
+    const updatedWorkshop = await this.prisma.workshop.update({
+      where: { id },
+      data: { videoLinks: allVideoLinks },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+        participants: {
+          include: {
+            creator: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return updatedWorkshop;
+  }
+
+  async uploadAudios(id: string, files: Express.Multer.File[]) {
+    const workshop = await this.findOne(id);
+    
+    const existingAudios = workshop.audioLinks || [];
+    const newAudioLinks = files.map(file => this.urlService.getFileUrl(file.filename));
+    const allAudioLinks = [...existingAudios, ...newAudioLinks.filter(Boolean) as string[]];
+    
+    const updatedWorkshop = await this.prisma.workshop.update({
+      where: { id },
+      data: { audioLinks: allAudioLinks },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+        participants: {
+          include: {
+            creator: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return updatedWorkshop;
   }
 
   async getUserWorkshops(userId: string) {

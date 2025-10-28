@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto, PaginationQueryDto } from './dto/user.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -63,8 +63,35 @@ export class UsersService {
     return user;
   }
 
-  async findAll() {
-    return this.prisma.user.findMany({
+  async findAll(paginationQuery: PaginationQueryDto) {
+    const { page = 1, limit = 10, search = '', role } = paginationQuery;
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+
+    // Search filter
+    if (search && search.trim()) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // Role filter
+    if (role) {
+      where.role = role;
+    }
+
+    // Get total count
+    const total = await this.prisma.user.count({ where });
+
+    // Get paginated users
+    const users = await this.prisma.user.findMany({
+      where,
       select: {
         id: true,
         email: true,
@@ -75,10 +102,26 @@ export class UsersService {
         avatar: true,
         role: true,
         isActive: true,
+        isOld: true,
         createdAt: true,
         updatedAt: true,
       },
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
+
+    return {
+      data: users,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string) {

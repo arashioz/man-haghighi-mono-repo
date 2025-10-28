@@ -126,25 +126,31 @@ async function main() {
       }
 
       // Create user with their old products
+      const userData: any = {
+        email: email || undefined,
+        phone: cleanPhone || undefined,
+        username: finalUsername,
+        password: hashedPassword,
+        firstName: oldUser.user_info.display_name || 'کاربر',
+        lastName: 'قدیمی',
+        role: 'USER',
+        isActive: true,
+        isOld: true, // Mark as old user
+      };
+
+      // Add oldProducts if there are any
+      if (oldUser.products && oldUser.products.length > 0) {
+        userData.oldProducts = {
+          create: oldUser.products.map(product => ({
+            productId: product.product_id,
+            productName: product.product_name,
+            productCategory: product.product_category,
+          })),
+        };
+      }
+
       const createdUser = await prisma.user.create({
-        data: {
-          email: email || undefined,
-          phone: cleanPhone || undefined,
-          username: finalUsername,
-          password: hashedPassword,
-          firstName: oldUser.user_info.display_name || 'کاربر',
-          lastName: 'قدیمی',
-          role: 'USER',
-          isActive: true,
-          isOld: true, // Mark as old user
-          oldProducts: {
-            create: oldUser.products?.map(product => ({
-              productId: product.product_id,
-              productName: product.product_name,
-              productCategory: product.product_category,
-            })) || [],
-          },
-        },
+        data: userData,
       });
 
       imported++;

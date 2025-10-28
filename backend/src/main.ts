@@ -21,12 +21,6 @@ async function bootstrap() {
   // Enable CORS first (before helmet)
   app.enableCors({
     origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:8080',
-      'http://localhost:8081',
-      'http://localhost:8082',
       'http://185.231.112.84',
       'http://185.231.112.84:3000',
       'http://185.231.112.84:3001',
@@ -37,9 +31,11 @@ async function bootstrap() {
       'https://185.231.112.84'
     ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     exposedHeaders: ['Content-Length', 'Content-Type'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.use(require('express').json({ limit: '10gb' }));
@@ -88,8 +84,9 @@ async function bootstrap() {
   
   await app.listen(port);
   
-  logger.log(`✅ Application is running on: http://localhost:${port}`)
-  logger.log(`📚 Swagger docs available at: http://localhost:${port}/api/docs`)
+  const serverIp = process.env.SERVER_IP || '185.231.112.84';
+  logger.log(`✅ Application is running on: http://${serverIp}:${port}`)
+  logger.log(`📚 Swagger docs available at: http://${serverIp}:${port}/api/docs`)
   logger.log(`📁 Static files served from: /uploads/`);
   logger.log('🎉 Haghighi Platform API is ready!');
 }

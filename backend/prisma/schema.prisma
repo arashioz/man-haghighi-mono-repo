@@ -63,15 +63,84 @@ model Article {
   id          String      @id @default(cuid())
   title       String
   slug        String      @unique
-  content     String
-  excerpt     String?
-  featuredImage String?
-  published   Boolean     @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  content     String      // محتوای اصلی مقاله (HTML)
+  excerpt     String?     // خلاصه مقاله
+  featuredImage String?   // تصویر شاخص
+  
+  // SEO Fields
+  metaTitle       String?       // عنوان سئو (اگر خالی باشد از title استفاده می‌شود)
+  metaDescription String?       // توضیحات سئو
+  metaKeywords    String[]      // کلمات کلیدی
+  canonicalUrl    String?       // URL کانونیکال
+  focusKeyword    String?       // کلمه کلیدی اصلی
+  
+  // Open Graph
+  ogTitle         String?       // عنوان OG
+  ogDescription   String?       // توضیحات OG
+  ogImage         String?       // تصویر OG
+  ogType          String        @default("article")
+  
+  // Twitter Card
+  twitterCard     String        @default("summary_large_image")
+  twitterTitle    String?       // عنوان توییتر
+  twitterDescription String?    // توضیحات توییتر
+  twitterImage    String?       // تصویر توییتر
+  
+  // Schema.org
+  schemaType      String        @default("Article")
+  author          String?       // نویسنده
+  authorBio       String?       // بیوگرافی نویسنده
+  
+  // Content Settings
+  allowComments   Boolean       @default(true)
+  viewCount       Int           @default(0)
+  readingTime     Int?          // زمان مطالعه (دقیقه)
+  
+  // Categories and Tags
+  categoryId      String?
+  tags            String[]      // تگ‌ها
+  
+  // Related Content
+  relatedArticles String[]      // آیدی مقالات مرتبط
+  
+  // Publishing
+  published       Boolean       @default(false)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?     // زمان‌بندی انتشار
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  category        ArticleCategory? @relation(fields: [categoryId], references: [id])
 
   @@map("articles")
+  @@index([slug])
+  @@index([categoryId])
+  @@index([published])
+}
+
+model ArticleCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  seoTitle    String?
+  seoDescription String?
+  parentId    String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  parent      ArticleCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    ArticleCategory[] @relation("CategoryHierarchy")
+  articles    Article[]
+
+  @@map("article_categories")
+  @@index([slug])
 }
 
 model Podcast {
@@ -198,6 +267,8 @@ model Workshop {
   maxParticipants Int?
   price           Decimal  @db.Decimal(15, 2)
   thumbnail       String?
+  videoLinks      String[] // لینک‌های ویدیوهای کارگاه
+  audioLinks      String[] // لینک‌های فایل‌های صوتی کارگاه
   isActive        Boolean  @default(true)
   createdBy       String
   createdAt       DateTime @default(now())

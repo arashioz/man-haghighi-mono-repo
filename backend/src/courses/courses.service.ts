@@ -170,6 +170,102 @@ export class CoursesService {
     });
   }
 
+  async uploadThumbnail(id: string, file: Express.Multer.File) {
+    await this.findOne(id);
+    
+    const updatedCourse = await this.prisma.course.update({
+      where: { id },
+      data: { thumbnail: file.filename },
+    });
+
+    return this.urlService.processCourseData(updatedCourse);
+  }
+
+  async uploadIntroVideo(id: string, file: Express.Multer.File) {
+    await this.findOne(id);
+    
+    const updatedCourse = await this.prisma.course.update({
+      where: { id },
+      data: { videoFile: file.filename },
+    });
+
+    return this.urlService.processCourseData(updatedCourse);
+  }
+
+  async uploadAttachments(id: string, files: Express.Multer.File[]) {
+    const course = await this.findOne(id);
+    
+    const existingAttachments = course.attachments || [];
+    const newAttachments = files.map(file => file.filename);
+    const allAttachments = [...existingAttachments, ...newAttachments];
+    
+    const updatedCourse = await this.prisma.course.update({
+      where: { id },
+      data: { attachments: allAttachments },
+    });
+
+    return this.urlService.processCourseData(updatedCourse);
+  }
+
+  async uploadCourseVideos(id: string, files: Express.Multer.File[]) {
+    const course = await this.findOne(id);
+    
+    const existingVideos = course.courseVideos || [];
+    const newVideos = files.map(file => file.filename);
+    const allVideos = [...existingVideos, ...newVideos];
+    
+    const updatedCourse = await this.prisma.course.update({
+      where: { id },
+      data: { courseVideos: allVideos },
+    });
+
+    // Create Video entities for each uploaded course video
+    for (let i = 0; i < files.length; i++) {
+      const videoFile = files[i];
+      const existingVideoCount = await this.prisma.video.count({
+        where: { courseId: id },
+      });
+      
+      await this.prisma.video.create({
+        data: {
+          title: `ویدیو ${existingVideoCount + i + 1}`,
+          description: `ویدیو ${existingVideoCount + i + 1} از دوره`,
+          videoFile: videoFile.filename,
+          order: existingVideoCount + i + 1,
+          courseId: id,
+          published: course.published,
+        },
+      });
+    }
+
+    return this.urlService.processCourseData(updatedCourse);
+  }
+
+  async uploadCourseAudios(id: string, files: Express.Multer.File[]) {
+    const course = await this.findOne(id);
+    
+    // Create Audio entities for each uploaded course audio
+    for (let i = 0; i < files.length; i++) {
+      const audioFile = files[i];
+      const existingAudioCount = await this.prisma.audio.count({
+        where: { courseId: id },
+      });
+      
+      await this.prisma.audio.create({
+        data: {
+          title: `فایل صوتی ${existingAudioCount + i + 1}`,
+          description: `فایل صوتی ${existingAudioCount + i + 1} از دوره`,
+          audioFile: audioFile.filename,
+          order: existingAudioCount + i + 1,
+          courseId: id,
+          published: course.published,
+        },
+      });
+    }
+
+    return this.findOne(id);
+  }
+
   async enrollUser(enrollCourseDto: EnrollCourseDto) {
     const { userId, courseId } = enrollCourseDto;
 

@@ -1,7 +1,7 @@
-import { Controller, Get, Patch, Param, Body, Delete, UseGuards, Post, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Patch, Param, Body, Delete, UseGuards, Post, Req, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto, PaginationQueryDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -15,10 +15,10 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all users (Admin only)' })
+  @ApiOperation({ summary: 'Get all users with pagination (Admin only)' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
-  async findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() paginationQuery: PaginationQueryDto) {
+    return this.usersService.findAll(paginationQuery);
   }
 
   @Post()

@@ -3,13 +3,13 @@ import { AuthResponse, LoginCredentials, RegisterCredentials, User, Slider, Arti
 
 // Use dynamic API URL based on environment
 const getApiBaseUrl = () => {
-  // If running in browser, use environment variable or current origin
+  // If running in browser, use environment variable or server IP
   if (typeof window !== 'undefined') {
-    // Use environment variable if available, otherwise use current origin
-    return process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
+    // Use environment variable if available, otherwise use server IP
+    return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
   }
-  // If running in server-side (SSR), use environment variable
-  return process.env.REACT_APP_API_URL || 'http://localhost:3000';
+  // If running in server-side (SSR), use environment variable or server IP
+  return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

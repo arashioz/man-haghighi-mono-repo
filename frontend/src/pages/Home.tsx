@@ -99,7 +99,7 @@ const Home: React.FC = () => {
       {/* 1. اسلایدر */}
       <section className="relative">
         {sliders.length > 0 ? (
-          <div className="relative h-screen overflow-hidden">
+          <div className="relative h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-screen overflow-hidden">
             {/* Slider Images */}
             <div className="relative w-full h-full">
               {sliders.map((slider, index) => (
@@ -114,21 +114,21 @@ const Home: React.FC = () => {
                     alt={slider.title}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-30"></div>
+                  <div className="absolute inset-0 bg-black bg-opacity-40"></div>
                   <div className="absolute inset-0 flex items-end justify-start">
-                    <div className="text-right text-white max-w-4xl px-8 pb-16">
-                      <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-in">
+                    <div className="text-right text-white max-w-4xl px-4 sm:px-6 md:px-8 pb-20 sm:pb-24 md:pb-16">
+                      <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-7xl font-bold mb-3 sm:mb-4 md:mb-6 animate-fade-in leading-tight">
                         {slider.title}
                       </h1>
                       {slider.description && (
-                        <p className="text-xl md:text-2xl mb-8 animate-fade-in-delay">
+                        <p className="text-sm sm:text-base md:text-xl lg:text-2xl mb-4 sm:mb-6 md:mb-8 animate-fade-in-delay line-clamp-2 sm:line-clamp-3">
                           {slider.description}
                         </p>
                       )}
                       {slider.link && (
                         <button
                           onClick={() => navigate(slider.link!)}
-                          className="bg-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 mr-auto"
+                          className="bg-indigo-600 text-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 rounded-lg text-sm sm:text-base md:text-lg font-semibold hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 mr-auto"
                         >
                           شروع کنید
                         </button>
@@ -144,17 +144,17 @@ const Home: React.FC = () => {
               <>
                 <button
                   onClick={() => setCurrentSlide((prev) => (prev === 0 ? sliders.length - 1 : prev - 1))}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-200"
+                  className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 sm:p-3 rounded-full transition-all duration-200 z-10"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
                 <button
                   onClick={() => setCurrentSlide((prev) => (prev === sliders.length - 1 ? 0 : prev + 1))}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-3 rounded-full transition-all duration-200"
+                  className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 sm:p-3 rounded-full transition-all duration-200 z-10"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -163,13 +163,13 @@ const Home: React.FC = () => {
 
             {/* Dots Indicator */}
             {sliders.length > 1 && (
-              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-2">
+              <div className="absolute bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-1.5 sm:space-x-2 z-10">
                 {sliders.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                      index === currentSlide ? 'bg-white' : 'bg-white/50'
+                    className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${
+                      index === currentSlide ? 'bg-white scale-110' : 'bg-white/50'
                     }`}
                   />
                 ))}
@@ -177,10 +177,10 @@ const Home: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="h-screen bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center">
-            <div className="text-center text-white">
-              <h1 className="text-5xl md:text-7xl font-bold mb-6">خوش آمدید</h1>
-              <p className="text-xl md:text-2xl mb-8">به پلتفرم آموزشی حقیقی</p>
+          <div className="h-[60vh] sm:h-[70vh] md:h-[80vh] lg:h-screen bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center">
+            <div className="text-center text-white px-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6">خوش آمدید</h1>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-6 sm:mb-8">به پلتفرم آموزشی حقیقی</p>
             </div>
           </div>
         )}

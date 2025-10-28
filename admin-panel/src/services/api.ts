@@ -3,10 +3,10 @@ import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, Course,
 
 const getApiBaseUrl = () => {
   if (typeof window !== 'undefined') {
-    // Use environment variable if available, otherwise use current origin
-    return process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
+    // Use environment variable if available, otherwise use server IP
+    return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
   }
-  return process.env.REACT_APP_API_URL || 'http://localhost:3000';
+  return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -54,8 +54,8 @@ export const authService = {
 };
 
 export const usersService = {
-  getAll: async (): Promise<User[]> => {
-    const response = await api.get('/users');
+  getAll: async (params?: { page?: number; limit?: number; search?: string; role?: string }): Promise<{ data: User[]; meta: { total: number; page: number; limit: number; totalPages: number } }> => {
+    const response = await api.get('/users', { params });
     return response.data;
   },
 
@@ -257,13 +257,13 @@ export const slidersService = {
 };
 
 export const articlesService = {
-  getAll: async (): Promise<Article[]> => {
-    const response = await api.get('/articles');
+  getAll: async (params?: any): Promise<any> => {
+    const response = await api.get('/articles', { params });
     return response.data;
   },
 
-  getPublished: async (): Promise<Article[]> => {
-    const response = await api.get('/articles/published');
+  getPublished: async (params?: any): Promise<any> => {
+    const response = await api.get('/articles/published', { params });
     return response.data;
   },
 
@@ -277,18 +277,62 @@ export const articlesService = {
     return response.data;
   },
 
-  create: async (data: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<Article> => {
+  create: async (data: any): Promise<Article> => {
     const response = await api.post('/articles', data);
     return response.data;
   },
 
-  update: async (id: string, data: Partial<Article>): Promise<Article> => {
+  update: async (id: string, data: any): Promise<Article> => {
     const response = await api.patch(`/articles/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/articles/${id}`);
+  },
+
+  uploadFeaturedImage: async (id: string, file: File): Promise<Article> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.patch(`/articles/${id}/featured-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  analyzeSeo: async (id: string): Promise<any> => {
+    const response = await api.get(`/articles/${id}/seo-analysis`);
+    return response.data;
+  },
+
+  generateSchema: async (id: string): Promise<any> => {
+    const response = await api.get(`/articles/${id}/schema`);
+    return response.data;
+  },
+
+  getRelated: async (id: string, limit?: number): Promise<Article[]> => {
+    const response = await api.get(`/articles/${id}/related`, { params: { limit } });
+    return response.data;
+  },
+
+  // Categories
+  getAllCategories: async (): Promise<any[]> => {
+    const response = await api.get('/articles/categories/all');
+    return response.data;
+  },
+
+  createCategory: async (data: any): Promise<any> => {
+    const response = await api.post('/articles/categories', data);
+    return response.data;
+  },
+
+  updateCategory: async (id: string, data: any): Promise<any> => {
+    const response = await api.patch(`/articles/categories/${id}`, data);
+    return response.data;
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    await api.delete(`/articles/categories/${id}`);
   },
 
   bulkUpdate: async (articleIds: string[], data: Partial<Article>) => {
@@ -829,6 +873,36 @@ export const workshopsService = {
 
   getUserParticipatedWorkshops: async (): Promise<Workshop[]> => {
     const response = await api.get('/workshops/user/participated');
+    return response.data;
+  },
+
+  uploadVideos: async (workshopId: string, files: File[], onProgress?: (progressEvent: any) => void) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('videos', file);
+    });
+    
+    const response = await api.patch(`/workshops/${workshopId}/videos`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
+    return response.data;
+  },
+
+  uploadAudios: async (workshopId: string, files: File[], onProgress?: (progressEvent: any) => void) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('audios', file);
+    });
+    
+    const response = await api.patch(`/workshops/${workshopId}/audios`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
     return response.data;
   },
 };

@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsBoolean, IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsEmail, IsNotEmpty, MinLength, IsInt, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateUserDto {
   @ApiProperty({ example: 'john@example.com' })
@@ -105,4 +106,30 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isOld?: boolean;
+}
+
+export class PaginationQueryDto {
+  @ApiProperty({ example: 1, required: false, description: 'Page number (starts from 1)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({ example: 10, required: false, description: 'Number of items per page' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 10;
+
+  @ApiProperty({ example: '', required: false, description: 'Search term' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiProperty({ example: 'USER', required: false, description: 'Filter by role', enum: ['ADMIN', 'SALES_MANAGER', 'SALES_PERSON', 'USER'] })
+  @IsOptional()
+  @IsString()
+  role?: string;
 }
