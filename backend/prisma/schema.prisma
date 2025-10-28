@@ -31,6 +31,7 @@ model User {
   purchasedCourses CourseEnrollment[]
   videoAccess      VideoAccess[]
   audioAccess      AudioAccess[]
+  oldProducts      OldProduct[]
   parent           User?   @relation("UserHierarchy", fields: [parentId], references: [id])
   children         User[]  @relation("UserHierarchy")
   createdWorkshops Workshop[]
@@ -277,6 +278,21 @@ model SalesTeamMember {
 
   @@unique([teamId, salesPersonId])
   @@map("sales_team_members")
+}
+
+model OldProduct {
+  id              String   @id @default(cuid())
+  userId          String
+  productId       String   // Original product ID from old system (e.g., "PROD_1382")
+  productName     String
+  productCategory String
+  importedAt      DateTime @default(now())
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@map("old_products")
 }
 
 enum UserRole {

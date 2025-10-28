@@ -125,8 +125,8 @@ async function main() {
         continue;
       }
 
-      // Create user
-      await prisma.user.create({
+      // Create user with their old products
+      const createdUser = await prisma.user.create({
         data: {
           email: email || undefined,
           phone: cleanPhone || undefined,
@@ -137,6 +137,13 @@ async function main() {
           role: 'USER',
           isActive: true,
           isOld: true, // Mark as old user
+          oldProducts: {
+            create: oldUser.products?.map(product => ({
+              productId: product.product_id,
+              productName: product.product_name,
+              productCategory: product.product_category,
+            })) || [],
+          },
         },
       });
 

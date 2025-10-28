@@ -94,6 +94,7 @@ export class UsersService {
         avatar: true,
         role: true,
         isActive: true,
+        isOld: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -104,6 +105,135 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  // Get user with their old products and purchased courses
+  async getUserWithProducts(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        isOld: true,
+        createdAt: true,
+        updatedAt: true,
+        oldProducts: {
+          select: {
+            id: true,
+            productId: true,
+            productName: true,
+            productCategory: true,
+            importedAt: true,
+          },
+          orderBy: {
+            importedAt: 'desc',
+          },
+        },
+        purchasedCourses: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+                price: true,
+                published: true,
+              },
+            },
+          },
+          orderBy: {
+            enrolledAt: 'desc',
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  // Assign a single course to user
+  async assignCourse(userId: string, courseId: string) {
+    // Check if user exists
+    await this.findOne(userId);
+
+    // Check if course exists
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Check if already enrolled
+    const existing = await this.prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException('User already enrolled in this course');
+    }
+
+    // Create enrollment
+    return this.prisma.courseEnrollment.create({
+      data: {
+        userId,
+        courseId,
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            thumbnail: true,
+            price: true,
+          },
+        },
+      },
+    });
+  }
+
+  // Remove course from user
+  async removeCourse(userId: string, courseId: string) {
+    const enrollment = await this.prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (!enrollment) {
+      throw new NotFoundException('User is not enrolled in this course');
+    }
+
+    return this.prisma.courseEnrollment.delete({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
