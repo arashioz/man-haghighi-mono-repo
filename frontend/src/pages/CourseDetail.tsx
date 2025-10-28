@@ -15,12 +15,6 @@ const CourseDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (id) {
-      fetchCourse();
-    }
-  }, [id]);
-
   const fetchCourse = async () => {
     try {
       const data = await coursesService.getById(id!);
@@ -38,6 +32,13 @@ const CourseDetail: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (id) {
+      fetchCourse();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleEnroll = async () => {
     if (!user) {

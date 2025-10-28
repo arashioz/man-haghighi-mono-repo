@@ -10,12 +10,6 @@ const ArticleDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (slug) {
-      fetchArticle();
-    }
-  }, [slug]);
-
   const fetchArticle = async () => {
     try {
       const data = await articlesService.getBySlug(slug!);
@@ -26,6 +20,13 @@ const ArticleDetail: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (slug) {
+      fetchArticle();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   if (loading) {
     return (
