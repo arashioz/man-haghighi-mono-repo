@@ -25,6 +25,10 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=builder /app/build /usr/share/nginx/html
 
+# Fix permissions for assets so nginx can serve them
+RUN find /usr/share/nginx/html -type d -exec chmod 755 {} \; && \
+    find /usr/share/nginx/html -type f -exec chmod 644 {} \;
+
 # Simple nginx config for SPA
 RUN echo 'server { \
     listen 80; \
