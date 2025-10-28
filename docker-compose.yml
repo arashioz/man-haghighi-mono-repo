@@ -1,94 +1,64 @@
 version: '3.8'
 
 services:
+  # Database
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: haghighi_postgres
-    environment:
-      POSTGRES_DB: haghighi_db
-      POSTGRES_USER: haghighi_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
+    env_file: .env
     ports:
-      - "127.0.0.1:5432:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    networks:
-      - haghighi_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
-  nginx:
-    image: nginx:alpine
-    container_name: haghighi_nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./uploads:/var/www/uploads:ro
-    depends_on:
-      - backend
-      - frontend
-      - admin-panel
-    networks:
-      - haghighi_network
-    restart: unless-stopped
-
+  # Backend API
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: haghighi_backend
-    environment:
-      DATABASE_URL: "postgresql://haghighi_user:${POSTGRES_PASSWORD:-mysecretpassword}@postgres:5432/haghighi_db?schema=public"
-      JWT_SECRET: ${JWT_SECRET:-your-super-secure-jwt-secret-change-this-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      API_BASE_URL: ${API_BASE_URL:-http://localhost:3000}
-      PORT: ${PORT:-3000}
-      NODE_ENV: ${NODE_ENV:-production}
-      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
-    depends_on:
-      - postgres
+    env_file: .env
+    ports:
+      - "3000:3000"
     volumes:
-      - uploads:/app/uploads
-    networks:
-      - haghighi_network
-    ports:
-      - "127.0.0.1:3000:3000"
-    restart: unless-stopped
-
-  admin-panel:
-    build:
-      context: ./admin-panel
-      dockerfile: Dockerfile
-    container_name: haghighi_admin
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost/api}
+      - ./uploads:/app/uploads
     depends_on:
-      - backend
-    networks:
-      - haghighi_network
-    ports:
-      - "127.0.0.1:3001:3000"
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
+  # Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL}
     container_name: haghighi_frontend
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost/api}
+    ports:
+      - "3002:80"
     depends_on:
       - backend
-    networks:
-      - haghighi_network
+    restart: unless-stopped
+
+  # Admin Panel
+  admin:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL}
+    container_name: haghighi_admin
     ports:
-      - "127.0.0.1:3002:3000"
+      - "3001:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
   postgres_data:
-  uploads:
-
-networks:
-  haghighi_network:
-    driver: bridge

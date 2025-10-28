@@ -1,40 +1,29 @@
-FROM node:18-slim
+# Backend Dockerfile
+FROM node:18-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    openssl \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package*.json ./
+COPY prisma ./prisma/
 
 # Install dependencies
 RUN npm ci
 
-# Install Sharp with correct platform flags
-RUN npm install --os=linux --cpu=arm64 sharp
-
 # Copy source code
 COPY . .
 
-# Make start script executable (if exists)
-# RUN chmod +x start.sh
-
-# Generate Prisma client
-RUN npm run prisma:generate
+# Generate Prisma Client
 RUN npx prisma generate
 
-# Create uploads directory with proper permissions
-RUN mkdir -p uploads && chmod 777 uploads
-RUN mkdir -p /app/dist && chmod -R 777 /app/dist
+# Build
+RUN npm run build
+
+# Create uploads directory
+RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["sh", "-c", "chmod -R 777 /app/uploads && npm run prisma:generate && npm run start:dev"]
+# Start the app
+CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
