@@ -1,0 +1,46 @@
+{
+  "name": "haghighi-platform",
+  "version": "1.0.0",
+  "description": "Haghighi Learning Platform - Complete monorepo",
+  "private": true,
+  "scripts": {
+    "start": "npm run docker:up",
+    "dev": "npm run docker:up",
+    "docker:up": "docker-compose up -d && npm run docker:logs",
+    "docker:build": "docker-compose build",
+    "docker:rebuild": "docker-compose build --no-cache",
+    "docker:down": "docker-compose down",
+    "docker:clean": "docker-compose down -v && docker system prune -f",
+    "docker:logs": "docker-compose logs -f",
+    "docker:ps": "docker-compose ps",
+    "docker:restart": "docker-compose restart",
+    "setup": "cp local.env .env && mkdir -p uploads && chmod 777 uploads",
+    "backend:logs": "docker-compose logs -f backend",
+    "frontend:logs": "docker-compose logs -f frontend",
+    "admin:logs": "docker-compose logs -f admin",
+    "postgres:logs": "docker-compose logs -f postgres",
+    "backend:shell": "docker exec -it haghighi_backend sh",
+    "postgres:shell": "docker exec -it haghighi_postgres psql -U haghighi_user -d haghighi_db",
+    "db:push": "docker exec haghighi_backend npx prisma db push",
+    "db:seed": "docker exec haghighi_backend npx prisma db seed",
+    "db:studio": "docker exec haghighi_backend npx prisma studio",
+    "test:api": "curl http://localhost:3000/api/health && curl -I http://localhost:3001/ && curl -I http://localhost:3002/",
+    "clean:all": "npm run docker:down && docker rmi new-haghighi-frontend new-haghighi-admin new-haghighi-backend 2>/dev/null || true",
+    "fresh:start": "npm run clean:all && npm run setup && npm run docker:build && npm run docker:up"
+  },
+  "keywords": [
+    "education",
+    "learning-platform",
+    "nestjs",
+    "react",
+    "postgresql",
+    "docker"
+  ],
+  "author": "Haghighi Platform",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arashioz/man-haghighi-mono-repo.git"
+  }
+}
+
