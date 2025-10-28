@@ -52,9 +52,9 @@ services:
     build:
       context: ./admin-panel
       dockerfile: Dockerfile.no-nginx
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://185.231.112.84:3000/api}
     container_name: haghighi_admin_prod
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://185.231.112.84:3000/api}
     ports:
       - "3001:80"
     depends_on:
@@ -67,9 +67,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.no-nginx
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://185.231.112.84:3000/api}
     container_name: haghighi_frontend_prod
-    environment:
-      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://185.231.112.84:3000/api}
     ports:
       - "3002:80"
     depends_on:

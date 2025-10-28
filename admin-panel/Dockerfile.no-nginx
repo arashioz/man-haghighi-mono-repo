@@ -12,10 +12,15 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Remove homepage field for direct access (no nginx)
+# Set build-time environment variables
+ARG REACT_APP_API_URL
+ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+
+# Remove homepage field and set PUBLIC_URL to root
 RUN npm pkg delete homepage
 
-# Build the application
+# Build the application with PUBLIC_URL set to root
+ENV PUBLIC_URL=/
 RUN npm run build
 
 # Stage 2: Production stage
