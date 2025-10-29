@@ -41,9 +41,19 @@ const Articles: React.FC = () => {
   const fetchArticles = async () => {
     try {
       const response = await articlesService.getAll();
-      setArticles(response.data || response);
+      // Handle different response structures: array, { data: array }, or { data: { data: array } }
+      let articlesArray: Article[] = [];
+      if (Array.isArray(response)) {
+        articlesArray = response;
+      } else if (Array.isArray(response?.data)) {
+        articlesArray = response.data;
+      } else if (response?.data?.data && Array.isArray(response.data.data)) {
+        articlesArray = response.data.data;
+      }
+      setArticles(articlesArray);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
+      setArticles([]); // Ensure articles is always an array
     } finally {
       setLoading(false);
     }
