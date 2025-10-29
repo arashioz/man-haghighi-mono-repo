@@ -99,9 +99,12 @@ async function main() {
   ];
 
   for (const slider of sliders) {
-    await prisma.slider.create({ data: slider });
+    await prisma.slider.create({ data: slider }).catch(() => {
+      // If already exists (by order or title), skip
+      console.log(`⚠️ Slider "${slider.title}" might already exist, skipping...`);
+    });
   }
-  console.log(`✅ ${sliders.length} sliders created`);
+  console.log(`✅ ${sliders.length} sliders processed`);
 
   // ✅ 5. Create Articles
   const articles = [
@@ -135,7 +138,11 @@ async function main() {
   ];
 
   for (const article of articles) {
-    await prisma.article.create({ data: article });
+    await prisma.article.upsert({
+      where: { slug: article.slug },
+      update: article,
+      create: article,
+    });
   }
   console.log(`✅ ${articles.length} articles created`);
 
@@ -160,7 +167,10 @@ async function main() {
   ];
 
   for (const podcast of podcasts) {
-    await prisma.podcast.create({ data: podcast });
+    await prisma.podcast.create({ data: podcast }).catch(() => {
+      // If already exists, skip
+      console.log(`⚠️ Podcast "${podcast.title}" already exists, skipping...`);
+    });
   }
   console.log(`✅ ${podcasts.length} podcasts created`);
 
@@ -197,10 +207,28 @@ async function main() {
 
   const courses = [];
   for (const course of coursesData) {
-    const created = await prisma.course.create({ data: course });
-    courses.push(created);
+    try {
+      const existing = await prisma.course.findFirst({
+        where: { title: course.title },
+      });
+      if (existing) {
+        courses.push(existing);
+        continue;
+      }
+      const created = await prisma.course.create({ data: course });
+      courses.push(created);
+    } catch (error) {
+      console.log(`⚠️ Course "${course.title}" might already exist, skipping...`);
+      // Try to find existing course
+      const existing = await prisma.course.findFirst({
+        where: { title: course.title },
+      });
+      if (existing) {
+        courses.push(existing);
+      }
+    }
   }
-  console.log(`✅ ${courses.length} courses created`);
+  console.log(`✅ ${courses.length} courses processed`);
 
   // ✅ 8. Create Workshops
   const workshops = [
@@ -227,9 +255,12 @@ async function main() {
   ];
 
   for (const workshop of workshops) {
-    await prisma.workshop.create({ data: workshop });
+    await prisma.workshop.create({ data: workshop }).catch(() => {
+      // If already exists, skip
+      console.log(`⚠️ Workshop "${workshop.title}" already exists, skipping...`);
+    });
   }
-  console.log(`✅ ${workshops.length} workshops created`);
+  console.log(`✅ ${workshops.length} workshops processed`);
 
   // ✅ 9. Create Videos (linked to courses)
   const videos = [
@@ -266,9 +297,12 @@ async function main() {
   ];
 
   for (const video of videos) {
-    await prisma.video.create({ data: video });
+    await prisma.video.create({ data: video }).catch(() => {
+      // If already exists, skip
+      console.log(`⚠️ Video "${video.title}" already exists, skipping...`);
+    });
   }
-  console.log(`✅ ${videos.length} videos created`);
+  console.log(`✅ ${videos.length} videos processed`);
 
   // ✅ 10. Create Audios (linked to courses)
   const audios = [
@@ -295,9 +329,12 @@ async function main() {
   ];
 
   for (const audio of audios) {
-    await prisma.audio.create({ data: audio });
+    await prisma.audio.create({ data: audio }).catch(() => {
+      // If already exists, skip
+      console.log(`⚠️ Audio "${audio.title}" already exists, skipping...`);
+    });
   }
-  console.log(`✅ ${audios.length} audios created`);
+  console.log(`✅ ${audios.length} audios processed`);
 
   console.log('');
   console.log('🎉 Database seeded successfully!');

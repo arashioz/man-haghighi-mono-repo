@@ -1,125 +1,81 @@
-import { PrismaClient } from '@prisma/client';
-import * as XLSX from 'xlsx';
+فimport { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
 import * as bcrypt from 'bcryptjs';
 import * as path from 'path';
 
 const prisma = new PrismaClient();
 
 interface OldUserData {
-  id: string;
+  ID?: string;
   user_login: string;
-  user_pass: string;
+  user_pass?: string;
   user_nicename: string;
   user_email: string;
-  user_url: string;
-  user_activation_key: string;
-  user_status: string;
-  display_name: string;
-  sms: string;
-  phone: string;
-  uToken: string;
-  spam: string;
-  deleted: string;
-  user_registered: string;
-  education: string;
-  univercity: string;
-  job: string;
-  state: string;
-  gender: string;
-}
-
-function parseUserData(rawData: string): OldUserData | null {
-  try {
-    const fields = rawData.split(';');
-    if (fields.length < 20) {
-      console.log(`Invalid data format: ${rawData}`);
-      return null;
-    }
-    
-    return {
-      id: fields[0] || '',
-      user_login: fields[1] || '',
-      user_pass: fields[2] || '',
-      user_nicename: fields[3] || '',
-      user_email: fields[4] || '',
-      user_url: fields[5] || '',
-      user_activation_key: fields[6] || '',
-      user_status: fields[7] || '',
-      display_name: fields[8] || '',
-      sms: fields[9] || '',
-      phone: fields[10] || '',
-      uToken: fields[11] || '',
-      spam: fields[12] || '',
-      deleted: fields[13] || '',
-      user_registered: fields[14] || '',
-      education: fields[15] || '',
-      univercity: fields[16] || '',
-      job: fields[17] || '',
-      state: fields[18] || '',
-      gender: fields[19] || '',
-    };
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    return null;
-  }
+  user_url?: string;
+  user_activation_key?: string;
+  user_status?: string;
+  display_name?: string;
+  sms?: string;
+  phone?: string;
+  uToken?: string;
+  spam?: string;
+  deleted?: string;
+  user_registered?: string;
+  education?: string;
+  univercity?: string;
+  job?: string;
+  state?: string;
+  gender?: string;
 }
 
 async function importOldUsers() {
   try {
     console.log('Starting import of old users...');
     
-    // Read the Excel file
+    // Try to read JSON file first, fallback to Excel if needed
+    const jsonPath = path.join(__dirname, '../moc-old-data/users.json');
     const excelPath = path.join(__dirname, '../moc-old-data/5pOOisH_users.xlsx');
-    const workbook = XLSX.readFile(excelPath);
     
-    // Get the first worksheet
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+    let jsonData: OldUserData[] = [];
     
-    // Convert to JSON
-    const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-    
-    console.log(`Found ${jsonData.length} records in Excel file`);
+    if (fs.existsSync(jsonPath)) {
+      console.log('Reading from users.json...');
+      const fileContent = fs.readFileSync(jsonPath, 'utf-8');
+      const parsedData = JSON.parse(fileContent);
+      jsonData = parsedData.users || parsedData;
+      console.log(`Found ${jsonData.length} records in JSON file`);
+    } else if (fs.existsSync(excelPath)) {
+      console.log('JSON file not found, trying Excel file...');
+      // Fallback to Excel reading would go here if needed
+      throw new Error('Excel file found but Excel reading not implemented in this version');
+    } else {
+      throw new Error(`Neither users.json nor 5pOOisH_users.xlsx found in moc-old-data directory`);
+    }
     
     // Process each user
     let importedCount = 0;
     let skippedCount = 0;
     
-    for (const row of jsonData) {
+    for (const userData of jsonData) {
       try {
-        // Get the raw data string
-        const rawDataKey = Object.keys(row)[0];
-        const rawData = row[rawDataKey];
-        
-        if (!rawData || typeof rawData !== 'string') {
-          console.log('Skipping invalid row');
-          skippedCount++;
-          continue;
-        }
-        
-        // Parse the semicolon-separated data
-        const userData = parseUserData(rawData);
-        if (!userData) {
-          skippedCount++;
-          continue;
-        }
-        
         // Extract user data
-        const email = userData.user_email && userData.user_email !== '""' ? userData.user_email.replace(/"/g, '') : null;
-        const phone = userData.phone && userData.phone !== '""' ? userData.phone.replace(/"/g, '') : null;
-        const username = userData.user_login || userData.user_nicename;
-        const displayName = userData.display_name;
+        const email = userData.user_email && userData.user_email.trim() !== '' ? userData.user_email.trim() : null;
+        const phone = userData.phone && userData.phone.trim() !== '' ? userData.phone.trim() : null;
+        const username = userData.user_login || userData.user_nicename || null;
+        const displayName = userData.display_name || null;
         
         // Skip if no essential data
         if (!phone && !email) {
-          console.log(`Skipping user: No phone or email provided (ID: ${userData.id})`);
+          console.log(`Skipping user: No phone or email provided (ID: ${userData.ID || 'N/A'})`);
           skippedCount++;
           continue;
         }
         
-        // Skip if user is marked as deleted
-        if (userData.deleted === '"1"' || userData.deleted === '1') {
-          console.log(`Skipping deleted user: ${username} (ID: ${userData.id})`);
+        // Skip if user is marked as deleted (handle string values with quotes)
+        const deletedStatus = String(userData.deleted || '').replace(/"/g, '');
+        const userStatus = String(userData.user_status || '').replace(/"/g, '');
+        if (deletedStatus === '1' || userStatus === '1') {
+          console.log(`Skipping deleted/inactive user: ${username} (ID: ${userData.ID || 'N/A'})`);
           skippedCount++;
           continue;
         }
@@ -149,8 +105,8 @@ async function importOldUsers() {
         // Parse display name to extract first and last name
         let firstName = null;
         let lastName = null;
-        if (displayName && displayName !== '""') {
-          const nameParts = displayName.replace(/"/g, '').trim().split(' ');
+        if (displayName && displayName.trim() !== '') {
+          const nameParts = displayName.trim().split(/\s+/);
           firstName = nameParts[0] || null;
           lastName = nameParts.slice(1).join(' ') || null;
         }
