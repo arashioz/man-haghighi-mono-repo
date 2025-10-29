@@ -91,12 +91,12 @@ const Dashboard: React.FC = () => {
           ]);
 
           setStats({
-            users: users.length,
-            sliders: sliders.length,
-            articles: articles.length,
-            podcasts: podcasts.length,
-            courses: courses.length,
-            videos: videos.length,
+            users: users.data?.length || 0,
+            sliders: sliders.length || 0,
+            articles: articles.length || 0,
+            podcasts: podcasts.length || 0,
+            courses: courses.length || 0,
+            videos: videos.length || 0,
             salesTeam: 0,
             enrollments: 0,
             workshops: 0,
@@ -251,97 +251,122 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div>
+    <div className="ios-fade-in">
+      {/* Header با طراحی iOS */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{getPageTitle()}</h1>
-        <p className="text-gray-600">{getPageDescription()}</p>
+        <h1 className="text-4xl font-semibold text-gray-900 mb-2">{getPageTitle()}</h1>
+        <p className="text-[17px] text-[#8E8E93]">{getPageDescription()}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {statCards.map((card) => (
-          <div key={card.title} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-2">{card.title}</p>
-                <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+      {/* Stats Cards با طراحی iOS 16 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {statCards.map((card, index) => (
+          <div 
+            key={card.title} 
+            className="ios-card p-6 hover:scale-[1.02] transition-transform duration-200 cursor-pointer"
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-14 h-14 rounded-2xl ${card.color} bg-opacity-10 flex items-center justify-center`}>
+                <div className={`${card.color.replace('bg-', 'text-')}`}>
+                  {card.icon}
+                </div>
               </div>
-              <div className={`${card.color} text-white p-3 rounded-lg`}>
-                {card.icon}
+              <div className="text-left">
+                <p className="text-sm font-medium text-[#8E8E93] mb-1">{card.title}</p>
+                <p className="text-3xl font-semibold text-gray-900">{card.value}</p>
               </div>
             </div>
+            <div className="w-full bg-gradient-to-l from-[#F2F2F7] to-transparent h-1 rounded-full"></div>
           </div>
         ))}
       </div>
 
-      {}
+      {/* Team Info با طراحی iOS 16 */}
       {user?.role === 'SALES_MANAGER' && myTeam && (
         <div className="mt-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">اطلاعات تیم شما</h3>
+          <div className="ios-card overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-l from-[#F2F2F7] to-transparent">
+              <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-2xl flex items-center justify-center ml-3">
+                  <TeamIcon />
+                </div>
+                اطلاعات تیم شما
+              </h3>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">جزئیات تیم</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">نام تیم:</span>
-                      <span className="text-sm font-medium text-gray-900">{myTeam.name}</span>
+                {/* Team Details */}
+                <div className="space-y-4">
+                  <h4 className="text-[17px] font-semibold text-gray-900 mb-4">جزئیات تیم</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F2F2F7]">
+                      <span className="text-[15px] text-[#8E8E93]">نام تیم</span>
+                      <span className="text-[15px] font-medium text-gray-900">{myTeam.name}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">تعداد اعضا:</span>
-                      <span className="text-sm font-medium text-gray-900">{myTeam.members.length} نفر</span>
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F2F2F7]">
+                      <span className="text-[15px] text-[#8E8E93]">تعداد اعضا</span>
+                      <span className="text-[15px] font-medium text-gray-900">{myTeam.members.length} نفر</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">وضعیت:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F2F2F7]">
+                      <span className="text-[15px] text-[#8E8E93]">وضعیت</span>
+                      <span className={`ios-badge ${
                         myTeam.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-500' 
+                          : 'bg-red-500'
                       }`}>
                         {myTeam.isActive ? 'فعال' : 'غیرفعال'}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">تاریخ ایجاد:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F2F2F7]">
+                      <span className="text-[15px] text-[#8E8E93]">تاریخ ایجاد</span>
+                      <span className="text-[15px] font-medium text-gray-900">
                         {new Date(myTeam.createdAt).toLocaleDateString('fa-IR')}
                       </span>
                     </div>
                   </div>
                 </div>
                 
+                {/* Team Members */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">اعضای تیم</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <h4 className="text-[17px] font-semibold text-gray-900 mb-4">اعضای تیم</h4>
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
                     {myTeam.members.length > 0 ? (
                       myTeam.members.map((member) => (
-                        <div key={member.id} className="flex items-center space-x-3 space-x-reverse p-2 bg-gray-50 rounded-lg">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-blue-600">
+                        <div key={member.id} className="flex items-center p-3 rounded-2xl bg-[#F2F2F7] hover:bg-gray-200 transition-colors">
+                          <div className="w-11 h-11 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-full flex items-center justify-center ml-3 shadow-md">
+                            <span className="text-sm font-medium text-white">
                               {member.salesPerson.firstName?.[0] || 'F'}
                             </span>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-[15px] font-medium text-gray-900">
                               {member.salesPerson.firstName} {member.salesPerson.lastName}
                             </p>
-                            <p className="text-xs text-gray-500">{member.salesPerson.username}</p>
+                            <p className="text-[13px] text-[#8E8E93]">{member.salesPerson.username}</p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-sm text-gray-500 text-center py-4">هیچ عضوی در تیم شما نیست</p>
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-[#F2F2F7] rounded-full flex items-center justify-center mx-auto mb-3">
+                          <TeamIcon />
+                        </div>
+                        <p className="text-[15px] text-[#8E8E93]">هیچ عضوی در تیم شما نیست</p>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
               
+              {/* Team Description */}
               {myTeam.description && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-900 mb-2">توضیحات تیم</h5>
-                  <p className="text-sm text-gray-700">{myTeam.description}</p>
+                <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-[#F2F2F7] to-gray-100">
+                  <h5 className="text-[15px] font-semibold text-gray-900 mb-2 flex items-center">
+                    <span className="w-2 h-2 bg-[#007AFF] rounded-full ml-2"></span>
+                    توضیحات تیم
+                  </h5>
+                  <p className="text-[15px] text-[#8E8E93] leading-relaxed">{myTeam.description}</p>
                 </div>
               )}
             </div>
