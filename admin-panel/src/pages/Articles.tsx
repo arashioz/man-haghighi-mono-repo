@@ -6,27 +6,7 @@ import Modal from '../components/Modal';
 import RichTextEditor from '../components/RichTextEditor';
 import SeoPreview from '../components/SeoPreview';
 import { articlesService } from '../services/api';
-
-interface Article {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  excerpt?: string;
-  featuredImage?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  metaKeywords?: string[];
-  focusKeyword?: string;
-  author?: string;
-  categoryId?: string;
-  tags?: string[];
-  published: boolean;
-  viewCount: number;
-  readingTime?: number;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Article } from '../types';
 
 const Articles: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
