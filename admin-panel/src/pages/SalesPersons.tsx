@@ -13,8 +13,8 @@ const SalesPersons: React.FC = () => {
   useEffect(() => {
     const fetchSalesPersons = async () => {
       try {
-        const data = await usersService.getAll();
-        const sellers = data.filter(user => user.role === 'SALES_PERSON');
+        const response = await usersService.getAll();
+        const sellers = response.data.filter(user => user.role === 'SALES_PERSON');
         setSalesPersons(sellers);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت فروشندگان');

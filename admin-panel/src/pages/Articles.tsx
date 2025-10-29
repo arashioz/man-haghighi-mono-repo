@@ -423,7 +423,7 @@ const Articles: React.FC = () => {
                 <div className="col-span-2">
                   <SeoPreview
                     title={newArticle.metaTitle || newArticle.title}
-                    metaDescription={newArticle.metaDescription}
+                    description={newArticle.metaDescription}
                     slug={newArticle.slug}
                   />
                 </div>
