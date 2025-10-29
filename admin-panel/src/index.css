@@ -2,26 +2,179 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS 16 Design System */
+:root {
+  --ios-blue: #007AFF;
+  --ios-blue-dark: #0051D5;
+  --ios-blue-light: #5AC8FA;
+  --ios-gray: #8E8E93;
+  --ios-gray-light: #F2F2F7;
+  --ios-gray-dark: #1C1C1E;
+  --ios-bg: #F2F2F7;
+  --ios-card: #FFFFFF;
+  --ios-border: rgba(0, 0, 0, 0.05);
+  --ios-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --ios-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --ios-blur: blur(20px);
+  --ios-radius: 20px;
+  --ios-radius-lg: 28px;
+}
+
 html {
   direction: rtl;
-  font-family: 'Dirooz', 'IranianSans', 'Tahoma', 'Arial', sans-serif;
-  font-weight: normal;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Dirooz', 'IranianSans', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   direction: rtl;
   text-align: right;
-  font-weight: normal;
+  background: var(--ios-bg);
+  margin: 0;
+  padding: 0;
 }
 
-/* Ensure no bold styling is applied globally */
-* {
-  font-weight: normal !important;
+/* iOS 16 Card Style */
+.ios-card {
+  background: var(--ios-card);
+  border-radius: var(--ios-radius);
+  box-shadow: var(--ios-shadow);
+  border: 1px solid var(--ios-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Override any bold classes */
-.font-bold, .font-semibold, .font-medium {
-  font-weight: normal !important;
+.ios-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ios-shadow-lg);
+}
+
+/* iOS 16 Blur Effect */
+.ios-blur {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: var(--ios-blur);
+  -webkit-backdrop-filter: var(--ios-blur);
+}
+
+/* iOS 16 Button Style */
+.ios-button {
+  background: var(--ios-blue);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.ios-button:hover {
+  background: var(--ios-blue-dark);
+  transform: scale(1.02);
+}
+
+.ios-button:active {
+  transform: scale(0.98);
+}
+
+/* iOS 16 Input Style */
+.ios-input {
+  background: var(--ios-gray-light);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.ios-input:focus {
+  background: white;
+  border-color: var(--ios-blue);
+  box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+/* iOS 16 Badge */
+.ios-badge {
+  background: var(--ios-blue);
+  color: white;
+  border-radius: 12px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-block;
+}
+
+/* iOS 16 Sidebar */
+.ios-sidebar {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-left: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* iOS 16 Nav Item */
+.ios-nav-item {
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 4px 0;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.ios-nav-item:hover {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.ios-nav-item.active {
+  background: var(--ios-blue);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+/* iOS 16 Header */
+.ios-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* iOS 16 Animations */
+@keyframes ios-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ios-fade-in {
+  animation: ios-fade-in 0.4s ease-out;
+}
+
+/* iOS 16 Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 /* Custom font loading */
@@ -39,5 +192,18 @@ body {
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+/* Remove aggressive font-weight overrides */
+.font-bold {
+  font-weight: 600 !important;
+}
+
+.font-semibold {
+  font-weight: 500 !important;
+}
+
+.font-medium {
+  font-weight: 500 !important;
 }
 

@@ -138,36 +138,39 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const drawer = (
-    <div className="h-full flex flex-col">
-      {}
-      <div className="p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white text-center rounded-tl-3xl">
-        <h1 className="text-xl font-bold mb-2">من حقیقی</h1>
-        <p className="text-sm opacity-90">
+    <div className="h-full flex flex-col ios-fade-in">
+      {/* Header با طراحی iOS */}
+      <div className="p-6 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-3xl flex items-center justify-center shadow-lg">
+          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+          </svg>
+        </div>
+        <h1 className="text-xl font-semibold text-gray-900 mb-1">من حقیقی</h1>
+        <p className="text-sm text-[#8E8E93]">
           {user?.role === 'ADMIN' ? 'پنل مدیریت' : 
            user?.role === 'SALES_MANAGER' ? 'پنل مدیر فروش' : 
            user?.role === 'SALES_PERSON' ? 'پنل فروشنده' : 'پنل کاربری'}
         </p>
       </div>
       
-      <div className="border-t border-gray-200"></div>
-      
-      {}
-      <div className="flex-1 py-4">
+      {/* Navigation */}
+      <div className="flex-1 py-2 overflow-y-auto">
         <nav className="px-4">
           {getMenuItems(user?.role || 'USER').map((item) => (
             <button
               key={item.text}
               onClick={() => navigate(item.path)}
-              className={`w-full flex items-center px-4 py-3 mb-2 rounded-xl transition-all duration-200 ${
+              className={`ios-nav-item w-full flex items-center px-4 py-3 mb-1.5 transition-all duration-200 ${
                 location.pathname === item.path
-                  ? 'bg-blue-50 text-blue-600 shadow-sm'
-                  : 'text-gray-700 hover:bg-gray-50'
+                  ? 'active'
+                  : 'text-gray-700'
               }`}
             >
-              <span className={`mr-3 ${location.pathname === item.path ? 'text-blue-600' : 'text-gray-500'}`}>
+              <span className={location.pathname === item.path ? 'text-white' : 'text-[#8E8E93]'}>
                 {item.icon}
               </span>
-              <span className={`text-sm ${location.pathname === item.path ? 'font-semibold' : 'font-medium'}`}>
+              <span className={`text-[15px] mr-3 ${location.pathname === item.path ? 'font-medium' : ''}`}>
                 {item.text}
               </span>
             </button>
@@ -175,19 +178,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
       </div>
       
-      <div className="border-t border-gray-200"></div>
-      
-      {}
-      <div className="p-4">
-        <div className="flex items-center p-4 rounded-xl bg-gray-50">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm ml-3">
+      {/* User Profile با طراحی iOS */}
+      <div className="p-4 border-t border-gray-100">
+        <div className="flex items-center p-3 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="w-11 h-11 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-full flex items-center justify-center text-white font-medium text-base ml-3 shadow-md">
             {user?.firstName?.[0] || user?.phone?.[0] || 'A'}
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-medium text-gray-900 truncate">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[#8E8E93] flex items-center mt-0.5">
+              <span className="w-2 h-2 bg-green-500 rounded-full ml-1.5"></span>
               {user?.role === 'ADMIN' ? 'مدیر' : 
                user?.role === 'SALES_MANAGER' ? 'مدیر فروش' : 
                user?.role === 'SALES_PERSON' ? 'فروشنده' : 'کاربر'}
@@ -199,53 +201,61 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="flex">
-      {}
+    <div className="flex min-h-screen bg-[#F2F2F7]">
+      {/* Mobile Drawer با Blur Effect */}
       <div className="sm:hidden">
-        <div className={`fixed inset-0 z-50 ${mobileOpen ? 'block' : 'hidden'}`}>
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={handleDrawerToggle}></div>
-          <div className="fixed right-0 top-0 h-full w-72 bg-gray-50 border-l border-gray-200 rounded-l-3xl">
+        <div className={`fixed inset-0 z-50 transition-opacity duration-300 ${mobileOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={handleDrawerToggle}></div>
+          <div className={`fixed right-0 top-0 h-full w-80 ios-sidebar transition-transform duration-300 ${mobileOpen ? 'translate-x-0' : 'translate-x-full'}`}>
             {drawer}
           </div>
         </div>
       </div>
 
-      {}
-      <div className="hidden sm:block w-72 flex-shrink-0">
-        <div className="fixed right-0 top-0 h-full w-72 bg-gray-50 border-l border-gray-200 rounded-l-3xl">
+      {/* Desktop Sidebar با iOS Style */}
+      <div className="hidden sm:block w-80 flex-shrink-0">
+        <div className="fixed right-0 top-0 h-screen w-80 ios-sidebar">
           {drawer}
         </div>
       </div>
 
-      {}
-      <div className="flex-1 flex flex-col min-h-screen">
-        {}
-        <header className="bg-white shadow-sm border-b border-gray-200 rounded-tr-3xl">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen sm:mr-4">
+        {/* Header با Blur Effect */}
+        <header className="ios-header sticky top-0 z-40">
           <div className="flex items-center justify-between px-6 py-4">
             <button
               onClick={handleDrawerToggle}
-              className="sm:hidden p-2 text-gray-600 hover:text-gray-900"
+              className="sm:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 active:scale-95 transition-all"
             >
               <MenuIcon />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">پنل مدیریت</h1>
+            <h1 className="text-xl font-semibold text-gray-900">پنل مدیریت</h1>
             <div className="relative">
               <button
                 onClick={handleMenuOpen}
-                className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:bg-blue-600 transition-colors"
+                className="w-10 h-10 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-full flex items-center justify-center text-white font-medium text-sm hover:scale-105 active:scale-95 transition-transform shadow-lg"
               >
                 {user?.firstName?.[0] || user?.phone?.[0] || 'A'}
               </button>
               
-              {}
+              {/* Dropdown Menu با iOS Style */}
               {anchorEl && (
-                <div className="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                <div className="absolute left-0 mt-3 w-52 ios-card py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-xs text-[#8E8E93] mt-0.5">
+                      {user?.username}
+                    </p>
+                  </div>
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1"
                   >
                     <LogoutIcon />
-                    <span className="mr-2">خروج</span>
+                    <span className="mr-2 font-medium">خروج از حساب</span>
                   </button>
                 </div>
               )}
@@ -253,9 +263,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        {}
-        <main className="flex-1 p-6 bg-gray-50 rounded-tl-3xl">
-          {children}
+        {/* Main Content Area */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          <div className="ios-fade-in">
+            {children}
+          </div>
         </main>
       </div>
     </div>
