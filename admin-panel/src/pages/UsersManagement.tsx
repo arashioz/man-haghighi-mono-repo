@@ -60,16 +60,16 @@ const UsersManagement: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersData, coursesData] = await Promise.all([
+        const [usersResponse, coursesResponse] = await Promise.all([
           usersService.getAll(),
           coursesService.getAll(),
         ]);
-        setUsers(usersData);
-        setCourses(coursesData);
+        setUsers(usersResponse.data);
+        setCourses(coursesResponse);
         
         // Fetch courses for each user
         const userCoursesData: {[userId: string]: Course[]} = {};
-        for (const user of usersData) {
+        for (const user of usersResponse.data) {
           try {
             const userCoursesResponse = await usersService.getUserCourses(user.id);
             userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course);
