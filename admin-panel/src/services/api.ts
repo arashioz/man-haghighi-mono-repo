@@ -27,7 +27,15 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Handle 304 Not Modified - ensure response.data exists
+    if (response.status === 304 && !response.data) {
+      // For 304, we should use cached data if available, or return empty array/object
+      // This depends on the endpoint, but we'll let the service handle it
+      response.data = response.data || null;
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -746,8 +754,21 @@ export const workshopsService = {
   },
 
   getActive: async (): Promise<Workshop[]> => {
-    const response = await api.get('/workshops/active');
-    return response.data;
+    try {
+      const response = await api.get('/workshops/active');
+      // Handle 304 Not Modified and ensure we return an array
+      if (response.status === 304 && !response.data) {
+        return [];
+      }
+      // Ensure response.data is an array
+      return Array.isArray(response.data) ? response.data : (response.data?.data || []);
+    } catch (error: any) {
+      // If it's a 304 error, return empty array instead of throwing
+      if (error.response?.status === 304) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   getById: async (id: string): Promise<Workshop> => {

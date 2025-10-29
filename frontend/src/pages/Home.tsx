@@ -29,11 +29,11 @@ const Home: React.FC = () => {
           workshopsService.getActive(),
         ]);
 
-        setSliders(slidersData);
-        setCourses(coursesData.slice(0, 6)); // نمایش 6 دوره
-        setArticles(articlesData.slice(0, 3));
-        setPodcasts(podcastsData.slice(0, 6)); // نمایش 6 پادکست
-        setWorkshops(workshopsData.slice(0, 3)); // نمایش 3 کارگاه فعال
+        setSliders(Array.isArray(slidersData) ? slidersData : []);
+        setCourses(Array.isArray(coursesData) ? coursesData.slice(0, 6) : []); // نمایش 6 دوره
+        setArticles(Array.isArray(articlesData) ? articlesData.slice(0, 3) : []);
+        setPodcasts(Array.isArray(podcastsData) ? podcastsData.slice(0, 6) : []); // نمایش 6 پادکست
+        setWorkshops(Array.isArray(workshopsData) ? workshopsData.slice(0, 3) : []); // نمایش 3 کارگاه فعال
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch data');
       } finally {
