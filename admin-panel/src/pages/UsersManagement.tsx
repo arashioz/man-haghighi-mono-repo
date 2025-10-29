@@ -24,6 +24,12 @@ const DeleteIcon = () => (
   </svg>
 );
 
+const PeopleIcon = () => (
+  <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+  </svg>
+);
+
 type TabType = 'users' | 'sales-managers' | 'sales-persons' | 'site-managers';
 
 const UsersManagement: React.FC = () => {
@@ -31,11 +37,22 @@ const UsersManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [userCourses, setUserCourses] = useState<{[userId: string]: Course[]}>({});
+  const [userProducts, setUserProducts] = useState<{[userId: string]: any[]}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
+  const [selectedUserForProducts, setSelectedUserForProducts] = useState<User | null>(null);
+  const [selectedUserProductsData, setSelectedUserProductsData] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     phone: '',
@@ -59,26 +76,52 @@ const UsersManagement: React.FC = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
+        const roleFilter = tabs.find(t => t.id === activeTab)?.role;
         const [usersResponse, coursesResponse] = await Promise.all([
-          usersService.getAll(),
+          usersService.getAll({
+            page: currentPage,
+            limit,
+            search: searchTerm || undefined,
+            role: roleFilter,
+          }),
           coursesService.getAll(),
         ]);
+        
         setUsers(usersResponse.data);
+        setTotal(usersResponse.meta.total);
+        setTotalPages(usersResponse.meta.totalPages);
         setCourses(coursesResponse);
         
-        // Fetch courses for each user
+        // Fetch courses and products for each user (only visible ones)
         const userCoursesData: {[userId: string]: Course[]} = {};
+        const userProductsData: {[userId: string]: any[]} = {};
+        
         for (const user of usersResponse.data) {
           try {
+            // Fetch courses
             const userCoursesResponse = await usersService.getUserCourses(user.id);
-            userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course);
+            userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course || enrollment);
+            
+            // Fetch products (only for old users or if needed)
+            if (user.isOld) {
+              try {
+                const userProductsResponse = await usersService.getUserWithProducts(user.id);
+                userProductsData[user.id] = userProductsResponse.oldProducts || [];
+              } catch (err) {
+                userProductsData[user.id] = [];
+              }
+            }
           } catch (err) {
-            console.error(`Failed to fetch courses for user ${user.id}:`, err);
+            console.error(`Failed to fetch data for user ${user.id}:`, err);
             userCoursesData[user.id] = [];
+            userProductsData[user.id] = [];
           }
         }
+        
         setUserCourses(userCoursesData);
+        setUserProducts(userProductsData);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت داده‌ها');
       } finally {
@@ -87,7 +130,12 @@ const UsersManagement: React.FC = () => {
     };
 
     fetchData();
-  }, []);
+  }, [activeTab, currentPage, limit, searchTerm]);
+  
+  // Reset to page 1 when search or tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab]);
 
   const handleDelete = async (id: string, userName: string) => {
     if (!window.confirm(`آیا از حذف "${userName}" اطمینان دارید؟\n\nاین عمل غیرقابل بازگشت است و تمام اطلاعات مربوط به این کاربر حذف خواهد شد.`)) {
@@ -206,26 +254,17 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const getFilteredUsers = () => {
-    const currentTab = tabs.find(tab => tab.id === activeTab);
-    const roleFilter = currentTab?.role;
+  const handleViewProducts = async (user: User) => {
+    setSelectedUserForProducts(user);
+    setIsProductsModalOpen(true);
     
-    let filteredUsers = users;
-    
-    if (roleFilter) {
-      filteredUsers = users.filter(user => user.role === roleFilter);
+    try {
+      const userData = await usersService.getUserWithProducts(user.id);
+      setSelectedUserProductsData(userData);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت محصولات کاربر');
+      setSelectedUserProductsData(null);
     }
-    
-    if (searchTerm) {
-      filteredUsers = filteredUsers.filter(user =>
-        user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone?.includes(searchTerm) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    return filteredUsers;
   };
 
   const getRoleBadge = (role: string) => {
@@ -254,8 +293,6 @@ const UsersManagement: React.FC = () => {
     const currentTab = tabs.find(tab => tab.id === activeTab);
     return currentTab?.label || 'کاربر';
   };
-
-  const filteredUsers = getFilteredUsers();
 
   if (loading) {
     return <LoadingSpinner />;
@@ -355,6 +392,9 @@ const UsersManagement: React.FC = () => {
                   دوره‌های دسترسی
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  محصولات قدیمی
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -366,7 +406,7 @@ const UsersManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -415,6 +455,45 @@ const UsersManagement: React.FC = () => {
                       )}
                     </div>
                   </td>
+                  <td className="px-6 py-4">
+                    <div className="max-w-xs">
+                      {user.isOld && userProducts[user.id] && userProducts[user.id].length > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap gap-1 flex-1">
+                            {userProducts[user.id].slice(0, 2).map((product: any, idx: number) => (
+                              <span
+                                key={product.id || idx}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
+                              >
+                                {product.productName || product.name || 'محصول'}
+                              </span>
+                            ))}
+                            {userProducts[user.id].length > 2 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                +{userProducts[user.id].length - 2}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleViewProducts(user)}
+                            className="text-orange-600 hover:text-orange-800 text-xs"
+                            title="مشاهده همه محصولات"
+                          >
+                            مشاهده
+                          </button>
+                        </div>
+                      ) : user.isOld ? (
+                        <button
+                          onClick={() => handleViewProducts(user)}
+                          className="text-orange-600 hover:text-orange-800 text-xs"
+                        >
+                          مشاهده محصولات
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       user.isActive 
@@ -451,7 +530,172 @@ const UsersManagement: React.FC = () => {
           </table>
         </div>
         
-        {filteredUsers.length === 0 && (
+        {users.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <EmptyState
+              icon={<PeopleIcon />}
+              title="کاربری یافت نشد"
+              description={`${getTabTitle()}ی با این فیلترها یافت نشد.`}
+            />
+          </div>
+        )}
+      </div>
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3 flex items-center justify-between mt-4">
+          <div className="flex-1 flex justify-between items-center">
+            <div className="text-sm text-gray-700">
+              نمایش <span className="font-medium">{((currentPage - 1) * limit) + 1}</span> تا{' '}
+              <span className="font-medium">
+                {Math.min(currentPage * limit, total)}
+              </span>{' '}
+              از <span className="font-medium">{total}</span> نتیجه
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                قبلی
+              </button>
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === pageNum
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                بعدی
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Products Modal */}
+      <Modal
+        isOpen={isProductsModalOpen}
+        onClose={() => {
+          setIsProductsModalOpen(false);
+          setSelectedUserForProducts(null);
+          setSelectedUserProductsData(null);
+        }}
+        title={`محصولات و دوره‌های ${selectedUserForProducts?.firstName} ${selectedUserForProducts?.lastName}`}
+        size="large"
+      >
+        {selectedUserProductsData ? (
+          <div className="space-y-6">
+            {/* Old Products */}
+            {selectedUserProductsData.oldProducts && selectedUserProductsData.oldProducts.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full ml-2"></span>
+                  محصولات قدیمی ({selectedUserProductsData.oldProducts.length})
+                </h3>
+                <div className="space-y-2">
+                  {selectedUserProductsData.oldProducts.map((product: any, idx: number) => (
+                    <div key={product.id || idx} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{product.productName || product.name || 'محصول بدون نام'}</h4>
+                          {product.productCategory && (
+                            <p className="text-sm text-gray-500 mt-1">دسته: {product.productCategory}</p>
+                          )}
+                          {product.productId && (
+                            <p className="text-xs text-gray-400 mt-1">شناسه: {product.productId}</p>
+                          )}
+                        </div>
+                        {product.importedAt && (
+                          <span className="text-xs text-gray-400">
+                            {new Date(product.importedAt).toLocaleDateString('fa-IR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Purchased Courses */}
+            {selectedUserProductsData.purchasedCourses && selectedUserProductsData.purchasedCourses.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full ml-2"></span>
+                  دوره‌های خریداری شده ({selectedUserProductsData.purchasedCourses.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedUserProductsData.purchasedCourses.map((enrollment: any) => (
+                    <div key={enrollment.id || enrollment.course?.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      {enrollment.course && (
+                        <>
+                          <h4 className="font-medium text-gray-900">{enrollment.course.title}</h4>
+                          {enrollment.course.description && (
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{enrollment.course.description}</p>
+                          )}
+                          <div className="flex justify-between items-center mt-3">
+                            {enrollment.course.price && (
+                              <span className="text-sm font-medium text-blue-600">
+                                {enrollment.course.price.toLocaleString()} تومان
+                              </span>
+                            )}
+                            {enrollment.enrolledAt && (
+                              <span className="text-xs text-gray-400">
+                                {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {(!selectedUserProductsData.oldProducts || selectedUserProductsData.oldProducts.length === 0) &&
+             (!selectedUserProductsData.purchasedCourses || selectedUserProductsData.purchasedCourses.length === 0) && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">این کاربر محصول یا دوره‌ای ندارد.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-500 mt-4">در حال بارگذاری...</p>
+          </div>
+        )}
+      </Modal>
+      
+      {users.length === 0 && loading && (
           <EmptyState
             icon={
               <svg className="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -463,9 +707,7 @@ const UsersManagement: React.FC = () => {
             action={!searchTerm ? <AddButton /> : undefined}
           />
         )}
-      </div>
-
-      {}
+      
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -630,7 +872,7 @@ const UsersManagement: React.FC = () => {
         onClose={() => setIsEditModalOpen(false)}
         title="ویرایش کاربر"
       >
-        {editingUser && (
+        {editingUser ? (
           <form onSubmit={handleUpdateUser} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -639,7 +881,7 @@ const UsersManagement: React.FC = () => {
               <input
                 type="text"
                 value={editingUser.firstName || ''}
-                onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, firstName: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -651,7 +893,7 @@ const UsersManagement: React.FC = () => {
               <input
                 type="text"
                 value={editingUser.lastName || ''}
-                onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, lastName: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -662,7 +904,7 @@ const UsersManagement: React.FC = () => {
               <input
                 type="text"
                 value={editingUser.username || ''}
-                onChange={(e) => setEditingUser({...editingUser, username: e.target.value})}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, username: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 placeholder="نام کاربری منحصر به فرد"
@@ -674,8 +916,8 @@ const UsersManagement: React.FC = () => {
               </label>
               <input
                 type="tel"
-                value={editingUser.phone}
-                onChange={(e) => setEditingUser({...editingUser, phone: e.target.value})}
+                value={editingUser.phone || ''}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, phone: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               />
@@ -686,8 +928,8 @@ const UsersManagement: React.FC = () => {
               </label>
               <input
                 type="email"
-                value={editingUser.email}
-                onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                value={editingUser.email || ''}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, email: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -697,7 +939,7 @@ const UsersManagement: React.FC = () => {
               </label>
               <select
                 value={editingUser.role}
-                onChange={(e) => setEditingUser({...editingUser, role: e.target.value as 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER'})}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, role: e.target.value as 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER'})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="USER">کاربر</option>
@@ -737,7 +979,7 @@ const UsersManagement: React.FC = () => {
               <input
                 type="checkbox"
                 checked={editingUser.isActive}
-                onChange={(e) => setEditingUser({...editingUser, isActive: e.target.checked})}
+                onChange={(e) => editingUser && setEditingUser({...editingUser, isActive: e.target.checked})}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label className="mr-2 block text-sm text-gray-900">
@@ -760,7 +1002,7 @@ const UsersManagement: React.FC = () => {
               </button>
             </div>
           </form>
-        )}
+        ) : null}
       </Modal>
     </div>
   );

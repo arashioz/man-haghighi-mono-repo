@@ -8,6 +8,7 @@ export interface User {
   avatar?: string;
   role: 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER';
   isActive: boolean;
+  isOld?: boolean;
   createdAt: string;
   updatedAt: string;
   parentId?: string;

@@ -95,6 +95,11 @@ export const usersService = {
     return response.data;
   },
 
+  getUserWithProducts: async (id: string) => {
+    const response = await api.get(`/users/${id}/products`);
+    return response.data;
+  },
+
   assignCourses: async (userId: string, courseIds: string[]) => {
     const response = await api.post(`/users/${userId}/courses`, { courseIds });
     return response.data;
