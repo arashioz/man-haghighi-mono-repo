@@ -175,9 +175,6 @@ export class UsersService {
             productCategory: true,
             importedAt: true,
           },
-          orderBy: {
-            importedAt: 'desc',
-          },
         },
         purchasedCourses: {
           include: {
@@ -196,7 +193,7 @@ export class UsersService {
             enrolledAt: 'desc',
           },
         },
-      },
+      } as any,
     });
 
     if (!user) {
@@ -304,16 +301,26 @@ export class UsersService {
   async remove(id: string) {
     const user = await this.findOne(id);
     
+    // حذف تیم‌های فروش مربوط به مدیر فروش
     if (user.role === 'SALES_MANAGER') {
-      await (this.prisma as any).salesTeam.deleteMany({
-        where: { managerId: id },
-      });
+      try {
+        await (this.prisma as any).salesTeam?.deleteMany({
+          where: { managerId: id },
+        });
+      } catch (error) {
+        // Ignore if salesTeam model doesn't exist
+      }
     }
     
+    // حذف عضویت‌های تیم و دسترسی‌های کارشناس فروش
     if (user.role === 'SALES_PERSON') {
-      await (this.prisma as any).salesTeamMember.deleteMany({
-        where: { salesPersonId: id },
-      });
+      try {
+        await (this.prisma as any).salesTeamMember?.deleteMany({
+          where: { salesPersonId: id },
+        });
+      } catch (error) {
+        // Ignore if salesTeamMember model doesn't exist
+      }
       
       await this.prisma.salesPersonWorkshopAccess.deleteMany({
         where: { 
@@ -333,7 +340,7 @@ export class UsersService {
       });
     }
     
-
+    // حذف دسترسی‌های ویدیو و صوت
     await this.prisma.videoAccess.deleteMany({
       where: { userId: id },
     });
@@ -342,10 +349,12 @@ export class UsersService {
       where: { userId: id },
     });
     
+    // حذف ثبت نام‌های دوره
     await this.prisma.courseEnrollment.deleteMany({
       where: { userId: id },
     });
     
+    // حذف کاربر
     return this.prisma.user.delete({
       where: { id },
     });

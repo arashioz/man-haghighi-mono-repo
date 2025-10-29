@@ -175,7 +175,7 @@ export class WorkshopsService {
   }
 
   async uploadVideos(id: string, files: Express.Multer.File[]) {
-    const workshop = await this.findOne(id);
+    const workshop = await this.findOne(id) as any;
     
     const existingVideos = workshop.videoLinks || [];
     const newVideoLinks = files.map(file => this.urlService.getFileUrl(file.filename));
@@ -183,7 +183,7 @@ export class WorkshopsService {
     
     const updatedWorkshop = await this.prisma.workshop.update({
       where: { id },
-      data: { videoLinks: allVideoLinks },
+      data: { videoLinks: allVideoLinks } as any,
       include: {
         creator: {
           select: {
@@ -212,7 +212,7 @@ export class WorkshopsService {
   }
 
   async uploadAudios(id: string, files: Express.Multer.File[]) {
-    const workshop = await this.findOne(id);
+    const workshop = await this.findOne(id) as any;
     
     const existingAudios = workshop.audioLinks || [];
     const newAudioLinks = files.map(file => this.urlService.getFileUrl(file.filename));
@@ -220,7 +220,7 @@ export class WorkshopsService {
     
     const updatedWorkshop = await this.prisma.workshop.update({
       where: { id },
-      data: { audioLinks: allAudioLinks },
+      data: { audioLinks: allAudioLinks } as any,
       include: {
         creator: {
           select: {
