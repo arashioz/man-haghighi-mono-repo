@@ -67,7 +67,16 @@ export interface Article {
   content: string;
   excerpt?: string;
   featuredImage?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string[];
+  focusKeyword?: string;
+  author?: string;
+  categoryId?: string;
+  tags?: string[];
   published: boolean;
+  viewCount: number;
+  readingTime?: number;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
