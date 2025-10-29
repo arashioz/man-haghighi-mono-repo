@@ -27,6 +27,7 @@ const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [userCourses, setUserCourses] = useState<{[userId: string]: Course[]}>({});
+  const [userProducts, setUserProducts] = useState<{[userId: string]: any[]}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,10 +35,13 @@ const Users: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
+  const [selectedUserForProducts, setSelectedUserForProducts] = useState<User | null>(null);
+  const [selectedUserProductsData, setSelectedUserProductsData] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     phone: '',
@@ -91,18 +95,34 @@ const Users: React.FC = () => {
         setTotalPages(usersResponse.meta.totalPages);
         setTotalUsers(usersResponse.meta.total);
         
-        // Fetch courses for each user
+        // Fetch courses and products for each user
         const userCoursesData: {[userId: string]: Course[]} = {};
+        const userProductsData: {[userId: string]: any[]} = {};
+        
         for (const user of usersResponse.data) {
           try {
+            // Fetch courses
             const userCoursesResponse = await usersService.getUserCourses(user.id);
             userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course);
+            
+            // Fetch products (only for old users)
+            if (user.isOld) {
+              try {
+                const userProductsResponse = await usersService.getUserWithProducts(user.id);
+                userProductsData[user.id] = userProductsResponse.oldProducts || [];
+              } catch (err) {
+                userProductsData[user.id] = [];
+              }
+            }
           } catch (err) {
-            console.error(`Failed to fetch courses for user ${user.id}:`, err);
+            console.error(`Failed to fetch data for user ${user.id}:`, err);
             userCoursesData[user.id] = [];
+            userProductsData[user.id] = [];
           }
         }
+        
         setUserCourses(userCoursesData);
+        setUserProducts(userProductsData);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت داده‌ها');
       } finally {
@@ -118,15 +138,33 @@ const Users: React.FC = () => {
       try {
         await usersService.delete(id);
         setUsers(users.filter(user => user.id !== id));
-        // Remove user courses from state
+        // Remove user courses and products from state
         setUserCourses(prev => {
           const newUserCourses = { ...prev };
           delete newUserCourses[id];
           return newUserCourses;
         });
+        setUserProducts(prev => {
+          const newUserProducts = { ...prev };
+          delete newUserProducts[id];
+          return newUserProducts;
+        });
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در حذف کاربر');
       }
+    }
+  };
+
+  const handleViewProducts = async (user: User) => {
+    setSelectedUserForProducts(user);
+    setIsProductsModalOpen(true);
+    
+    try {
+      const userData = await usersService.getUserWithProducts(user.id);
+      setSelectedUserProductsData(userData);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت محصولات کاربر');
+      setSelectedUserProductsData(null);
     }
   };
 
@@ -313,7 +351,7 @@ const Users: React.FC = () => {
       )}
 
       {/* Search and Filter */}
-      <div className="mb-6 flex gap-4">
+      <div className="mb-6 flex gap-4 items-center">
         <div className="relative flex-1">
           <input
             type="text"
@@ -339,6 +377,13 @@ const Users: React.FC = () => {
           <option value="SALES_MANAGER">مدیر فروش</option>
           <option value="ADMIN">مدیر</option>
         </select>
+        {!loading && totalUsers > 0 && (
+          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+            <span className="text-sm text-gray-600">تعداد کل:</span>
+            <span className="text-lg font-bold text-blue-600">{totalUsers.toLocaleString('fa-IR')}</span>
+            <span className="text-sm text-gray-600">کاربر</span>
+          </div>
+        )}
       </div>
 
       {}
@@ -355,6 +400,9 @@ const Users: React.FC = () => {
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   دوره‌های دسترسی
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  محصولات <span className="text-red-600 font-bold">قدیمی</span>
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
@@ -410,6 +458,45 @@ const Users: React.FC = () => {
                         </div>
                       ) : (
                         <span className="text-gray-400 text-sm">هیچ دوره‌ای</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="max-w-xs">
+                      {user.isOld && userProducts[user.id] && userProducts[user.id].length > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap gap-1 flex-1">
+                            {userProducts[user.id].slice(0, 2).map((product: any, idx: number) => (
+                              <span
+                                key={product.id || idx}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
+                              >
+                                {product.productName || product.name || 'محصول'}
+                              </span>
+                            ))}
+                            {userProducts[user.id].length > 2 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                +{userProducts[user.id].length - 2}
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleViewProducts(user)}
+                            className="text-orange-600 hover:text-orange-800 text-xs"
+                            title="مشاهده همه محصولات"
+                          >
+                            مشاهده
+                          </button>
+                        </div>
+                      ) : user.isOld ? (
+                        <button
+                          onClick={() => handleViewProducts(user)}
+                          className="text-orange-600 hover:text-orange-800 text-xs"
+                        >
+                          مشاهده محصولات
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </div>
                   </td>
@@ -709,6 +796,102 @@ const Users: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Products Modal */}
+      <Modal
+        isOpen={isProductsModalOpen}
+        onClose={() => {
+          setIsProductsModalOpen(false);
+          setSelectedUserForProducts(null);
+          setSelectedUserProductsData(null);
+        }}
+        title={`محصولات و دوره‌های ${selectedUserForProducts?.firstName} ${selectedUserForProducts?.lastName}`}
+        size="large"
+      >
+        {selectedUserProductsData ? (
+          <div className="space-y-6">
+            {/* Old Products */}
+            {selectedUserProductsData.oldProducts && selectedUserProductsData.oldProducts.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full ml-2"></span>
+                  محصولات <span className="text-red-600 font-bold mx-1">قدیمی</span> ({selectedUserProductsData.oldProducts.length})
+                </h3>
+                <div className="space-y-2">
+                  {selectedUserProductsData.oldProducts.map((product: any, idx: number) => (
+                    <div key={product.id || idx} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-gray-900">{product.productName || product.name || 'محصول بدون نام'}</h4>
+                          {product.productCategory && (
+                            <p className="text-sm text-gray-500 mt-1">دسته: {product.productCategory}</p>
+                          )}
+                          {product.productId && (
+                            <p className="text-xs text-gray-400 mt-1">شناسه: {product.productId}</p>
+                          )}
+                        </div>
+                        {product.importedAt && (
+                          <span className="text-xs text-gray-400">
+                            {new Date(product.importedAt).toLocaleDateString('fa-IR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Purchased Courses */}
+            {selectedUserProductsData.purchasedCourses && selectedUserProductsData.purchasedCourses.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full ml-2"></span>
+                  دوره‌های خریداری شده ({selectedUserProductsData.purchasedCourses.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedUserProductsData.purchasedCourses.map((enrollment: any) => (
+                    <div key={enrollment.id || enrollment.course?.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                      {enrollment.course && (
+                        <>
+                          <h4 className="font-medium text-gray-900">{enrollment.course.title}</h4>
+                          {enrollment.course.description && (
+                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{enrollment.course.description}</p>
+                          )}
+                          <div className="flex justify-between items-center mt-3">
+                            {enrollment.course.price && (
+                              <span className="text-sm font-medium text-blue-600">
+                                {enrollment.course.price.toLocaleString()} تومان
+                              </span>
+                            )}
+                            {enrollment.enrolledAt && (
+                              <span className="text-xs text-gray-400">
+                                {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {(!selectedUserProductsData.oldProducts || selectedUserProductsData.oldProducts.length === 0) &&
+             (!selectedUserProductsData.purchasedCourses || selectedUserProductsData.purchasedCourses.length === 0) && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">این کاربر محصول یا دوره‌ای ندارد.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-500 mt-4">در حال بارگذاری...</p>
+          </div>
+        )}
       </Modal>
 
       {}

@@ -356,8 +356,8 @@ const UsersManagement: React.FC = () => {
       </div>
 
       {}
-      <div className="mb-6">
-        <div className="relative">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="relative flex-1">
           <input
             type="text"
             placeholder={`جستجو در ${getTabTitle()}...`}
@@ -371,6 +371,13 @@ const UsersManagement: React.FC = () => {
             </svg>
           </div>
         </div>
+        {!loading && total > 0 && (
+          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
+            <span className="text-sm text-gray-600">تعداد کل:</span>
+            <span className="text-lg font-bold text-blue-600">{total.toLocaleString('fa-IR')}</span>
+            <span className="text-sm text-gray-600">{getTabTitle()}</span>
+          </div>
+        )}
       </div>
 
       {}
@@ -392,7 +399,7 @@ const UsersManagement: React.FC = () => {
                   دوره‌های دسترسی
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  محصولات قدیمی
+                  محصولات <span className="text-red-600 font-bold">قدیمی</span>
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
@@ -617,7 +624,7 @@ const UsersManagement: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                   <span className="w-2 h-2 bg-orange-500 rounded-full ml-2"></span>
-                  محصولات قدیمی ({selectedUserProductsData.oldProducts.length})
+                  محصولات <span className="text-red-600 font-bold mx-1">قدیمی</span> ({selectedUserProductsData.oldProducts.length})
                 </h3>
                 <div className="space-y-2">
                   {selectedUserProductsData.oldProducts.map((product: any, idx: number) => (
