@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Response } from 'express';
-import { createReadStream, statSync } from 'fs';
+import { createReadStream, statSync, existsSync } from 'fs';
 import { join } from 'path';
 import { UrlService } from '../common/services/url.service';
 
@@ -103,38 +103,79 @@ export class VideosController {
     @Res() res: Response,
     @Headers('range') range?: string
   ) {
-    const hasAccess = await this.videosService.checkVideoAccess(req.user.id, id);
-    
-    if (!hasAccess) {
-      throw new ForbiddenException('You do not have access to this video');
-    }
-
-    // Get raw video data (with filename, not URL) for file access
-    const video = await this.videosService.findOneRaw(id);
-    
-    if (!video.videoFile) {
-      return res.status(404).json({ error: 'Video file not specified' });
-    }
-    
-    // Check if videoFile is a URL or a local file path
-    let videoPath: string;
-    if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-      // External URL - redirect to it
-      return res.redirect(302, video.videoFile);
-    } else if (video.videoFile.startsWith('/')) {
-      // Absolute path
-      videoPath = video.videoFile;
-    } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
-      // Path already includes uploads directory
-      videoPath = join(process.cwd(), video.videoFile.replace(/^\.\//, ''));
-    } else {
-      // Relative path - assume it's in uploads directory
-      videoPath = join(process.cwd(), 'uploads', video.videoFile);
-    }
-    
     try {
+      const hasAccess = await this.videosService.checkVideoAccess(req.user.id, id);
+      
+      if (!hasAccess) {
+        throw new ForbiddenException('You do not have access to this video');
+      }
+
+      // Get raw video data (with filename, not URL) for file access
+      const video = await this.videosService.findOneRaw(id);
+      
+      if (!video || !video.videoFile) {
+        console.error(`Video not found or videoFile is missing. Video ID: ${id}`);
+        return res.status(404).json({ error: 'Video file not specified' });
+      }
+
+      console.log(`Streaming video ID: ${id}, videoFile: ${video.videoFile}`);
+      
+      // Check if videoFile is a URL or a local file path
+      let videoPath: string;
+      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
+        // External URL - redirect to it
+        console.log(`Redirecting to external URL: ${video.videoFile}`);
+        return res.redirect(302, video.videoFile);
+      } else if (video.videoFile.startsWith('/')) {
+        // Absolute path
+        videoPath = video.videoFile;
+      } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
+        // Path already includes uploads directory
+        videoPath = join(process.cwd(), video.videoFile.replace(/^\.\//, ''));
+      } else {
+        // Relative path - assume it's in uploads directory
+        videoPath = join(process.cwd(), 'uploads', video.videoFile);
+      }
+
+      console.log(`Attempting to stream from path: ${videoPath}`);
+      
+      // Check if file exists
+      if (!existsSync(videoPath)) {
+        console.error(`Video file does not exist at path: ${videoPath}`);
+        // Try alternative paths
+        const altPaths = [
+          join(process.cwd(), video.videoFile),
+          join('/app/uploads', video.videoFile),
+          join('/app', video.videoFile),
+        ];
+        
+        for (const altPath of altPaths) {
+          if (existsSync(altPath)) {
+            console.log(`Found video at alternative path: ${altPath}`);
+            videoPath = altPath;
+            break;
+          }
+        }
+        
+        if (!existsSync(videoPath)) {
+          console.error(`Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
+          return res.status(404).json({ 
+            error: 'Video file not found',
+            videoFile: video.videoFile,
+            attemptedPaths: [videoPath, ...altPaths]
+          });
+        }
+      }
+      
       const stat = statSync(videoPath);
       const fileSize = stat.size;
+      console.log(`Video file size: ${fileSize} bytes`);
+      
+      // Determine content type based on file extension
+      const ext = videoPath.split('.').pop()?.toLowerCase();
+      const contentType = ext === 'webm' ? 'video/webm' : 
+                         ext === 'mov' ? 'video/quicktime' : 
+                         ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
       
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
@@ -147,7 +188,7 @@ export class VideosController {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
-          'Content-Type': 'video/mp4',
+          'Content-Type': contentType,
         };
         
         res.writeHead(206, head);
@@ -156,7 +197,7 @@ export class VideosController {
         const head = {
           'Content-Length': fileSize,
           'Accept-Ranges': 'bytes',
-          'Content-Type': 'video/mp4',
+          'Content-Type': contentType,
         };
         
         res.writeHead(200, head);
@@ -164,11 +205,14 @@ export class VideosController {
       }
     } catch (error: any) {
       console.error('Video stream error:', error.message);
+      console.error('Error stack:', error.stack);
       if (!res.headersSent) {
+        if (error instanceof ForbiddenException) {
+          throw error;
+        }
         res.status(404).json({ 
           error: 'Video file not found',
-          message: error.message,
-          path: videoPath 
+          message: error.message
         });
       }
     }
