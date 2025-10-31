@@ -40,17 +40,22 @@ const Articles: React.FC = () => {
 
   const fetchArticles = async () => {
     try {
+      setLoading(true);
+      setError('');
       const response = await articlesService.getAll();
       // Handle different response structures: array, { data: array }, or { data: { data: array } }
       let articlesArray: Article[] = [];
       if (Array.isArray(response)) {
         articlesArray = response;
-      } else if (Array.isArray(response?.data)) {
-        articlesArray = response.data;
-      } else if (response?.data?.data && Array.isArray(response.data.data)) {
-        articlesArray = response.data.data;
+      } else if (response && typeof response === 'object') {
+        if (Array.isArray(response.data)) {
+          articlesArray = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          articlesArray = response.data.data;
+        }
       }
-      setArticles(articlesArray);
+      // Ensure articlesArray is always an array
+      setArticles(Array.isArray(articlesArray) ? articlesArray : []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
       setArticles([]); // Ensure articles is always an array
@@ -149,7 +154,11 @@ const Articles: React.FC = () => {
 
     try {
       await articlesService.delete(articleId);
-      setArticles(articles.filter(article => article.id !== articleId));
+      if (Array.isArray(articles)) {
+        setArticles(articles.filter(article => article.id !== articleId));
+      } else {
+        setArticles([]);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در حذف مقاله');
     }
@@ -161,9 +170,13 @@ const Articles: React.FC = () => {
 
     try {
       const updatedArticle = await articlesService.update(editingArticle.id, editingArticle);
-      setArticles(articles.map(article => 
-        article.id === editingArticle.id ? updatedArticle : article
-      ));
+      if (Array.isArray(articles)) {
+        setArticles(articles.map(article => 
+          article.id === editingArticle.id ? updatedArticle : article
+        ));
+      } else {
+        setArticles([]);
+      }
       setIsEditModalOpen(false);
       setEditingArticle(null);
     } catch (err: any) {
@@ -208,7 +221,7 @@ const Articles: React.FC = () => {
       )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {articles.length > 0 ? (
+        {Array.isArray(articles) && articles.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
