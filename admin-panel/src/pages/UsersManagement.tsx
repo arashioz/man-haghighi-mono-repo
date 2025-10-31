@@ -397,7 +397,7 @@ const UsersManagement: React.FC = () => {
       </div>
 
       {}
-      <div className="mb-6 flex items-center justify-between gap-4">
+      <div className="mb-6 flex items-center justify-between gap-4 relative z-10">
         <div className="relative flex-1">
           <input
             type="text"
@@ -424,31 +424,31 @@ const UsersManagement: React.FC = () => {
       {}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200 table-fixed">
             <thead className="bg-gray-50">
               <tr>
-                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-48 px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {getTabTitle()}
                 </th>
-                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   نقش
                 </th>
-                <th className="w-1/8 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-36 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تماس
                 </th>
-                <th className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  دوره‌های دسترسی
+                <th className="w-28 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  دوره‌ها
                 </th>
-                <th className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-28 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   محصولات <span className="text-red-600 font-bold">قدیمی</span>
                 </th>
-                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-20 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
                 </th>
-                <th className="w-1/10 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  تاریخ عضویت
+                <th className="w-28 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  تاریخ
                 </th>
-                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-2 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   عملیات
                 </th>
               </tr>
@@ -456,76 +456,62 @@ const UsersManagement: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-xs">
                           {user.firstName?.[0] || user.phone?.[0] || 'U'}
                         </div>
                       </div>
-                      <div className="mr-4">
-                        <div className="text-sm font-medium text-gray-900">
+                      <div className="mr-2 min-w-0 flex-1">
+                        <div className="text-xs font-medium text-gray-900 truncate">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs text-gray-500 truncate">
                           {user.username}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3">
                     {getRoleBadge(user.role)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.phone}</div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
+                  <td className="px-2 py-3">
+                    <div className="text-xs text-gray-900 truncate" title={user.phone}>{user.phone}</div>
+                    <div className="text-xs text-gray-500 truncate" title={user.email}>{user.email}</div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {userCoursesCount[user.id] > 0 ? (
-                        <>
-                          <span className="inline-flex items-center  rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {userCoursesCount[user.id]}
-                          </span>
-                          <button
-                            onClick={() => handleViewProducts(user)}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                          >
-                            مشاهده
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 text-sm">هیچ دوره‌ای</span>
-                      )}
-                    </div>
+                  <td className="px-2 py-3 text-center">
+                    {userCoursesCount[user.id] > 0 ? (
+                      <button
+                        onClick={() => handleViewProducts(user)}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
+                      >
+                        {userCoursesCount[user.id]}
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      {user.isOld && userProductsCount[user.id] > 0 ? (
-                        <>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            {userProductsCount[user.id]}
-                          </span>
-                          <button
-                            onClick={() => handleViewProducts(user)}
-                            className="text-orange-600 hover:text-orange-800 text-xs font-medium"
-                          >
-                            مشاهده
-                          </button>
-                        </>
-                      ) : user.isOld ? (
-                        <button
-                          onClick={() => handleViewProducts(user)}
-                          className="text-orange-600 hover:text-orange-800 text-xs font-medium"
-                        >
-                          مشاهده
-                        </button>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
-                    </div>
+                  <td className="px-2 py-3 text-center">
+                    {user.isOld && userProductsCount[user.id] > 0 ? (
+                      <button
+                        onClick={() => handleViewProducts(user)}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 hover:bg-orange-200"
+                      >
+                        {userProductsCount[user.id]}
+                      </button>
+                    ) : user.isOld ? (
+                      <button
+                        onClick={() => handleViewProducts(user)}
+                        className="text-orange-600 hover:text-orange-800 text-xs"
+                      >
+                        نمایش
+                      </button>
+                    ) : (
+                      <span className="text-gray-400 text-xs">-</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-2 py-3 text-center">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       user.isActive 
                         ? 'bg-green-100 text-green-800' 
@@ -534,21 +520,21 @@ const UsersManagement: React.FC = () => {
                       {user.isActive ? 'فعال' : 'غیرفعال'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-2 py-3 text-xs text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString('fa-IR')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2 space-x-reverse">
+                  <td className="px-2 py-3">
+                    <div className="flex justify-center gap-1">
                       <button 
                         onClick={() => handleEditUser(user)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 p-1"
                         title="ویرایش"
                       >
                         <EditIcon />
                       </button>
                       <button 
                         onClick={() => handleDelete(user.id, `${user.firstName} ${user.lastName}`)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 hover:text-red-900 p-1"
                         title="حذف"
                       >
                         <DeleteIcon />
@@ -682,25 +668,107 @@ const UsersManagement: React.FC = () => {
                   <span className="w-2 h-2 bg-blue-500 rounded-full ml-2"></span>
                   دوره‌های خریداری شده ({selectedUserProductsData.purchasedCourses.length})
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   {selectedUserProductsData.purchasedCourses.map((enrollment: any) => (
-                    <div key={enrollment.id || enrollment.course?.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+                    <div key={enrollment.id || enrollment.course?.id} className="border border-gray-200 rounded-lg overflow-hidden">
                       {enrollment.course && (
                         <>
-                          <h4 className="font-medium text-gray-900">{enrollment.course.title}</h4>
-                          {enrollment.course.description && (
-                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{enrollment.course.description}</p>
-                          )}
-                          <div className="flex justify-between items-center mt-3">
-                            {enrollment.course.price && (
-                              <span className="text-sm font-medium text-blue-600">
-                                {enrollment.course.price.toLocaleString()} تومان
-                              </span>
+                          <div className="bg-gray-50 p-4 border-b border-gray-200">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900 text-lg">{enrollment.course.title}</h4>
+                                {enrollment.course.description && (
+                                  <p className="text-sm text-gray-600 mt-1">{enrollment.course.description}</p>
+                                )}
+                              </div>
+                              <div className="text-left mr-4">
+                                {enrollment.course.price && (
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {enrollment.course.price.toLocaleString()} تومان
+                                  </span>
+                                )}
+                                {enrollment.enrolledAt && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="p-4">
+                            {/* Videos Section */}
+                            {enrollment.course.videos && enrollment.course.videos.length > 0 && (
+                              <div className="mb-4">
+                                <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  ویدیوهای دوره ({enrollment.course.videos.length})
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {enrollment.course.videos.map((video: any, idx: number) => (
+                                    <div key={video.id} className="flex items-center gap-2 p-2 bg-blue-50 rounded text-sm">
+                                      <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs">
+                                        {idx + 1}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-gray-900 truncate">{video.title}</p>
+                                        {video.duration && (
+                                          <p className="text-xs text-gray-500">
+                                            {Math.floor(video.duration / 60)} دقیقه
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className={`text-xs px-2 py-1 rounded ${video.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                        {video.published ? 'منتشر شده' : 'پیش‌نویس'}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             )}
-                            {enrollment.enrolledAt && (
-                              <span className="text-xs text-gray-400">
-                                {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
-                              </span>
+                            
+                            {/* Attachments Section */}
+                            {enrollment.course.attachments && enrollment.course.attachments.length > 0 && (
+                              <div>
+                                <h5 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                  </svg>
+                                  فایل‌های ضمیمه ({enrollment.course.attachments.length})
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {enrollment.course.attachments.map((attachment: string, idx: number) => {
+                                    const fileName = attachment.split('/').pop() || attachment;
+                                    const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
+                                    return (
+                                      <a 
+                                        key={idx}
+                                        href={attachment}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 p-2 bg-green-50 rounded text-sm hover:bg-green-100 transition-colors"
+                                      >
+                                        <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-gray-900 truncate">{fileName}</p>
+                                          <p className="text-xs text-gray-500 uppercase">{fileExt}</p>
+                                        </div>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {(!enrollment.course.videos || enrollment.course.videos.length === 0) && 
+                             (!enrollment.course.attachments || enrollment.course.attachments.length === 0) && (
+                              <p className="text-sm text-gray-500 text-center py-4">
+                                هیچ محتوای اضافی برای این دوره موجود نیست
+                              </p>
                             )}
                           </div>
                         </>
