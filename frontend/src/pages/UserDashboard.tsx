@@ -86,18 +86,18 @@ const UserDashboard: React.FC = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:py-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">داشبورد من</h1>
-              <p className="text-gray-600 mt-1">خوش آمدید، {user?.firstName} {user?.lastName}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">داشبورد من</h1>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">خوش آمدید، {user?.firstName} {user?.lastName}</p>
             </div>
-            <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="flex items-center space-x-4 space-x-reverse w-full sm:w-auto justify-between sm:justify-end">
               <div className="text-right">
-                <p className="text-sm text-gray-500">کیف پول</p>
-                <p className="text-xl font-bold text-green-600">۰ تومان</p>
+                <p className="text-xs sm:text-sm text-gray-500">کیف پول</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600">۰ تومان</p>
               </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-base sm:text-lg">
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </span>
               </div>
@@ -106,11 +106,11 @@ const UserDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 space-x-reverse">
+        <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8 space-x-reverse min-w-max sm:min-w-0">
               {[
                 { id: 'courses', name: 'دوره‌های من', icon: '📚', count: myCourses.length },
                 { id: 'workshops', name: 'کارگاه‌های من', icon: '🎓', count: myWorkshops.length },
@@ -121,14 +121,15 @@ const UserDashboard: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-4 px-6 border-b-2 font-medium text-sm flex items-center space-x-2 space-x-reverse ${
+                  className={`py-3 sm:py-4 px-4 sm:px-6 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-2 space-x-reverse whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <span className="text-lg">{tab.icon}</span>
-                  <span>{tab.name}</span>
+                  <span className="text-base sm:text-lg">{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.name}</span>
+                  <span className="sm:hidden">{tab.name.split(' ')[0]}</span>
                   {tab.count > 0 && (
                     <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
                       {tab.count}
@@ -141,21 +142,22 @@ const UserDashboard: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {activeTab === 'courses' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">دوره‌های من</h2>
+            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">دوره‌های من</h2>
                 <button
                   onClick={() => navigate('/courses')}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
                 >
                   مشاهده همه دوره‌ها
                 </button>
               </div>
               
               {myCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
                   {myCourses.map((course) => (
                     <div key={course.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                       {course.thumbnail && (
@@ -186,39 +188,43 @@ const UserDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">📚</span>
+                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                  <div>
+                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl sm:text-4xl">📚</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">هنوز در هیچ دوره‌ای شرکت نکرده‌اید</h3>
+                    <p className="text-gray-600 mb-6">دوره‌های جذاب ما را کشف کنید</p>
+                    <button
+                      onClick={() => navigate('/courses')}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      مشاهده دوره‌ها
+                    </button>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">هنوز در هیچ دوره‌ای شرکت نکرده‌اید</h3>
-                  <p className="text-gray-600 mb-6">دوره‌های جذاب ما را کشف کنید</p>
-                  <button
-                    onClick={() => navigate('/courses')}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    مشاهده دوره‌ها
-                  </button>
                 </div>
               )}
             </div>
           )}
 
           {activeTab === 'workshops' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">کارگاه‌های من</h2>
+            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">کارگاه‌های من</h2>
                 <button
                   onClick={() => navigate('/workshops')}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
                 >
                   مشاهده همه کارگاه‌ها
                 </button>
               </div>
               
               {myWorkshops.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
                   {myWorkshops.map((workshop) => (
                     <div key={workshop.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                       {workshop.thumbnail && (
@@ -259,12 +265,14 @@ const UserDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">🎓</span>
-                  </div>
+                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                  <div>
+                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl sm:text-4xl">🎓</span>
+                    </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">هنوز در هیچ کارگاهی شرکت نکرده‌اید</h3>
                   <p className="text-gray-600 mb-6">کارگاه‌های جذاب ما را کشف کنید</p>
                   <button
@@ -279,13 +287,14 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'videos' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">ویدیوهای من</h2>
+            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">ویدیوهای من</h2>
               </div>
               
               {myVideos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
                   {myVideos.map((video) => (
                     <div key={video.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                       {video.thumbnail && (
@@ -316,12 +325,14 @@ const UserDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">🎥</span>
-                  </div>
+                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                  <div>
+                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl sm:text-4xl">🎥</span>
+                    </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">ویدیویی برای تماشا ندارید</h3>
                   <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
                   <button
@@ -336,13 +347,14 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'audios' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">فایل‌های صوتی من</h2>
+            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">فایل‌های صوتی من</h2>
               </div>
               
               {myAudios.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
                   {myAudios.map((audio) => (
                     <div key={audio.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
                       {audio.thumbnail && (
@@ -381,12 +393,14 @@ const UserDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-4xl">🎵</span>
-                  </div>
+                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                  <div>
+                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl sm:text-4xl">🎵</span>
+                    </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">فایل صوتی برای پخش ندارید</h3>
                   <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
                   <button
@@ -401,12 +415,12 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'wallet' && (
-            <div className="p-6">
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-4xl">💰</span>
+            <div className="p-4 sm:p-6">
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl sm:text-4xl">💰</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">کیف پول</h3>
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">کیف پول</h3>
                 <p className="text-gray-600 mb-6">موجودی فعلی شما</p>
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-8 mb-8">
                   <p className="text-4xl font-bold text-green-600 mb-2">۰ تومان</p>
