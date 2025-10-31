@@ -32,10 +32,26 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-    exposedHeaders: ['Content-Length', 'Content-Type'],
+    allowedHeaders: [
+      'Content-Type', 
+      'Authorization', 
+      'Accept', 
+      'Origin', 
+      'X-Requested-With',
+      'Range', // Important for video streaming
+      'Content-Range',
+      'Accept-Ranges'
+    ],
+    exposedHeaders: [
+      'Content-Length', 
+      'Content-Type',
+      'Content-Range', // Important for video streaming
+      'Accept-Ranges', // Important for video streaming
+      'Content-Location'
+    ],
     preflightContinue: false,
     optionsSuccessStatus: 204,
+    maxAge: 86400, // Cache preflight requests for 24 hours
   });
 
   app.use(require('express').json({ limit: '10gb' }));

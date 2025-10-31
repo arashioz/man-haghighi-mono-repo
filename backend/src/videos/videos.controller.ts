@@ -177,6 +177,11 @@ export class VideosController {
                          ext === 'mov' ? 'video/quicktime' : 
                          ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
       
+      // Set CORS headers for video streaming
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+      
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
@@ -189,6 +194,7 @@ export class VideosController {
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
           'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
         };
         
         res.writeHead(206, head);
@@ -198,6 +204,7 @@ export class VideosController {
           'Content-Length': fileSize,
           'Accept-Ranges': 'bytes',
           'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
         };
         
         res.writeHead(200, head);
