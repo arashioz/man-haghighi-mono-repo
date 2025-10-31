@@ -82,7 +82,7 @@ const Dashboard: React.FC = () => {
       try {
         if (user?.role === 'ADMIN') {
           const [users, sliders, articles, podcasts, courses, videos] = await Promise.all([
-            usersService.getAll(),
+            usersService.getAll({ page: 1, limit: 1 }), // Just get the total count
             slidersService.getAll(),
             articlesService.getAll(),
             podcastsService.getAll(),
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
           ]);
 
           setStats({
-            users: users.data?.length || 0,
+            users: users.meta?.total || 0,
             sliders: sliders.length || 0,
             articles: articles.length || 0,
             podcasts: podcasts.length || 0,
