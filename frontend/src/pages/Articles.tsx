@@ -15,7 +15,7 @@ const Articles: React.FC = () => {
       try {
         setLoading(true);
         setError('');
-        const response = await articlesService.getPublished();
+        const response: any = await articlesService.getPublished();
         // Handle different response structures: array, { data: array }, or { data: { data: array } }
         let articlesArray: Article[] = [];
         if (Array.isArray(response)) {
