@@ -64,6 +64,23 @@ services:
       - backend
     restart: unless-stopped
 
+  # Prisma Studio
+  prisma-studio:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haghighi_prisma_studio
+    env_file: .env
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npx prisma studio
+    restart: unless-stopped
+
 volumes:
   postgres_data:
 
