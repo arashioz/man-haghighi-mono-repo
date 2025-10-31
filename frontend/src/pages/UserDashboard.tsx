@@ -273,14 +273,15 @@ const UserDashboard: React.FC = () => {
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎓</span>
                     </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">هنوز در هیچ کارگاهی شرکت نکرده‌اید</h3>
-                  <p className="text-gray-600 mb-6">کارگاه‌های جذاب ما را کشف کنید</p>
-                  <button
-                    onClick={() => navigate('/workshops')}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    مشاهده کارگاه‌ها
-                  </button>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">هنوز در هیچ کارگاهی شرکت نکرده‌اید</h3>
+                    <p className="text-gray-600 mb-6">کارگاه‌های جذاب ما را کشف کنید</p>
+                    <button
+                      onClick={() => navigate('/workshops')}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      مشاهده کارگاه‌ها
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -333,14 +334,15 @@ const UserDashboard: React.FC = () => {
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎥</span>
                     </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">ویدیویی برای تماشا ندارید</h3>
-                  <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
-                  <button
-                    onClick={() => navigate('/courses')}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    مشاهده دوره‌ها
-                  </button>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">ویدیویی برای تماشا ندارید</h3>
+                    <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
+                    <button
+                      onClick={() => navigate('/courses')}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      مشاهده دوره‌ها
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -401,14 +403,15 @@ const UserDashboard: React.FC = () => {
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎵</span>
                     </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">فایل صوتی برای پخش ندارید</h3>
-                  <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
-                  <button
-                    onClick={() => navigate('/courses')}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    مشاهده دوره‌ها
-                  </button>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">فایل صوتی برای پخش ندارید</h3>
+                    <p className="text-gray-600 mb-6">ابتدا در دوره‌ای شرکت کنید</p>
+                    <button
+                      onClick={() => navigate('/courses')}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      مشاهده دوره‌ها
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
