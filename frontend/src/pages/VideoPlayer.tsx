@@ -45,6 +45,31 @@ const VideoPlayer: React.FC = () => {
       const streamUrl = token 
         ? `${baseUrl}/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
         : streamData.streamUrl;
+      
+      console.log('Video stream URL:', streamUrl);
+      console.log('Video info:', streamData);
+      
+      // Test if URL is accessible
+      try {
+        const testResponse = await fetch(streamUrl, {
+          method: 'HEAD',
+          headers: {
+            'Range': 'bytes=0-1'
+          }
+        });
+        console.log('Video URL test response:', {
+          status: testResponse.status,
+          statusText: testResponse.statusText,
+          headers: Object.fromEntries(testResponse.headers.entries())
+        });
+        
+        if (!testResponse.ok) {
+          console.error('Video URL not accessible:', testResponse.status, testResponse.statusText);
+        }
+      } catch (fetchError) {
+        console.error('Error testing video URL:', fetchError);
+      }
+      
       setVideoUrl(streamUrl);
       
       // Get course details and all course videos
@@ -159,20 +184,54 @@ const VideoPlayer: React.FC = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
               <div className="aspect-video bg-black">
-                <video
-                  key={videoId} // Force re-render when video changes
-                  controls
-                  className="w-full h-full"
-                  poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
-                  onEnded={hasNext ? goToNextVideo : undefined}
-                  onError={(e) => {
-                    console.error('Video playback error:', e);
-                    setError('خطا در پخش ویدیو. لطفاً صفحه را رفرش کنید.');
-                  }}
-                >
-                  <source src={videoUrl || videoInfo.streamUrl} type="video/mp4" />
-                  مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                </video>
+                {videoUrl && (
+                  <video
+                    key={videoId} // Force re-render when video changes
+                    controls
+                    className="w-full h-full"
+                    poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
+                    onEnded={hasNext ? goToNextVideo : undefined}
+                    onError={(e) => {
+                      const videoElement = e.target as HTMLVideoElement;
+                      const error = videoElement.error;
+                      console.error('Video playback error:', {
+                        code: error?.code,
+                        message: error?.message,
+                        url: videoUrl || videoInfo.streamUrl,
+                        networkState: videoElement.networkState,
+                        readyState: videoElement.readyState
+                      });
+                      
+                      let errorMessage = 'خطا در پخش ویدیو. ';
+                      if (error?.code === 1) {
+                        errorMessage += 'فایل ویدیو یافت نشد.';
+                      } else if (error?.code === 2) {
+                        errorMessage += 'خطا در اتصال به سرور.';
+                      } else if (error?.code === 3) {
+                        errorMessage += 'فایل ویدیو خراب است یا فرمت آن پشتیبانی نمی‌شود.';
+                      } else if (error?.code === 4) {
+                        errorMessage += 'فایل ویدیو رمزگذاری شده و قابل پخش نیست.';
+                      } else {
+                        errorMessage += 'لطفاً صفحه را رفرش کنید.';
+                      }
+                      setError(errorMessage);
+                    }}
+                    onLoadStart={() => {
+                      console.log('Video loading started:', videoUrl || videoInfo.streamUrl);
+                    }}
+                    onLoadedData={() => {
+                      console.log('Video loaded successfully');
+                    }}
+                    onCanPlay={() => {
+                      console.log('Video can play');
+                    }}
+                  >
+                    <source src={videoUrl || videoInfo.streamUrl} type="video/mp4" />
+                    <source src={videoUrl || videoInfo.streamUrl} type="video/webm" />
+                    <source src={videoUrl || videoInfo.streamUrl} type="video/ogg" />
+                    مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                  </video>
+                )}
               </div>
               
               {/* Video Info */}
