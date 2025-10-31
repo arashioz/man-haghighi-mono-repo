@@ -23,6 +23,11 @@ export class UrlService {
   }
 
   
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  
   getFileUrl(filePath: string | null | undefined): string | null {
     if (!filePath) {
       return null;

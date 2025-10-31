@@ -24,9 +24,56 @@ const Courses: React.FC = () => {
     thumbnail: null as File | null,
     video: null as File | null,
     attachments: [] as File[],
-    courseVideos: [] as File[],
-    courseAudios: [] as File[],
+    courseVideos: [] as Array<{id: string, file: File | null, title: string}>,
+    courseAudios: [] as Array<{id: string, file: File | null, title: string}>,
   });
+
+  // Helper functions for dynamic video/audio management
+  const addVideoField = () => {
+    setNewCourse({
+      ...newCourse,
+      courseVideos: [...newCourse.courseVideos, {id: Date.now().toString(), file: null, title: ''}]
+    });
+  };
+
+  const removeVideoField = (id: string) => {
+    setNewCourse({
+      ...newCourse,
+      courseVideos: newCourse.courseVideos.filter(v => v.id !== id)
+    });
+  };
+
+  const updateVideoField = (id: string, field: 'file' | 'title', value: File | null | string) => {
+    setNewCourse({
+      ...newCourse,
+      courseVideos: newCourse.courseVideos.map(v => 
+        v.id === id ? {...v, [field]: value} : v
+      )
+    });
+  };
+
+  const addAudioField = () => {
+    setNewCourse({
+      ...newCourse,
+      courseAudios: [...newCourse.courseAudios, {id: Date.now().toString(), file: null, title: ''}]
+    });
+  };
+
+  const removeAudioField = (id: string) => {
+    setNewCourse({
+      ...newCourse,
+      courseAudios: newCourse.courseAudios.filter(a => a.id !== id)
+    });
+  };
+
+  const updateAudioField = (id: string, field: 'file' | 'title', value: File | null | string) => {
+    setNewCourse({
+      ...newCourse,
+      courseAudios: newCourse.courseAudios.map(a => 
+        a.id === id ? {...a, [field]: value} : a
+      )
+    });
+  };
 
   const fetchCourses = async () => {
     try {
@@ -138,35 +185,39 @@ const Courses: React.FC = () => {
       }
 
       for (const video of newCourse.courseVideos) {
-        const formData = new FormData();
-        formData.append('courseVideos', video);
-        
-        await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseVideos`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        });
-        
-        uploadedFiles++;
-        setUploadProgress((uploadedFiles / totalFiles) * 100);
+        if (video.file) {
+          const formData = new FormData();
+          formData.append('courseVideos', video.file);
+          
+          await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseVideos`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          
+          uploadedFiles++;
+          setUploadProgress((uploadedFiles / totalFiles) * 100);
+        }
       }
 
       for (const audio of newCourse.courseAudios) {
-        const formData = new FormData();
-        formData.append('courseAudios', audio);
-        
-        await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseAudios`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        });
-        
-        uploadedFiles++;
-        setUploadProgress((uploadedFiles / totalFiles) * 100);
+        if (audio.file) {
+          const formData = new FormData();
+          formData.append('courseAudios', audio.file);
+          
+          await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseAudios`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          
+          uploadedFiles++;
+          setUploadProgress((uploadedFiles / totalFiles) * 100);
+        }
       }
       
       setNewCourse({
@@ -322,11 +373,11 @@ const Courses: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className="mr-4">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="mr-4 min-w-0 flex-1">
+                          <div className="text-sm font-medium text-gray-900 truncate">
                             {course.title}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 line-clamp-2">
                             {course.description}
                           </div>
                         </div>
@@ -480,29 +531,136 @@ const Courses: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          {/* Dynamic Video Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ویدیوهای دوره
-            </label>
-            <input
-              type="file"
-              multiple
-              accept="video/*"
-              onChange={(e) => setNewCourse({...newCourse, courseVideos: Array.from(e.target.files || [])})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                ویدیوهای دوره (اپیزودها)
+              </label>
+              <button
+                type="button"
+                onClick={addVideoField}
+                className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                افزودن ویدیو
+              </button>
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {newCourse.courseVideos.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-500">هیچ ویدیویی اضافه نشده است</p>
+                  <p className="text-xs text-gray-400 mt-1">روی دکمه "افزودن ویدیو" کلیک کنید</p>
+                </div>
+              ) : (
+                newCourse.courseVideos.map((video, index) => (
+                  <div key={video.id} className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="عنوان ویدیو (مثلاً: اپیزود 1 - مقدمه)"
+                        value={video.title}
+                        onChange={(e) => updateVideoField(video.id, 'title', e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => updateVideoField(video.id, 'file', e.target.files?.[0] || null)}
+                        className="w-full text-sm"
+                      />
+                      {video.file && (
+                        <p className="text-xs text-green-600">✓ {video.file.name}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeVideoField(video.id)}
+                      className="flex-shrink-0 text-red-600 hover:text-red-800 p-1"
+                      title="حذف"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
+
+          {/* Dynamic Audio Upload */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              فایل‌های صوتی دوره
-            </label>
-            <input
-              type="file"
-              multiple
-              accept="audio/*"
-              onChange={(e) => setNewCourse({...newCourse, courseAudios: Array.from(e.target.files || [])})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                فایل‌های صوتی دوره (اپیزودها)
+              </label>
+              <button
+                type="button"
+                onClick={addAudioField}
+                className="flex items-center gap-1 px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                افزودن صوتی
+              </button>
+            </div>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {newCourse.courseAudios.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                  </svg>
+                  <p className="text-sm text-gray-500">هیچ فایل صوتی اضافه نشده است</p>
+                  <p className="text-xs text-gray-400 mt-1">روی دکمه "افزودن صوتی" کلیک کنید</p>
+                </div>
+              ) : (
+                newCourse.courseAudios.map((audio, index) => (
+                  <div key={audio.id} className="flex items-start gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="عنوان فایل صوتی (مثلاً: جلسه 1 - مقدمه)"
+                        value={audio.title}
+                        onChange={(e) => updateAudioField(audio.id, 'title', e.target.value)}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => updateAudioField(audio.id, 'file', e.target.files?.[0] || null)}
+                        className="w-full text-sm"
+                      />
+                      {audio.file && (
+                        <p className="text-xs text-green-600">✓ {audio.file.name}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAudioField(audio.id)}
+                      className="flex-shrink-0 text-red-600 hover:text-red-800 p-1"
+                      title="حذف"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
           <div className="flex items-center">
             <input

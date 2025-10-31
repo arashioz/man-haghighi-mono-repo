@@ -4,6 +4,7 @@ import { videosService, coursesService } from '../services/api';
 import { Video, Course, VideoStreamInfo } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const VideoPlayer: React.FC = () => {
   const { videoId } = useParams<{ videoId: string }>();
@@ -80,11 +81,7 @@ const VideoPlayer: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {

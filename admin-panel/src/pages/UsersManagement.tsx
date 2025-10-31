@@ -678,17 +678,17 @@ const UsersManagement: React.FC = () => {
                               <div className="flex-1">
                                 <h4 className="font-medium text-gray-900 text-lg">{enrollment.course.title}</h4>
                                 {enrollment.course.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{enrollment.course.description}</p>
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">{enrollment.course.description}</p>
                                 )}
                               </div>
-                              <div className="text-left mr-4">
+                              <div className="text-left mr-4 flex-shrink-0">
                                 {enrollment.course.price && (
-                                  <span className="text-sm font-medium text-blue-600">
+                                  <span className="text-sm font-medium text-blue-600 whitespace-nowrap">
                                     {enrollment.course.price.toLocaleString()} تومان
                                   </span>
                                 )}
                                 {enrollment.enrolledAt && (
-                                  <p className="text-xs text-gray-400 mt-1">
+                                  <p className="text-xs text-gray-400 mt-1 whitespace-nowrap">
                                     {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
                                   </p>
                                 )}

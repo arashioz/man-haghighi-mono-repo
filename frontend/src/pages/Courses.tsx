@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { coursesService } from '../services/api';
 import { Course } from '../types';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -25,11 +26,7 @@ const Courses: React.FC = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-      </div>
-    );
+    return <LoadingSpinner size="lg" />;
   }
 
   if (error) {
