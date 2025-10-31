@@ -73,6 +73,27 @@ export class VideosService {
     };
   }
 
+  async findOneRaw(id: string) {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      include: {
+        course: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!video) {
+      throw new NotFoundException('Video not found');
+    }
+
+    // Return raw data without URL conversion (for internal use like file streaming)
+    return video;
+  }
+
   async update(id: string, updateVideoDto: UpdateVideoDto) {
     await this.findOne(id);
     

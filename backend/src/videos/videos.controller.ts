@@ -8,11 +8,15 @@ import { Roles } from '../auth/roles.decorator';
 import { Response } from 'express';
 import { createReadStream, statSync } from 'fs';
 import { join } from 'path';
+import { UrlService } from '../common/services/url.service';
 
 @ApiTags('Videos')
 @Controller('videos')
 export class VideosController {
-  constructor(private readonly videosService: VideosService) {}
+  constructor(
+    private readonly videosService: VideosService,
+    private readonly urlService: UrlService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,7 +68,8 @@ export class VideosController {
     }
 
     const video = await this.videosService.findOne(id);
-    const streamUrl = `${process.env.API_BASE_URL || 'http://194.180.11.193:3000'}/videos/${id}/stream`;
+    const baseUrl = this.urlService.getBaseUrl();
+    const streamUrl = `${baseUrl}/videos/${id}/stream`;
     
     return {
       videoId: video.id,
@@ -100,7 +105,8 @@ export class VideosController {
       throw new ForbiddenException('You do not have access to this video');
     }
 
-    const video = await this.videosService.findOne(id);
+    // Get raw video data (with filename, not URL) for file access
+    const video = await this.videosService.findOneRaw(id);
     const videoPath = join(process.cwd(), 'uploads', video.videoFile);
     
     try {
