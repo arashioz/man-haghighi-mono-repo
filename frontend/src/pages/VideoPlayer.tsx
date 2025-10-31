@@ -17,6 +17,7 @@ const VideoPlayer: React.FC = () => {
   const [courseVideos, setCourseVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [videoUrl, setVideoUrl] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -36,6 +37,15 @@ const VideoPlayer: React.FC = () => {
       // Get video stream info (which includes all video details)
       const streamData = await videosService.getVideoStreamUrl(videoId!);
       setVideoInfo(streamData);
+      
+      // Get fresh token and create stream URL with current token
+      const token = localStorage.getItem('token');
+      const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
+      const baseUrl = apiBaseUrl.replace('/api', '');
+      const streamUrl = token 
+        ? `${baseUrl}/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
+        : streamData.streamUrl;
+      setVideoUrl(streamUrl);
       
       // Get course details and all course videos
       if (streamData.courseId) {
@@ -155,8 +165,12 @@ const VideoPlayer: React.FC = () => {
                   className="w-full h-full"
                   poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
                   onEnded={hasNext ? goToNextVideo : undefined}
+                  onError={(e) => {
+                    console.error('Video playback error:', e);
+                    setError('خطا در پخش ویدیو. لطفاً صفحه را رفرش کنید.');
+                  }}
                 >
-                  <source src={videoInfo.streamUrl} type="video/mp4" />
+                  <source src={videoUrl || videoInfo.streamUrl} type="video/mp4" />
                   مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                 </video>
               </div>
