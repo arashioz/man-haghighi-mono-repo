@@ -423,7 +423,7 @@ const UsersManagement: React.FC = () => {
           <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {getTabTitle()}
                 </th>
                 <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -480,8 +480,8 @@ const UsersManagement: React.FC = () => {
                     <div className="flex items-center gap-2">
                       {userCoursesCount[user.id] > 0 ? (
                         <>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {userCoursesCount[user.id]} دوره
+                          <span className="inline-flex items-center  rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {userCoursesCount[user.id]}
                           </span>
                           <button
                             onClick={() => handleViewProducts(user)}
@@ -500,7 +500,7 @@ const UsersManagement: React.FC = () => {
                       {user.isOld && userProductsCount[user.id] > 0 ? (
                         <>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            {userProductsCount[user.id]} محصول
+                            {userProductsCount[user.id]}
                           </span>
                           <button
                             onClick={() => handleViewProducts(user)}
