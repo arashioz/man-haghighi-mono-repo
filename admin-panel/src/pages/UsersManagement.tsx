@@ -94,11 +94,12 @@ const UsersManagement: React.FC = () => {
         setTotalPages(usersResponse.meta.totalPages);
         setCourses(coursesResponse);
         
-        // Fetch only counts for better performance
+        // Fetch all counts in parallel for MUCH better performance
         const coursesCountData: {[userId: string]: number} = {};
         const productsCountData: {[userId: string]: number} = {};
         
-        for (const user of usersResponse.data) {
+        // Create array of promises for parallel execution
+        const userDataPromises = usersResponse.data.map(async (user) => {
           try {
             // Get courses count
             const userCoursesResponse = await usersService.getUserCourses(user.id);
@@ -118,7 +119,10 @@ const UsersManagement: React.FC = () => {
             coursesCountData[user.id] = 0;
             productsCountData[user.id] = 0;
           }
-        }
+        });
+        
+        // Wait for all requests to complete in parallel
+        await Promise.all(userDataPromises);
         
         setUserCoursesCount(coursesCountData);
         setUserProductsCount(productsCountData);
