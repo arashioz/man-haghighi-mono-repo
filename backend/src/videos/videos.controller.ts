@@ -96,6 +96,7 @@ export class VideosController {
   @ApiResponse({ status: 200, description: 'Video stream started' })
   @ApiResponse({ status: 206, description: 'Partial content' })
   @ApiResponse({ status: 403, description: 'Access denied' })
+  @ApiResponse({ status: 404, description: 'Video file not found' })
   async streamVideo(
     @Param('id') id: string, 
     @Request() req, 
@@ -110,7 +111,26 @@ export class VideosController {
 
     // Get raw video data (with filename, not URL) for file access
     const video = await this.videosService.findOneRaw(id);
-    const videoPath = join(process.cwd(), 'uploads', video.videoFile);
+    
+    if (!video.videoFile) {
+      return res.status(404).json({ error: 'Video file not specified' });
+    }
+    
+    // Check if videoFile is a URL or a local file path
+    let videoPath: string;
+    if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
+      // External URL - redirect to it
+      return res.redirect(302, video.videoFile);
+    } else if (video.videoFile.startsWith('/')) {
+      // Absolute path
+      videoPath = video.videoFile;
+    } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
+      // Path already includes uploads directory
+      videoPath = join(process.cwd(), video.videoFile.replace(/^\.\//, ''));
+    } else {
+      // Relative path - assume it's in uploads directory
+      videoPath = join(process.cwd(), 'uploads', video.videoFile);
+    }
     
     try {
       const stat = statSync(videoPath);
@@ -135,14 +155,22 @@ export class VideosController {
       } else {
         const head = {
           'Content-Length': fileSize,
+          'Accept-Ranges': 'bytes',
           'Content-Type': 'video/mp4',
         };
         
         res.writeHead(200, head);
         createReadStream(videoPath).pipe(res);
       }
-    } catch (error) {
-      res.status(404).send('Video file not found');
+    } catch (error: any) {
+      console.error('Video stream error:', error.message);
+      if (!res.headersSent) {
+        res.status(404).json({ 
+          error: 'Video file not found',
+          message: error.message,
+          path: videoPath 
+        });
+      }
     }
   }
 
