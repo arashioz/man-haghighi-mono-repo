@@ -69,7 +69,10 @@ export class VideosController {
 
     const video = await this.videosService.findOne(id);
     const baseUrl = this.urlService.getBaseUrl();
-    const streamUrl = `${baseUrl}/videos/${id}/stream`;
+    // Extract token from Authorization header and add to query parameter for video streaming
+    const token = req.headers.authorization?.replace('Bearer ', '') || '';
+    const encodedToken = encodeURIComponent(token);
+    const streamUrl = `${baseUrl}/videos/${id}/stream?token=${encodedToken}`;
     
     return {
       videoId: video.id,
