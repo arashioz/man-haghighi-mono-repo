@@ -186,6 +186,21 @@ export class UsersService {
                 thumbnail: true,
                 price: true,
                 published: true,
+                attachments: true,
+                videos: {
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    thumbnail: true,
+                    duration: true,
+                    order: true,
+                    published: true,
+                  },
+                  orderBy: {
+                    order: 'asc',
+                  },
+                },
               },
             },
           },
