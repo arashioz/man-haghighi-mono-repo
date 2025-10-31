@@ -69,6 +69,7 @@ export interface Course {
   updatedAt: string;
   videos?: Video[];
   audios?: Audio[];
+  attachments?: string[];
   _count?: {
     enrollments: number;
   };
