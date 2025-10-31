@@ -52,19 +52,27 @@ export class AudiosController {
   }
 
   @Get(':id/stream-url')
-  getAudioStreamUrl(@Param('id') id: string) {
-    return this.audiosService.getAudioStreamUrl(id);
+  async getAudioStreamUrl(@Param('id') id: string, @Request() req) {
+    const audioInfo = await this.audiosService.getAudioStreamUrl(id);
+    // Extract token from Authorization header and add to query parameter for audio streaming
+    const token = req.headers.authorization?.replace('Bearer ', '') || '';
+    const encodedToken = encodeURIComponent(token);
+    return {
+      ...audioInfo,
+      streamUrl: `${audioInfo.streamUrl}?token=${encodedToken}`,
+    };
   }
 
   @Get(':id/stream')
   async streamAudio(
     @Param('id') id: string,
+    @Request() req,
     @Res() res: Response,
     @Headers('range') range?: string,
   ) {
     try {
-      const audioInfo = await this.audiosService.getAudioStreamUrl(id);
-      const audioPath = path.join(process.cwd(), 'uploads', audioInfo.audioFile);
+      const audio = await this.audiosService.findOne(id);
+      const audioPath = path.join(process.cwd(), 'uploads', audio.audioFile);
 
       if (!fs.existsSync(audioPath)) {
         return res.status(404).json({ message: 'Audio file not found' });
@@ -72,21 +80,33 @@ export class AudiosController {
 
       const stat = fs.statSync(audioPath);
       const fileSize = stat.size;
-      const start = 0;
-      const end = fileSize - 1;
 
-      const contentLength = end - start + 1;
-      const headers = {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': contentLength,
-        'Content-Type': 'audio/mpeg',
-      };
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
 
-      res.writeHead(206, headers);
+        const stream = fs.createReadStream(audioPath, { start, end });
+        const headers = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': 'audio/mpeg',
+        };
 
-      const stream = fs.createReadStream(audioPath, { start, end });
-      stream.pipe(res);
+        res.writeHead(206, headers);
+        stream.pipe(res);
+      } else {
+        const headers = {
+          'Content-Length': fileSize,
+          'Content-Type': 'audio/mpeg',
+          'Accept-Ranges': 'bytes',
+        };
+
+        res.writeHead(200, headers);
+        fs.createReadStream(audioPath).pipe(res);
+      }
     } catch (error) {
       res.status(500).json({ message: 'Error streaming audio' });
     }

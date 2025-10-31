@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateAudioDto, UpdateAudioDto, AudioStreamInfo } from './dto/audio.dto';
 import { Audio } from '@prisma/client';
+import { UrlService } from '../common/services/url.service';
 
 @Injectable()
 export class AudiosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private urlService: UrlService,
+  ) {}
 
   async create(createAudioDto: CreateAudioDto): Promise<Audio> {
     const course = await this.prisma.course.findUnique({
@@ -88,7 +92,8 @@ export class AudiosService {
       throw new BadRequestException('Audio is not published');
     }
 
-    const streamUrl = `${process.env.API_BASE_URL || 'http://194.180.11.193:3000'}/uploads/audios/${audio.audioFile}`;
+    const baseUrl = this.urlService.getBaseUrl();
+    const streamUrl = `${baseUrl}/audios/${id}/stream`;
 
     return {
       ...audio,

@@ -94,7 +94,11 @@ const Courses: React.FC = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
-
+  const truncateWords = (text:string, wordLimit = 30) => {
+    const words = text.split(" ");
+    if (words.length <= wordLimit) return text;
+    return words.slice(0, wordLimit).join(" ") + "...";
+  };
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUploading(true);
@@ -219,6 +223,7 @@ const Courses: React.FC = () => {
           setUploadProgress((uploadedFiles / totalFiles) * 100);
         }
       }
+ 
       
       setNewCourse({
         title: '',
@@ -378,7 +383,7 @@ const Courses: React.FC = () => {
                             {course.title}
                           </div>
                           <div className="text-sm text-gray-500 line-clamp-2">
-                            {course.description}
+                            {course.description ? truncateWords(course.description, 30) : "..."}
                           </div>
                         </div>
                       </div>

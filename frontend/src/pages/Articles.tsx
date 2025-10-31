@@ -13,10 +13,25 @@ const Articles: React.FC = () => {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const data = await articlesService.getPublished();
-        setArticles(data);
+        setLoading(true);
+        setError('');
+        const response = await articlesService.getPublished();
+        // Handle different response structures: array, { data: array }, or { data: { data: array } }
+        let articlesArray: Article[] = [];
+        if (Array.isArray(response)) {
+          articlesArray = response;
+        } else if (response && typeof response === 'object') {
+          if (Array.isArray(response.data)) {
+            articlesArray = response.data;
+          } else if (response.data && Array.isArray(response.data.data)) {
+            articlesArray = response.data.data;
+          }
+        }
+        // Ensure articlesArray is always an array
+        setArticles(Array.isArray(articlesArray) ? articlesArray : []);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت مقالات');
+        setArticles([]); // Ensure articles is always an array
       } finally {
         setLoading(false);
       }
@@ -54,7 +69,7 @@ const Articles: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {articles.map((article) => (
+          {Array.isArray(articles) && articles.map((article) => (
             <div key={article.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
               {article.featuredImage && (
                 <img
@@ -83,7 +98,7 @@ const Articles: React.FC = () => {
           ))}
         </div>
 
-        {articles.length === 0 && (
+        {(!Array.isArray(articles) || articles.length === 0) && (
           <div className="text-center py-12">
             <div className="bg-white rounded-lg shadow-lg p-8">
               <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
