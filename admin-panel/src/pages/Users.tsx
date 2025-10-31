@@ -103,7 +103,15 @@ const Users: React.FC = () => {
           try {
             // Fetch courses
             const userCoursesResponse = await usersService.getUserCourses(user.id);
-            userCoursesData[user.id] = userCoursesResponse.map((enrollment: any) => enrollment.course);
+            // Handle both direct course objects and enrollment objects
+            userCoursesData[user.id] = userCoursesResponse.map((item: any) => {
+              // If it's an enrollment object with a course property
+              if (item.course) {
+                return item.course;
+              }
+              // If it's directly a course object
+              return item;
+            }).filter((course: any) => course && course.id); // Filter out null/undefined
             
             // Fetch products (only for old users)
             if (user.isOld) {
@@ -252,7 +260,19 @@ const Users: React.FC = () => {
     
     try {
       const userCourses = await usersService.getUserCourses(user.id);
-      const courseIds = userCourses.map((enrollment: any) => enrollment.course.id);
+      const courseIds = userCourses
+        .map((item: any) => {
+          // If it's an enrollment object with a course property
+          if (item.course && item.course.id) {
+            return item.course.id;
+          }
+          // If it's directly a course object
+          if (item.id) {
+            return item.id;
+          }
+          return null;
+        })
+        .filter((id: any) => id !== null);
       setEditingUserCourses(courseIds);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت دوره‌های کاربر');
@@ -463,37 +483,12 @@ const Users: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="max-w-xs">
-                      {user.isOld && userProducts[user.id] && userProducts[user.id].length > 0 ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex flex-wrap gap-1 flex-1">
-                            {userProducts[user.id].slice(0, 2).map((product: any, idx: number) => (
-                              <span
-                                key={product.id || idx}
-                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
-                              >
-                                {product.productName || product.name || 'محصول'}
-                              </span>
-                            ))}
-                            {userProducts[user.id].length > 2 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                +{userProducts[user.id].length - 2}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleViewProducts(user)}
-                            className="text-orange-600 hover:text-orange-800 text-xs"
-                            title="مشاهده همه محصولات"
-                          >
-                            مشاهده
-                          </button>
-                        </div>
-                      ) : user.isOld ? (
+                      {user.isOld ? (
                         <button
                           onClick={() => handleViewProducts(user)}
-                          className="text-orange-600 hover:text-orange-800 text-xs"
+                          className="text-orange-600 hover:text-orange-800 text-xs font-medium"
                         >
-                          مشاهده محصولات
+                          مشاهده
                         </button>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>
