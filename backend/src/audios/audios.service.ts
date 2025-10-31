@@ -93,7 +93,8 @@ export class AudiosService {
     }
 
     const baseUrl = this.urlService.getBaseUrl();
-    const streamUrl = `${baseUrl}/audios/${id}/stream`;
+    // Add /api prefix since we have global prefix configured
+    const streamUrl = `${baseUrl}/api/audios/${id}/stream`;
 
     return {
       ...audio,

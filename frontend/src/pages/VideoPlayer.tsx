@@ -40,10 +40,12 @@ const VideoPlayer: React.FC = () => {
       
       // Get fresh token and create stream URL with current token
       const token = localStorage.getItem('token');
+      // Use streamUrl from backend (which should include /api prefix)
+      // But also create a fresh one with current token in case backend URL is stale
       const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
       const baseUrl = apiBaseUrl.replace('/api', '');
       const streamUrl = token 
-        ? `${baseUrl}/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
+        ? `${baseUrl}/api/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
         : streamData.streamUrl;
       
       console.log('Video stream URL:', streamUrl);

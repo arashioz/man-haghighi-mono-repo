@@ -72,7 +72,8 @@ export class VideosController {
     // Extract token from Authorization header and add to query parameter for video streaming
     const token = req.headers.authorization?.replace('Bearer ', '') || '';
     const encodedToken = encodeURIComponent(token);
-    const streamUrl = `${baseUrl}/videos/${id}/stream?token=${encodedToken}`;
+    // Add /api prefix since we have global prefix configured
+    const streamUrl = `${baseUrl}/api/videos/${id}/stream?token=${encodedToken}`;
     
     return {
       videoId: video.id,
