@@ -26,8 +26,8 @@ const DeleteIcon = () => (
 const Users: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [userCourses, setUserCourses] = useState<{[userId: string]: Course[]}>({});
-  const [userProducts, setUserProducts] = useState<{[userId: string]: any[]}>({});
+  const [userCoursesCount, setUserCoursesCount] = useState<{[userId: string]: number}>({});
+  const [userProductsCount, setUserProductsCount] = useState<{[userId: string]: number}>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -95,42 +95,34 @@ const Users: React.FC = () => {
         setTotalPages(usersResponse.meta.totalPages);
         setTotalUsers(usersResponse.meta.total);
         
-        // Fetch courses and products for each user
-        const userCoursesData: {[userId: string]: Course[]} = {};
-        const userProductsData: {[userId: string]: any[]} = {};
+        // Fetch only counts for better performance
+        const coursesCountData: {[userId: string]: number} = {};
+        const productsCountData: {[userId: string]: number} = {};
         
         for (const user of usersResponse.data) {
           try {
-            // Fetch courses
+            // Get courses count
             const userCoursesResponse = await usersService.getUserCourses(user.id);
-            // Handle both direct course objects and enrollment objects
-            userCoursesData[user.id] = userCoursesResponse.map((item: any) => {
-              // If it's an enrollment object with a course property
-              if (item.course) {
-                return item.course;
-              }
-              // If it's directly a course object
-              return item;
-            }).filter((course: any) => course && course.id); // Filter out null/undefined
+            coursesCountData[user.id] = userCoursesResponse.length;
             
-            // Fetch products (only for old users)
+            // Get products count (only for old users)
             if (user.isOld) {
               try {
                 const userProductsResponse = await usersService.getUserWithProducts(user.id);
-                userProductsData[user.id] = userProductsResponse.oldProducts || [];
+                productsCountData[user.id] = userProductsResponse.oldProducts?.length || 0;
               } catch (err) {
-                userProductsData[user.id] = [];
+                productsCountData[user.id] = 0;
               }
             }
           } catch (err) {
             console.error(`Failed to fetch data for user ${user.id}:`, err);
-            userCoursesData[user.id] = [];
-            userProductsData[user.id] = [];
+            coursesCountData[user.id] = 0;
+            productsCountData[user.id] = 0;
           }
         }
         
-        setUserCourses(userCoursesData);
-        setUserProducts(userProductsData);
+        setUserCoursesCount(coursesCountData);
+        setUserProductsCount(productsCountData);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت داده‌ها');
       } finally {
@@ -146,16 +138,16 @@ const Users: React.FC = () => {
       try {
         await usersService.delete(id);
         setUsers(users.filter(user => user.id !== id));
-        // Remove user courses and products from state
-        setUserCourses(prev => {
-          const newUserCourses = { ...prev };
-          delete newUserCourses[id];
-          return newUserCourses;
+        // Remove user courses and products counts from state
+        setUserCoursesCount(prev => {
+          const newCounts = { ...prev };
+          delete newCounts[id];
+          return newCounts;
         });
-        setUserProducts(prev => {
-          const newUserProducts = { ...prev };
-          delete newUserProducts[id];
-          return newUserProducts;
+        setUserProductsCount(prev => {
+          const newCounts = { ...prev };
+          delete newCounts[id];
+          return newCounts;
         });
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در حذف کاربر');
@@ -224,16 +216,15 @@ const Users: React.FC = () => {
       
       if (newUser.selectedCourses.length > 0) {
         await usersService.assignCourses(createdUser.id, newUser.selectedCourses);
-        // Update user courses in state
-        const userCoursesResponse = await usersService.getUserCourses(createdUser.id);
-        setUserCourses(prev => ({
+        // Update courses count
+        setUserCoursesCount(prev => ({
           ...prev,
-          [createdUser.id]: userCoursesResponse.map((enrollment: any) => enrollment.course)
+          [createdUser.id]: newUser.selectedCourses.length
         }));
       } else {
-        setUserCourses(prev => ({
+        setUserCoursesCount(prev => ({
           ...prev,
-          [createdUser.id]: []
+          [createdUser.id]: 0
         }));
       }
       
@@ -284,17 +275,20 @@ const Users: React.FC = () => {
     if (!editingUser) return;
     
     try {
-      const updatedUser = await usersService.update(editingUser.id, editingUser);
+      // Only send editable fields
+      const updateData = {
+        username: editingUser.username,
+        phone: editingUser.phone,
+        email: editingUser.email,
+        firstName: editingUser.firstName,
+        lastName: editingUser.lastName,
+        isActive: editingUser.isActive,
+      };
+      
+      const updatedUser = await usersService.update(editingUser.id, updateData);
       setUsers(users.map(user => user.id === editingUser.id ? updatedUser : user));
       
       await usersService.assignCourses(editingUser.id, editingUserCourses);
-      
-      // Update user courses in state
-      const userCoursesResponse = await usersService.getUserCourses(editingUser.id);
-      setUserCourses(prev => ({
-        ...prev,
-        [editingUser.id]: userCoursesResponse.map((enrollment: any) => enrollment.course)
-      }));
       
       setIsEditModalOpen(false);
       setEditingUser(null);
@@ -409,28 +403,28 @@ const Users: React.FC = () => {
       {}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/5 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   کاربر
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   نقش
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   دوره‌های دسترسی
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/6 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   محصولات <span className="text-red-600 font-bold">قدیمی</span>
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   وضعیت
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/8 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   تاریخ عضویت
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-1/12 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   عملیات
                 </th>
               </tr>
@@ -459,31 +453,39 @@ const Users: React.FC = () => {
                     {getRoleBadge(user.role)}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="max-w-xs">
-                      {userCourses[user.id] && userCourses[user.id].length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {userCourses[user.id].slice(0, 3).map((course) => (
-                            <span
-                              key={course.id}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              {course.title}
-                            </span>
-                          ))}
-                          {userCourses[user.id].length > 3 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                              +{userCourses[user.id].length - 3} بیشتر
-                            </span>
-                          )}
-                        </div>
+                    <div className="flex items-center gap-2">
+                      {userCoursesCount[user.id] > 0 ? (
+                        <>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {userCoursesCount[user.id]} دوره
+                          </span>
+                          <button
+                            onClick={() => handleViewProducts(user)}
+                            className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                          >
+                            مشاهده
+                          </button>
+                        </>
                       ) : (
                         <span className="text-gray-400 text-sm">هیچ دوره‌ای</span>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="max-w-xs">
-                      {user.isOld ? (
+                    <div className="flex items-center gap-2">
+                      {user.isOld && userProductsCount[user.id] > 0 ? (
+                        <>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            {userProductsCount[user.id]} محصول
+                          </span>
+                          <button
+                            onClick={() => handleViewProducts(user)}
+                            className="text-orange-600 hover:text-orange-800 text-xs font-medium"
+                          >
+                            مشاهده
+                          </button>
+                        </>
+                      ) : user.isOld ? (
                         <button
                           onClick={() => handleViewProducts(user)}
                           className="text-orange-600 hover:text-orange-800 text-xs font-medium"
