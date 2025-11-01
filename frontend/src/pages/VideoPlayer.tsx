@@ -44,9 +44,14 @@ const VideoPlayer: React.FC = () => {
       // But also create a fresh one with current token in case backend URL is stale
       const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
       const baseUrl = apiBaseUrl.replace('/api', '');
-      const streamUrl = token 
-        ? `${baseUrl}/api/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
-        : streamData.streamUrl;
+      
+      // TEMPORARY: Use test endpoint without auth for debugging
+      const USE_TEST_ENDPOINT = true; // Set to false to use normal endpoint
+      const streamUrl = USE_TEST_ENDPOINT
+        ? `${baseUrl}/api/videos/${videoId}/stream-test`
+        : (token 
+          ? `${baseUrl}/api/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
+          : streamData.streamUrl);
       
       console.log('Video stream URL:', streamUrl);
       console.log('Video info:', streamData);
