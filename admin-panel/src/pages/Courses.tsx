@@ -519,15 +519,22 @@ const Courses: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="text-sm text-gray-900">
-                          {course.courseVideos?.length || 0} ویدیو
-                        </span>
-                        {course.videoFile && (
-                          <span className="mr-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                            معرفی
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-900">
+                            {course.videos?.length || 0} ویدیو
                           </span>
-                        )}
+                          {course.videoFile && (
+                            <span className="mr-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                              معرفی
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center">
+                          <span className="text-sm text-purple-700">
+                            {course.audios?.length || 0} فایل صوتی
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
