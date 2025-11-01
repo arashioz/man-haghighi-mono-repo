@@ -44,7 +44,7 @@ export class CoursesController {
       }
     },
     limits: {
-      fileSize: 100 * 1024 * 1024,
+      fileSize: 15 * 1024 * 1024 * 1024, // 15GB
     },
   }))
   @ApiBearerAuth()
@@ -266,7 +266,7 @@ export class CoursesController {
       }
     },
     limits: {
-      fileSize: 100 * 1024 * 1024,
+      fileSize: 15 * 1024 * 1024 * 1024, // 15GB
     },
   }))
   @ApiBearerAuth()
@@ -335,7 +335,7 @@ export class CoursesController {
         cb(new Error('Only video files are allowed'), false);
       }
     },
-    limits: { fileSize: 100 * 1024 * 1024 },
+    limits: { fileSize: 15 * 1024 * 1024 * 1024 }, // 15GB
   }))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
@@ -367,7 +367,7 @@ export class CoursesController {
         cb(new Error('Only document files are allowed'), false);
       }
     },
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 * 1024 }, // 5GB for audio
   }))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
@@ -399,7 +399,7 @@ export class CoursesController {
         cb(new Error('Only video files are allowed'), false);
       }
     },
-    limits: { fileSize: 100 * 1024 * 1024 },
+    limits: { fileSize: 15 * 1024 * 1024 * 1024 }, // 15GB
   }))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
@@ -431,7 +431,7 @@ export class CoursesController {
         cb(new Error('Only audio files are allowed'), false);
       }
     },
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 * 1024 }, // 5GB for audio
   }))
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')

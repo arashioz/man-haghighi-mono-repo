@@ -4,8 +4,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
-import { coursesService, api } from '../services/api';
-import { Course } from '../types';
+import { coursesService, api, videosService } from '../services/api';
+import { Course, Video } from '../types';
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -19,6 +19,8 @@ const Courses: React.FC = () => {
   const [uploadedBytes, setUploadedBytes] = useState(0);
   const [totalBytes, setTotalBytes] = useState(0);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [courseVideos, setCourseVideos] = useState<Video[]>([]);
+  const [newVideos, setNewVideos] = useState<Array<{id: string, file: File | null, title: string}>>([]);
   const [newCourse, setNewCourse] = useState({
     title: '',
     description: '',
@@ -303,9 +305,48 @@ const Courses: React.FC = () => {
     }
   };
 
-  const handleEditCourse = (course: Course) => {
+  const handleEditCourse = async (course: Course) => {
     setEditingCourse(course);
     setIsEditModalOpen(true);
+    setNewVideos([]);
+    
+    // Fetch existing videos for this course
+    try {
+      const videos = await videosService.getAll(course.id);
+      setCourseVideos(videos.sort((a, b) => a.order - b.order));
+    } catch (err: any) {
+      console.error('Error fetching course videos:', err);
+      setCourseVideos([]);
+    }
+  };
+
+  const handleDeleteVideo = async (videoId: string) => {
+    if (!window.confirm('آیا از حذف این ویدیو اطمینان دارید؟')) {
+      return;
+    }
+
+    try {
+      await videosService.delete(videoId);
+      setCourseVideos(courseVideos.filter(v => v.id !== videoId));
+      // Refresh courses list
+      fetchCourses();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در حذف ویدیو');
+    }
+  };
+
+  const addNewVideoField = () => {
+    setNewVideos([...newVideos, {id: Date.now().toString(), file: null, title: ''}]);
+  };
+
+  const removeNewVideoField = (id: string) => {
+    setNewVideos(newVideos.filter(v => v.id !== id));
+  };
+
+  const updateNewVideoField = (id: string, field: 'file' | 'title', value: File | null | string) => {
+    setNewVideos(newVideos.map(v => 
+      v.id === id ? {...v, [field]: value} : v
+    ));
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -325,7 +366,12 @@ const Courses: React.FC = () => {
     e.preventDefault();
     if (!editingCourse) return;
 
+    setIsUploading(true);
+    setUploadProgress(0);
+    setError('');
+
     try {
+      // Update basic course info
       const updateData = {
         title: editingCourse.title,
         description: editingCourse.description,
@@ -335,14 +381,53 @@ const Courses: React.FC = () => {
 
       const updatedCourse = await coursesService.update(editingCourse.id, updateData);
       
+      // Upload new videos if any
+      if (newVideos.length > 0) {
+        const totalSize = newVideos.reduce((sum, v) => sum + (v.file?.size || 0), 0);
+        let uploadedBytesTotal = 0;
+
+        for (const videoItem of newVideos) {
+          if (videoItem.file) {
+            const formData = new FormData();
+            formData.append('courseVideos', videoItem.file);
+            
+            await uploadFileWithProgress(
+              `/courses/${editingCourse.id}/courseVideos`,
+              formData,
+              videoItem.file.name,
+              videoItem.file.size,
+              uploadedBytesTotal,
+              totalSize,
+              (currentFileProgress: number) => {
+                const overallProgress = ((uploadedBytesTotal + (videoItem.file!.size * currentFileProgress / 100)) / totalSize) * 100;
+                setUploadProgress(Math.min(100, overallProgress));
+              }
+            );
+            
+            uploadedBytesTotal += videoItem.file.size;
+            setUploadProgress((uploadedBytesTotal / totalSize) * 100);
+          }
+        }
+      }
+
+      setUploadProgress(100);
+      setCurrentUploadFile('');
+      
       setCourses(courses.map(course => 
         course.id === editingCourse.id ? updatedCourse : course
       ));
       
       setIsEditModalOpen(false);
       setEditingCourse(null);
+      setCourseVideos([]);
+      setNewVideos([]);
+      fetchCourses(); // Refresh courses list
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ویرایش دوره');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setCurrentUploadFile('');
     }
   };
 
@@ -767,9 +852,31 @@ const Courses: React.FC = () => {
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingCourse(null);
+          setCourseVideos([]);
+          setNewVideos([]);
         }}
         title="ویرایش دوره"
       >
+        {isUploading && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-blue-900">در حال آپلود فایل‌ها...</span>
+              <span className="text-sm font-semibold text-blue-700">{Math.round(uploadProgress)}%</span>
+            </div>
+            {currentUploadFile && (
+              <p className="text-xs text-blue-700 mb-2 truncate" title={currentUploadFile}>
+                📁 {currentUploadFile}
+              </p>
+            )}
+            <ProgressBar progress={uploadProgress} className="mb-2" />
+            {uploadedBytes > 0 && totalBytes > 0 && (
+              <div className="flex justify-between text-xs text-blue-600">
+                <span>{(uploadedBytes / (1024 * 1024)).toFixed(2)} MB</span>
+                <span>از {(totalBytes / (1024 * 1024)).toFixed(2)} MB</span>
+              </div>
+            )}
+          </div>
+        )}
         <form onSubmit={handleUpdateCourse} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -817,6 +924,107 @@ const Courses: React.FC = () => {
               منتشر شده
             </label>
           </div>
+
+          {/* Existing Videos Section */}
+          {courseVideos.length > 0 && (
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  ویدیوهای موجود ({courseVideos.length})
+                </label>
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {courseVideos.map((video) => (
+                  <div
+                    key={video.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {video.title}
+                      </p>
+                      {video.description && (
+                        <p className="text-xs text-gray-500 truncate mt-1">
+                          {video.description}
+                        </p>
+                      )}
+                      {video.duration && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          مدت: {Math.floor(video.duration / 60)} دقیقه
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVideo(video.id)}
+                      className="flex-shrink-0 mr-2 text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
+                      title="حذف ویدیو"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add New Videos Section */}
+          <div className="border-t pt-4">
+            <div className="flex justify-between items-center mb-3">
+              <label className="block text-sm font-medium text-gray-700">
+                افزودن ویدیوهای جدید
+              </label>
+              <button
+                type="button"
+                onClick={addNewVideoField}
+                className="flex items-center gap-1 px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                افزودن ویدیو
+              </button>
+            </div>
+            {newVideos.length > 0 && (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {newVideos.map((video) => (
+                  <div key={video.id} className="flex gap-2 items-start p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="عنوان ویدیو"
+                        value={video.title}
+                        onChange={(e) => updateNewVideoField(video.id, 'title', e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={(e) => updateNewVideoField(video.id, 'file', e.target.files?.[0] || null)}
+                        className="w-full text-sm"
+                      />
+                      {video.file && (
+                        <p className="text-xs text-green-600">✓ {video.file.name} ({(video.file.size / (1024 * 1024)).toFixed(2)} MB)</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeNewVideoField(video.id)}
+                      className="flex-shrink-0 text-red-600 hover:text-red-800 p-1"
+                      title="حذف"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end space-x-2 space-x-reverse pt-4">
             <button
               type="button"
