@@ -260,7 +260,7 @@ export class CoursesController {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|webm|mov|avi|pdf|doc|docx|txt)$/)) {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|webm|mov|avi|pdf|doc|docx|txt|mp3|wav|ogg|m4a|aac)$/)) {
         cb(null, true);
       } else {
         cb(new Error('Unsupported file type'), false);
