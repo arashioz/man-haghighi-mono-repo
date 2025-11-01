@@ -90,6 +90,130 @@ export class VideosController {
     };
   }
 
+  @Get(':id/stream-test')
+  @ApiOperation({ summary: 'Test stream video WITHOUT authentication (for debugging)' })
+  @ApiResponse({ status: 200, description: 'Video stream started' })
+  @ApiResponse({ status: 206, description: 'Partial content' })
+  @ApiResponse({ status: 404, description: 'Video file not found' })
+  async streamVideoTest(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Headers('range') range?: string
+  ) {
+    try {
+      console.log(`[TEST] Streaming video ID: ${id} (NO AUTH)`);
+
+      // Get raw video data (with filename, not URL) for file access
+      const video = await this.videosService.findOneRaw(id);
+      
+      if (!video || !video.videoFile) {
+        console.error(`[TEST] Video not found or videoFile is missing. Video ID: ${id}`);
+        return res.status(404).json({ error: 'Video file not specified' });
+      }
+
+      console.log(`[TEST] Video file: ${video.videoFile}`);
+      
+      // Check if videoFile is a URL or a local file path
+      let videoPath: string;
+      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
+        // External URL - redirect to it
+        console.log(`[TEST] Redirecting to external URL: ${video.videoFile}`);
+        return res.redirect(302, video.videoFile);
+      } else if (video.videoFile.startsWith('/')) {
+        // Absolute path
+        videoPath = video.videoFile;
+      } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
+        // Path already includes uploads directory
+        videoPath = join(process.cwd(), video.videoFile.replace(/^\.\//, ''));
+      } else {
+        // Relative path - assume it's in uploads directory
+        videoPath = join(process.cwd(), 'uploads', video.videoFile);
+      }
+
+      console.log(`[TEST] Attempting to stream from path: ${videoPath}`);
+      
+      // Check if file exists
+      if (!existsSync(videoPath)) {
+        console.error(`[TEST] Video file does not exist at path: ${videoPath}`);
+        // Try alternative paths
+        const altPaths = [
+          join(process.cwd(), video.videoFile),
+          join('/app/uploads', video.videoFile),
+          join('/app', video.videoFile),
+        ];
+        
+        for (const altPath of altPaths) {
+          if (existsSync(altPath)) {
+            console.log(`[TEST] Found video at alternative path: ${altPath}`);
+            videoPath = altPath;
+            break;
+          }
+        }
+        
+        if (!existsSync(videoPath)) {
+          console.error(`[TEST] Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
+          return res.status(404).json({ 
+            error: 'Video file not found',
+            videoFile: video.videoFile,
+            attemptedPaths: [videoPath, ...altPaths]
+          });
+        }
+      }
+      
+      const stat = statSync(videoPath);
+      const fileSize = stat.size;
+      console.log(`[TEST] Video file size: ${fileSize} bytes`);
+      
+      // Determine content type based on file extension
+      const ext = videoPath.split('.').pop()?.toLowerCase();
+      const contentType = ext === 'webm' ? 'video/webm' : 
+                         ext === 'mov' ? 'video/quicktime' : 
+                         ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
+      
+      // Set CORS headers for video streaming
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+      
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = (end - start) + 1;
+        
+        const file = createReadStream(videoPath, { start, end });
+        const head = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000',
+        };
+        
+        res.writeHead(206, head);
+        file.pipe(res);
+      } else {
+        const head = {
+          'Content-Length': fileSize,
+          'Accept-Ranges': 'bytes',
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000',
+        };
+        
+        res.writeHead(200, head);
+        createReadStream(videoPath).pipe(res);
+      }
+    } catch (error: any) {
+      console.error('[TEST] Video stream error:', error.message);
+      console.error('[TEST] Error stack:', error.stack);
+      if (!res.headersSent) {
+        res.status(404).json({ 
+          error: 'Video file not found',
+          message: error.message
+        });
+      }
+    }
+  }
+
   @Get(':id/stream')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
