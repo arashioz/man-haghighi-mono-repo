@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFiles, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFiles, UploadedFile, Res, Headers } from '@nestjs/common';
 import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
@@ -8,6 +8,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
+import { Response } from 'express';
+import { createReadStream, statSync, existsSync } from 'fs';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -77,6 +79,144 @@ export class CoursesController {
   @ApiResponse({ status: 200, description: 'User courses retrieved successfully' })
   async getMyCourses(@Request() req) {
     return this.coursesService.getUserCourses(req.user.id);
+  }
+
+  @Get(':id/intro-video/stream')
+  @ApiOperation({ summary: 'Stream course intro video (public access)' })
+  @ApiResponse({ status: 200, description: 'Video stream' })
+  async streamIntroVideo(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @Headers('range') range?: string,
+  ) {
+    try {
+      // Get raw course data (with filename, not URL) for file access
+      const course = await this.coursesService.findOneRaw(id);
+      
+      if (!course || !course.videoFile) {
+        console.error(`Course not found or videoFile is missing. Course ID: ${id}`);
+        return res.status(404).json({ error: 'Course intro video file not specified' });
+      }
+
+      console.log(`Streaming course intro video ID: ${id}, videoFile: ${course.videoFile}`);
+      
+      // Check if videoFile is a URL or a local file path
+      let videoPath: string;
+      if (course.videoFile.startsWith('http://') || course.videoFile.startsWith('https://')) {
+        // External URL - redirect to it
+        console.log(`Redirecting to external URL: ${course.videoFile}`);
+        return res.redirect(302, course.videoFile);
+      } else if (course.videoFile.startsWith('/')) {
+        // Absolute path
+        videoPath = course.videoFile;
+      } else if (course.videoFile.startsWith('uploads/') || course.videoFile.startsWith('./uploads/')) {
+        // Path already includes uploads directory
+        videoPath = join(process.cwd(), course.videoFile.replace(/^\.\//, ''));
+      } else {
+        // Relative path - assume it's in uploads directory
+        videoPath = join(process.cwd(), 'uploads', course.videoFile);
+      }
+
+      console.log(`Attempting to stream from path: ${videoPath}`);
+      
+      // Check if file exists
+      if (!existsSync(videoPath)) {
+        console.error(`Video file does not exist at path: ${videoPath}`);
+        // Try alternative paths
+        const altPaths = [
+          join(process.cwd(), course.videoFile),
+          join('/app/uploads', course.videoFile),
+          join('/app', course.videoFile),
+        ];
+        
+        for (const altPath of altPaths) {
+          if (existsSync(altPath)) {
+            console.log(`Found video at alternative path: ${altPath}`);
+            videoPath = altPath;
+            break;
+          }
+        }
+        
+        if (!existsSync(videoPath)) {
+          console.error(`Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
+          return res.status(404).json({ 
+            error: 'Video file not found',
+            videoFile: course.videoFile,
+            attemptedPaths: [videoPath, ...altPaths]
+          });
+        }
+      }
+      
+      const stat = statSync(videoPath);
+      const fileSize = stat.size;
+      console.log(`Course intro video file size: ${fileSize} bytes`);
+      
+      // Check if file is empty
+      if (fileSize === 0) {
+        console.error(`Video file is empty (0 bytes) at path: ${videoPath}`);
+        return res.status(404).json({ 
+          error: 'Video file is empty or corrupted',
+          videoFile: course.videoFile,
+          path: videoPath,
+          size: fileSize
+        });
+      }
+      
+      // Determine content type based on file extension
+      const ext = videoPath.split('.').pop()?.toLowerCase();
+      const contentType = ext === 'webm' ? 'video/webm' : 
+                         ext === 'mov' ? 'video/quicktime' : 
+                         ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
+      
+      // Set CORS headers for video streaming
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+      
+      if (range) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? Math.min(parseInt(parts[1], 10), fileSize - 1) : fileSize - 1;
+        
+        // Validate range
+        if (start < 0 || start >= fileSize || end < start || end >= fileSize) {
+          return res.status(416).json({
+            error: 'Range Not Satisfiable',
+            contentRange: `bytes */${fileSize}`
+          });
+        }
+        
+        const chunksize = (end - start) + 1;
+        
+        const file = createReadStream(videoPath, { start, end });
+        const head = {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize,
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        };
+        
+        res.writeHead(206, head);
+        file.pipe(res);
+      } else {
+        const head = {
+          'Content-Length': fileSize,
+          'Content-Type': contentType,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        };
+        
+        res.writeHead(200, head);
+        createReadStream(videoPath).pipe(res);
+      }
+    } catch (error: any) {
+      console.error('Course intro video stream error:', error.message);
+      console.error('Error stack:', error.stack);
+      return res.status(500).json({ 
+        error: 'Error streaming video',
+        message: error.message 
+      });
+    }
   }
 
   @Get(':id')

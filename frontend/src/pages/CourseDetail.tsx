@@ -104,7 +104,28 @@ const CourseDetail: React.FC = () => {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-              {course.thumbnail && (
+              {/* Course Intro Video */}
+              {course.videoFile && (
+                <div className="w-full">
+                  <video
+                    className="w-full h-auto max-h-[600px] bg-black"
+                    controls
+                    controlsList="nodownload"
+                    preload="metadata"
+                  >
+                    <source 
+                      src={`${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://185.231.112.84:8080'}/api/courses/${id}/intro-video/stream`} 
+                      type="video/mp4" 
+                    />
+                    <source 
+                      src={`${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://185.231.112.84:8080'}/api/courses/${id}/intro-video/stream`} 
+                      type="video/webm" 
+                    />
+                    مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                  </video>
+                </div>
+              )}
+              {!course.videoFile && course.thumbnail && (
                 <img
                   src={course.thumbnail}
                   alt={course.title}
