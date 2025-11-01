@@ -64,6 +64,7 @@ export interface Course {
   description?: string;
   price: number;
   thumbnail?: string;
+  videoFile?: string; // ویدیو معرفی دوره
   published: boolean;
   createdAt: string;
   updatedAt: string;

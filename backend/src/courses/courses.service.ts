@@ -121,6 +121,19 @@ export class CoursesService {
     return this.urlService.processCourseData(course);
   }
 
+  // Get raw course data without URL processing (for file streaming)
+  async findOneRaw(id: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return course;
+  }
+
   async update(id: string, updateCourseDto: UpdateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }) {
     await this.findOne(id);
     
