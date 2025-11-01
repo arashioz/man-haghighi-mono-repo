@@ -164,6 +164,17 @@ export class VideosController {
       const fileSize = stat.size;
       console.log(`[TEST] Video file size: ${fileSize} bytes`);
       
+      // Check if file is empty
+      if (fileSize === 0) {
+        console.error(`[TEST] Video file is empty (0 bytes) at path: ${videoPath}`);
+        return res.status(404).json({ 
+          error: 'Video file is empty or corrupted',
+          videoFile: video.videoFile,
+          path: videoPath,
+          size: fileSize
+        });
+      }
+      
       // Determine content type based on file extension
       const ext = videoPath.split('.').pop()?.toLowerCase();
       const contentType = ext === 'webm' ? 'video/webm' : 
@@ -177,7 +188,16 @@ export class VideosController {
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const end = parts[1] ? Math.min(parseInt(parts[1], 10), fileSize - 1) : fileSize - 1;
+        
+        // Validate range
+        if (start < 0 || start >= fileSize || end < start || end >= fileSize) {
+          return res.status(416).json({
+            error: 'Range Not Satisfiable',
+            contentRange: `bytes */${fileSize}`
+          });
+        }
+        
         const chunksize = (end - start) + 1;
         
         const file = createReadStream(videoPath, { start, end });
@@ -296,6 +316,17 @@ export class VideosController {
       const fileSize = stat.size;
       console.log(`Video file size: ${fileSize} bytes`);
       
+      // Check if file is empty
+      if (fileSize === 0) {
+        console.error(`Video file is empty (0 bytes) at path: ${videoPath}`);
+        return res.status(404).json({ 
+          error: 'Video file is empty or corrupted',
+          videoFile: video.videoFile,
+          path: videoPath,
+          size: fileSize
+        });
+      }
+      
       // Determine content type based on file extension
       const ext = videoPath.split('.').pop()?.toLowerCase();
       const contentType = ext === 'webm' ? 'video/webm' : 
@@ -310,7 +341,16 @@ export class VideosController {
       if (range) {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const end = parts[1] ? Math.min(parseInt(parts[1], 10), fileSize - 1) : fileSize - 1;
+        
+        // Validate range
+        if (start < 0 || start >= fileSize || end < start || end >= fileSize) {
+          return res.status(416).json({
+            error: 'Range Not Satisfiable',
+            contentRange: `bytes */${fileSize}`
+          });
+        }
+        
         const chunksize = (end - start) + 1;
         
         const file = createReadStream(videoPath, { start, end });
