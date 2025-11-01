@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto, EnrollCourseDto } from './dto/course.dto';
 import { UrlService } from '../common/services/url.service';
 
 @Injectable()
 export class CoursesService {
+  private readonly logger = new Logger(CoursesService.name);
+
   constructor(
     private prisma: PrismaService,
     private urlService: UrlService,
@@ -33,10 +35,32 @@ export class CoursesService {
       data: courseData,
     });
 
+    // Log course creation
+    this.logger.log(`=== دوره جدید ایجاد شد ===`);
+    this.logger.log(`شناسه دوره: ${course.id}`);
+    this.logger.log(`عنوان دوره: ${course.title}`);
+    this.logger.log(`قیمت: ${course.price}`);
+    
+    // Log intro video if uploaded
+    if (files?.video?.[0]) {
+      const introVideoFile = files.video[0];
+      const introVideoUrl = this.urlService.getFileUrl(introVideoFile.filename);
+      const introVideoStreamUrl = `${this.urlService.getBaseUrl()}/api/courses/${course.id}/intro-video/stream`;
+      
+      this.logger.log(`--- ویدیو معرفی دوره ---`);
+      this.logger.log(`نام فایل: ${introVideoFile.filename}`);
+      this.logger.log(`اندازه فایل: ${(introVideoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`نوع فایل: ${introVideoFile.mimetype}`);
+      this.logger.log(`لینک فایل: ${introVideoUrl}`);
+      this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
+    }
+
     if (files?.courseVideos && files.courseVideos.length > 0) {
+      this.logger.log(`--- ویدیوهای دوره (${files.courseVideos.length} عدد) ---`);
+      
       for (let i = 0; i < files.courseVideos.length; i++) {
         const videoFile = files.courseVideos[i];
-        await this.prisma.video.create({
+        const video = await this.prisma.video.create({
           data: {
             title: `ویدیو ${i + 1}`,
             description: `ویدیو ${i + 1} از دوره`,
@@ -46,8 +70,21 @@ export class CoursesService {
             published: course.published,
           },
         });
+        
+        const videoUrl = this.urlService.getFileUrl(videoFile.filename);
+        const videoStreamUrl = `${this.urlService.getBaseUrl()}/api/videos/${video.id}/stream`;
+        
+        this.logger.log(`ویدیو ${i + 1}:`);
+        this.logger.log(`  - شناسه: ${video.id}`);
+        this.logger.log(`  - نام فایل: ${videoFile.filename}`);
+        this.logger.log(`  - اندازه: ${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+        this.logger.log(`  - نوع: ${videoFile.mimetype}`);
+        this.logger.log(`  - لینک فایل: ${videoUrl}`);
+        this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
       }
     }
+
+    this.logger.log(`=== پایان لاگ دوره ===\n`);
 
     return this.urlService.processCourseData(course);
   }
@@ -195,12 +232,26 @@ export class CoursesService {
   }
 
   async uploadIntroVideo(id: string, file: Express.Multer.File) {
-    await this.findOne(id);
+    const course = await this.findOne(id);
     
     const updatedCourse = await this.prisma.course.update({
       where: { id },
       data: { videoFile: file.filename },
     });
+
+    // Log intro video upload
+    const introVideoUrl = this.urlService.getFileUrl(file.filename);
+    const introVideoStreamUrl = `${this.urlService.getBaseUrl()}/api/courses/${id}/intro-video/stream`;
+    
+    this.logger.log(`=== آپلود ویدیو معرفی دوره ===`);
+    this.logger.log(`شناسه دوره: ${id}`);
+    this.logger.log(`عنوان دوره: ${course.title}`);
+    this.logger.log(`نام فایل: ${file.filename}`);
+    this.logger.log(`اندازه فایل: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    this.logger.log(`نوع فایل: ${file.mimetype}`);
+    this.logger.log(`لینک فایل: ${introVideoUrl}`);
+    this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
+    this.logger.log(`=== پایان لاگ ===\n`);
 
     return this.urlService.processCourseData(updatedCourse);
   }
@@ -233,13 +284,18 @@ export class CoursesService {
     });
 
     // Create Video entities for each uploaded course video
+    this.logger.log(`=== آپلود ویدیوهای دوره ===`);
+    this.logger.log(`شناسه دوره: ${id}`);
+    this.logger.log(`عنوان دوره: ${course.title}`);
+    this.logger.log(`تعداد ویدیوهای جدید: ${files.length}`);
+    
     for (let i = 0; i < files.length; i++) {
       const videoFile = files[i];
       const existingVideoCount = await this.prisma.video.count({
         where: { courseId: id },
       });
       
-      await this.prisma.video.create({
+      const video = await this.prisma.video.create({
         data: {
           title: `ویدیو ${existingVideoCount + i + 1}`,
           description: `ویدیو ${existingVideoCount + i + 1} از دوره`,
@@ -249,7 +305,20 @@ export class CoursesService {
           published: course.published,
         },
       });
+      
+      const videoUrl = this.urlService.getFileUrl(videoFile.filename);
+      const videoStreamUrl = `${this.urlService.getBaseUrl()}/api/videos/${video.id}/stream`;
+      
+      this.logger.log(`ویدیو ${existingVideoCount + i + 1}:`);
+      this.logger.log(`  - شناسه: ${video.id}`);
+      this.logger.log(`  - نام فایل: ${videoFile.filename}`);
+      this.logger.log(`  - اندازه: ${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`  - نوع: ${videoFile.mimetype}`);
+      this.logger.log(`  - لینک فایل: ${videoUrl}`);
+      this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
     }
+    
+    this.logger.log(`=== پایان لاگ ===\n`);
 
     return this.urlService.processCourseData(updatedCourse);
   }
