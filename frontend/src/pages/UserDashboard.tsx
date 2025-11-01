@@ -13,15 +13,20 @@ const UserDashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet'>('courses');
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) {
+      return;
+    }
+
     if (user) {
       fetchUserData();
     } else {
       navigate('/login');
     }
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const fetchUserData = async () => {
     try {
@@ -46,7 +51,8 @@ const UserDashboard: React.FC = () => {
     navigate(`/courses/${courseId}/videos/${videoId}`);
   };
 
-  if (loading) {
+  // Show loading while auth is checking or data is loading
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
         <div className="text-center">
