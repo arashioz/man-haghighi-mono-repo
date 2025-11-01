@@ -57,7 +57,7 @@ export class CoursesService {
     return 0;
   }
 
-  async create(createCourseDto: CreateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }) {                                                               
+  async create(createCourseDto: CreateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[], courseAudios?: Express.Multer.File[] }) {                                                               
     const courseData: any = { ...createCourseDto };
     
     if (files?.thumbnail?.[0]) {
@@ -104,10 +104,47 @@ export class CoursesService {
       this.logger.log(`Stream URL: ${introVideoStreamUrl}`);
     }
 
-    if (files?.courseVideos && files.courseVideos.length > 0) {
-      this.logger.log(`--- Course Videos (${files.courseVideos.length} files) ---`);
-      
-      for (let i = 0; i < files.courseVideos.length; i++) {
+           if (files?.courseAudios && files.courseAudios.length > 0) {
+             this.logger.log(`--- Course Audios (${files.courseAudios.length} files) ---`);
+             
+             for (let i = 0; i < files.courseAudios.length; i++) {
+               const audioFile = files.courseAudios[i];
+               const existingAudioCount = await this.prisma.audio.count({
+                 where: { courseId: course.id },
+               });
+               
+               const audio = await this.prisma.audio.create({
+                 data: {
+                   title: `Audio File ${existingAudioCount + i + 1}`,
+                   description: `Audio File ${existingAudioCount + i + 1} of the course`,
+                   audioFile: audioFile.filename,
+                   order: existingAudioCount + i + 1,
+                   courseId: course.id,
+                   published: course.published,
+                 },
+               });
+               
+               const audioUrl = this.urlService.getFileUrl(audioFile.filename);
+               const audioStreamUrl = `${this.urlService.getBaseUrl()}/api/audios/${audio.id}/stream`;
+               
+               // Get actual file size from disk (with fallback to file.size)
+               const fileSize = this.getFileSize(audioFile.filename, audioFile.size || 0);
+               const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+               
+               this.logger.log(`Audio ${existingAudioCount + i + 1}:`);
+               this.logger.log(`  - Audio ID: ${audio.id}`);
+               this.logger.log(`  - Filename: ${audioFile.filename}`);
+               this.logger.log(`  - File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+               this.logger.log(`  - File Type: ${audioFile.mimetype}`);
+               this.logger.log(`  - File URL: ${audioUrl}`);
+               this.logger.log(`  - Stream URL: ${audioStreamUrl}`);
+             }
+           }
+
+           if (files?.courseVideos && files.courseVideos.length > 0) {
+             this.logger.log(`--- Course Videos (${files.courseVideos.length} files) ---`);
+             
+             for (let i = 0; i < files.courseVideos.length; i++) {
         const videoFile = files.courseVideos[i];
         const video = await this.prisma.video.create({
           data: {
@@ -149,6 +186,10 @@ export class CoursesService {
           where: { published: true },
           orderBy: { order: 'asc' },
         },
+        audios: {
+          where: { published: true },
+          orderBy: { order: 'asc' },
+        },
         _count: {
           select: {
             enrollments: true,
@@ -169,6 +210,10 @@ export class CoursesService {
           where: { published: true },
           orderBy: { order: 'asc' },
         },
+        audios: {
+          where: { published: true },
+          orderBy: { order: 'asc' },
+        },
         _count: {
           select: {
             enrollments: true,
@@ -186,6 +231,10 @@ export class CoursesService {
       where: { id },
       include: {
         videos: {
+          where: { published: true },
+          orderBy: { order: 'asc' },
+        },
+        audios: {
           where: { published: true },
           orderBy: { order: 'asc' },
         },
@@ -224,7 +273,7 @@ export class CoursesService {
     return course;
   }
 
-  async update(id: string, updateCourseDto: UpdateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }) {
+  async update(id: string, updateCourseDto: UpdateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[], courseAudios?: Express.Multer.File[] }) {
     await this.findOne(id);
     
     const updateData: any = { ...updateCourseDto };
@@ -387,6 +436,11 @@ export class CoursesService {
   async uploadCourseAudios(id: string, files: Express.Multer.File[]) {
     const course = await this.findOne(id);
     
+    this.logger.log(`=== Course Audios Upload ===`);
+    this.logger.log(`Course ID: ${id}`);
+    this.logger.log(`Course Title: ${course.title}`);
+    this.logger.log(`New Audios Count: ${files.length}`);
+    
     // Create Audio entities for each uploaded course audio
     for (let i = 0; i < files.length; i++) {
       const audioFile = files[i];
@@ -394,17 +448,34 @@ export class CoursesService {
         where: { courseId: id },
       });
       
-      await this.prisma.audio.create({
+      const audio = await this.prisma.audio.create({
         data: {
-          title: `فایل صوتی ${existingAudioCount + i + 1}`,
-          description: `فایل صوتی ${existingAudioCount + i + 1} از دوره`,
+          title: `Audio File ${existingAudioCount + i + 1}`,
+          description: `Audio File ${existingAudioCount + i + 1} of the course`,
           audioFile: audioFile.filename,
           order: existingAudioCount + i + 1,
           courseId: id,
           published: course.published,
         },
       });
+      
+      const audioUrl = this.urlService.getFileUrl(audioFile.filename);
+      const audioStreamUrl = `${this.urlService.getBaseUrl()}/api/audios/${audio.id}/stream`;
+      
+      // Get actual file size from disk (with fallback to file.size)
+      const fileSize = this.getFileSize(audioFile.filename, audioFile.size || 0);
+      const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+      
+      this.logger.log(`Audio ${existingAudioCount + i + 1}:`);
+      this.logger.log(`  - Audio ID: ${audio.id}`);
+      this.logger.log(`  - Filename: ${audioFile.filename}`);
+      this.logger.log(`  - File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+      this.logger.log(`  - File Type: ${audioFile.mimetype}`);
+      this.logger.log(`  - File URL: ${audioUrl}`);
+      this.logger.log(`  - Stream URL: ${audioStreamUrl}`);
     }
+    
+    this.logger.log(`=== End Log ===\n`);
 
     return this.findOne(id);
   }
@@ -455,6 +526,10 @@ export class CoursesService {
         course: {
           include: {
             videos: {
+              where: { published: true },
+              orderBy: { order: 'asc' },
+            },
+            audios: {
               where: { published: true },
               orderBy: { order: 'asc' },
             },

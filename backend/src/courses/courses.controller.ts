@@ -53,7 +53,7 @@ export class CoursesController {
   @ApiResponse({ status: 201, description: 'Course created successfully' })
   async create(
     @Body() createCourseDto: CreateCourseDto,
-    @UploadedFiles() files: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }
+    @UploadedFiles() files: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[], courseAudios?: Express.Multer.File[] }
   ) {
     return this.coursesService.create(createCourseDto, files);
   }
@@ -246,6 +246,7 @@ export class CoursesController {
     { name: 'video', maxCount: 1 },
     { name: 'attachments', maxCount: 10 },
     { name: 'courseVideos', maxCount: 20 },
+    { name: 'courseAudios', maxCount: 20 },
   ], {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -276,7 +277,7 @@ export class CoursesController {
   async update(
     @Param('id') id: string, 
     @Body() updateCourseDto: UpdateCourseDto,
-    @UploadedFiles() files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }
+    @UploadedFiles() files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[], courseAudios?: Express.Multer.File[] }
   ) {
     return this.coursesService.update(id, updateCourseDto, files);
   }
