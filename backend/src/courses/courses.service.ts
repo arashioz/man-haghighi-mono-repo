@@ -27,7 +27,7 @@ export class CoursesService {
       join('/app/uploads', filename),
       join('/app', filename),
     ];
-    log("possiblePaths", possiblePaths);
+    
     for (const path of possiblePaths) {
       if (existsSync(path)) {
         try {
