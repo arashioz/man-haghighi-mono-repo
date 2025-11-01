@@ -10,7 +10,7 @@ const VideoPlayer: React.FC = () => {
   const { videoId } = useParams<{ videoId: string }>();
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   
   const [videoInfo, setVideoInfo] = useState<VideoStreamInfo | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
@@ -20,6 +20,11 @@ const VideoPlayer: React.FC = () => {
   const [videoUrl, setVideoUrl] = useState<string>('');
 
   useEffect(() => {
+    // Wait for auth to finish loading before checking user
+    if (authLoading) {
+      return;
+    }
+
     if (!user) {
       navigate('/login');
       return;
@@ -28,7 +33,7 @@ const VideoPlayer: React.FC = () => {
     if (videoId) {
       fetchVideoData();
     }
-  }, [videoId, user, navigate]);
+  }, [videoId, user, authLoading, navigate]);
 
   const fetchVideoData = async () => {
     try {
