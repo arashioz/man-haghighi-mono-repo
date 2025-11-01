@@ -4,6 +4,7 @@ import { CreateCourseDto, UpdateCourseDto, EnrollCourseDto } from './dto/course.
 import { UrlService } from '../common/services/url.service';
 import { statSync, existsSync } from 'fs';
 import { join } from 'path';
+import { log } from 'console';
 
 @Injectable()
 export class CoursesService {
@@ -26,7 +27,7 @@ export class CoursesService {
       join('/app/uploads', filename),
       join('/app', filename),
     ];
-    
+    log("possiblePaths", possiblePaths);
     for (const path of possiblePaths) {
       if (existsSync(path)) {
         try {
