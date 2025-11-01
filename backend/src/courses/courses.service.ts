@@ -81,10 +81,10 @@ export class CoursesService {
     });
 
     // Log course creation
-    this.logger.log(`=== دوره جدید ایجاد شد ===`);
-    this.logger.log(`شناسه دوره: ${course.id}`);
-    this.logger.log(`عنوان دوره: ${course.title}`);
-    this.logger.log(`قیمت: ${course.price}`);
+    this.logger.log(`=== New Course Created ===`);
+    this.logger.log(`Course ID: ${course.id}`);
+    this.logger.log(`Course Title: ${course.title}`);
+    this.logger.log(`Price: ${course.price}`);
     
     // Log intro video if uploaded
     if (files?.video?.[0]) {
@@ -96,16 +96,16 @@ export class CoursesService {
       const fileSize = this.getFileSize(introVideoFile.filename, introVideoFile.size || 0);
       const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
       
-      this.logger.log(`--- ویدیو معرفی دوره ---`);
-      this.logger.log(`نام فایل: ${introVideoFile.filename}`);
-      this.logger.log(`اندازه فایل: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
-      this.logger.log(`نوع فایل: ${introVideoFile.mimetype}`);
-      this.logger.log(`لینک فایل: ${introVideoUrl}`);
-      this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
+      this.logger.log(`--- Course Intro Video ---`);
+      this.logger.log(`Filename: ${introVideoFile.filename}`);
+      this.logger.log(`File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+      this.logger.log(`File Type: ${introVideoFile.mimetype}`);
+      this.logger.log(`File URL: ${introVideoUrl}`);
+      this.logger.log(`Stream URL: ${introVideoStreamUrl}`);
     }
 
     if (files?.courseVideos && files.courseVideos.length > 0) {
-      this.logger.log(`--- ویدیوهای دوره (${files.courseVideos.length} عدد) ---`);
+      this.logger.log(`--- Course Videos (${files.courseVideos.length} files) ---`);
       
       for (let i = 0; i < files.courseVideos.length; i++) {
         const videoFile = files.courseVideos[i];
@@ -127,17 +127,17 @@ export class CoursesService {
         const fileSize = this.getFileSize(videoFile.filename, videoFile.size || 0);
         const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
         
-        this.logger.log(`ویدیو ${i + 1}:`);
-        this.logger.log(`  - شناسه: ${video.id}`);
-        this.logger.log(`  - نام فایل: ${videoFile.filename}`);
-        this.logger.log(`  - اندازه: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
-        this.logger.log(`  - نوع: ${videoFile.mimetype}`);
-        this.logger.log(`  - لینک فایل: ${videoUrl}`);
-        this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
+        this.logger.log(`Video ${i + 1}:`);
+        this.logger.log(`  - Video ID: ${video.id}`);
+        this.logger.log(`  - Filename: ${videoFile.filename}`);
+        this.logger.log(`  - File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+        this.logger.log(`  - File Type: ${videoFile.mimetype}`);
+        this.logger.log(`  - File URL: ${videoUrl}`);
+        this.logger.log(`  - Stream URL: ${videoStreamUrl}`);
       }
     }
 
-    this.logger.log(`=== پایان لاگ دوره ===\n`);
+    this.logger.log(`=== End Course Log ===\n`);
 
     return this.urlService.processCourseData(course);
   }
@@ -297,18 +297,18 @@ export class CoursesService {
     const introVideoStreamUrl = `${this.urlService.getBaseUrl()}/api/courses/${id}/intro-video/stream`;
     
     // Get actual file size from disk
-    const fileSize = this.getFileSize(file.filename);
+    const fileSize = this.getFileSize(file.filename, file.size || 0);
     const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
     
-    this.logger.log(`=== آپلود ویدیو معرفی دوره ===`);
-    this.logger.log(`شناسه دوره: ${id}`);
-    this.logger.log(`عنوان دوره: ${course.title}`);
-    this.logger.log(`نام فایل: ${file.filename}`);
-    this.logger.log(`اندازه فایل: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
-    this.logger.log(`نوع فایل: ${file.mimetype}`);
-    this.logger.log(`لینک فایل: ${introVideoUrl}`);
-    this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
-    this.logger.log(`=== پایان لاگ ===\n`);
+    this.logger.log(`=== Course Intro Video Upload ===`);
+    this.logger.log(`Course ID: ${id}`);
+    this.logger.log(`Course Title: ${course.title}`);
+    this.logger.log(`Filename: ${file.filename}`);
+    this.logger.log(`File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+    this.logger.log(`File Type: ${file.mimetype}`);
+    this.logger.log(`File URL: ${introVideoUrl}`);
+    this.logger.log(`Stream URL: ${introVideoStreamUrl}`);
+    this.logger.log(`=== End Log ===\n`);
 
     return this.urlService.processCourseData(updatedCourse);
   }
@@ -341,10 +341,10 @@ export class CoursesService {
     });
 
     // Create Video entities for each uploaded course video
-    this.logger.log(`=== آپلود ویدیوهای دوره ===`);
-    this.logger.log(`شناسه دوره: ${id}`);
-    this.logger.log(`عنوان دوره: ${course.title}`);
-    this.logger.log(`تعداد ویدیوهای جدید: ${files.length}`);
+    this.logger.log(`=== Course Videos Upload ===`);
+    this.logger.log(`Course ID: ${id}`);
+    this.logger.log(`Course Title: ${course.title}`);
+    this.logger.log(`New Videos Count: ${files.length}`);
     
     for (let i = 0; i < files.length; i++) {
       const videoFile = files[i];
@@ -366,20 +366,20 @@ export class CoursesService {
       const videoUrl = this.urlService.getFileUrl(videoFile.filename);
       const videoStreamUrl = `${this.urlService.getBaseUrl()}/api/videos/${video.id}/stream`;
       
-      // Get actual file size from disk
-      const fileSize = this.getFileSize(videoFile.filename);
+      // Get actual file size from disk (with fallback to file.size)
+      const fileSize = this.getFileSize(videoFile.filename, videoFile.size || 0);
       const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
       
-      this.logger.log(`ویدیو ${existingVideoCount + i + 1}:`);
-      this.logger.log(`  - شناسه: ${video.id}`);
-      this.logger.log(`  - نام فایل: ${videoFile.filename}`);
-      this.logger.log(`  - اندازه: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
-      this.logger.log(`  - نوع: ${videoFile.mimetype}`);
-      this.logger.log(`  - لینک فایل: ${videoUrl}`);
-      this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
+      this.logger.log(`Video ${existingVideoCount + i + 1}:`);
+      this.logger.log(`  - Video ID: ${video.id}`);
+      this.logger.log(`  - Filename: ${videoFile.filename}`);
+      this.logger.log(`  - File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
+      this.logger.log(`  - File Type: ${videoFile.mimetype}`);
+      this.logger.log(`  - File URL: ${videoUrl}`);
+      this.logger.log(`  - Stream URL: ${videoStreamUrl}`);
     }
     
-    this.logger.log(`=== پایان لاگ ===\n`);
+    this.logger.log(`=== End Log ===\n`);
 
     return this.urlService.processCourseData(updatedCourse);
   }
