@@ -4,7 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
-import { coursesService } from '../services/api';
+import { coursesService, api } from '../services/api';
 import { Course } from '../types';
 
 const Courses: React.FC = () => {
@@ -15,6 +15,9 @@ const Courses: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadFile, setCurrentUploadFile] = useState<string>('');
+  const [uploadedBytes, setUploadedBytes] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [newCourse, setNewCourse] = useState({
     title: '',
@@ -94,10 +97,54 @@ const Courses: React.FC = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
+
   const truncateWords = (text:string, wordLimit = 30) => {
     const words = text.split(" ");
     if (words.length <= wordLimit) return text;
     return words.slice(0, wordLimit).join(" ") + "...";
+  };
+
+  // Helper function to upload file with progress tracking
+  const uploadFileWithProgress = async (
+    url: string,
+    formData: FormData,
+    fileName: string,
+    fileSize: number,
+    previousBytes: number,
+    totalSize: number,
+    onProgress?: (progress: number) => void
+  ): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      setCurrentUploadFile(fileName);
+      setTotalBytes(totalSize);
+      setUploadedBytes(previousBytes);
+
+      api.patch(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent: any) => {
+          if (progressEvent.total) {
+            const currentFilePercent = (progressEvent.loaded * 100) / progressEvent.total;
+            const currentFileBytes = progressEvent.loaded;
+            const totalUploadedBytes = previousBytes + currentFileBytes;
+            
+            setUploadedBytes(totalUploadedBytes);
+            
+            // Call progress callback if provided
+            if (onProgress) {
+              onProgress(currentFilePercent);
+            }
+          }
+        },
+      })
+        .then(() => {
+          resolve();
+        })
+        .catch((error: any) => {
+          reject(error);
+        });
+    });
   };
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,98 +178,96 @@ const Courses: React.FC = () => {
 
       const createdCourse = await response.json();
       
+      // Calculate total files and their sizes
       let totalFiles = 0;
-      let uploadedFiles = 0;
+      let totalSize = 0;
+      const filesToUpload: Array<{type: string, file: File, url: string}> = [];
       
-      if (newCourse.thumbnail) totalFiles++;
-      if (newCourse.video) totalFiles++;
-      totalFiles += newCourse.attachments.length;
-      totalFiles += newCourse.courseVideos.length;
-      totalFiles += newCourse.courseAudios.length;
-
       if (newCourse.thumbnail) {
-        const formData = new FormData();
-        formData.append('thumbnail', newCourse.thumbnail);
-        
-        await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/thumbnail`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
+        totalFiles++;
+        totalSize += newCourse.thumbnail.size;
+        filesToUpload.push({
+          type: 'thumbnail',
+          file: newCourse.thumbnail,
+          url: `/courses/${createdCourse.id}/thumbnail`
         });
-        
-        uploadedFiles++;
-        setUploadProgress((uploadedFiles / totalFiles) * 100);
       }
 
       if (newCourse.video) {
-        const formData = new FormData();
-        formData.append('video', newCourse.video);
-        
-        await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/video`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
+        totalFiles++;
+        totalSize += newCourse.video.size;
+        filesToUpload.push({
+          type: 'video',
+          file: newCourse.video,
+          url: `/courses/${createdCourse.id}/video`
         });
-        
-        uploadedFiles++;
-        setUploadProgress((uploadedFiles / totalFiles) * 100);
       }
 
       for (const attachment of newCourse.attachments) {
-        const formData = new FormData();
-        formData.append('attachments', attachment);
-        
-        await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/attachments`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
+        totalFiles++;
+        totalSize += attachment.size;
+        filesToUpload.push({
+          type: 'attachment',
+          file: attachment,
+          url: `/courses/${createdCourse.id}/attachments`
         });
-        
-        uploadedFiles++;
-        setUploadProgress((uploadedFiles / totalFiles) * 100);
       }
 
       for (const video of newCourse.courseVideos) {
         if (video.file) {
-          const formData = new FormData();
-          formData.append('courseVideos', video.file);
-          
-          await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseVideos`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
+          totalFiles++;
+          totalSize += video.file.size;
+          filesToUpload.push({
+            type: 'courseVideo',
+            file: video.file,
+            url: `/courses/${createdCourse.id}/courseVideos`
           });
-          
-          uploadedFiles++;
-          setUploadProgress((uploadedFiles / totalFiles) * 100);
         }
       }
 
       for (const audio of newCourse.courseAudios) {
         if (audio.file) {
-          const formData = new FormData();
-          formData.append('courseAudios', audio.file);
-          
-          await fetch(`${API_BASE_URL}/courses/${createdCourse.id}/courseAudios`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-            body: formData,
+          totalFiles++;
+          totalSize += audio.file.size;
+          filesToUpload.push({
+            type: 'courseAudio',
+            file: audio.file,
+            url: `/courses/${createdCourse.id}/courseAudios`
           });
-          
-          uploadedFiles++;
-          setUploadProgress((uploadedFiles / totalFiles) * 100);
         }
       }
+
+      // Upload all files with progress tracking
+      let uploadedBytesTotal = 0;
+      
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const fileItem = filesToUpload[i];
+        const formData = new FormData();
+        formData.append(fileItem.type === 'courseVideo' ? 'courseVideos' : 
+                       fileItem.type === 'courseAudio' ? 'courseAudios' :
+                       fileItem.type === 'attachment' ? 'attachments' : fileItem.type, 
+                       fileItem.file);
+        
+        await uploadFileWithProgress(
+          fileItem.url,
+          formData,
+          fileItem.file.name,
+          fileItem.file.size,
+          uploadedBytesTotal,
+          totalSize,
+          (currentFileProgress: number) => {
+            // Calculate overall progress: previous files + current file progress
+            const overallProgress = ((uploadedBytesTotal + (fileItem.file.size * currentFileProgress / 100)) / totalSize) * 100;
+            setUploadProgress(Math.min(100, overallProgress));
+          }
+        );
+        
+        uploadedBytesTotal += fileItem.file.size;
+        setUploadProgress((uploadedBytesTotal / totalSize) * 100);
+      }
+      
+      setUploadProgress(100);
+      setCurrentUploadFile('');
  
       
       setNewCourse({
@@ -457,12 +502,23 @@ const Courses: React.FC = () => {
         title="دوره جدید"
       >
         {isUploading && (
-          <div className="mb-4">
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm text-gray-600">در حال آپلود...</span>
-              <span className="text-sm text-gray-600">{Math.round(uploadProgress)}%</span>
+              <span className="text-sm font-medium text-blue-900">در حال آپلود فایل‌ها...</span>
+              <span className="text-sm font-semibold text-blue-700">{Math.round(uploadProgress)}%</span>
             </div>
-            <ProgressBar progress={uploadProgress} />
+            {currentUploadFile && (
+              <p className="text-xs text-blue-700 mb-2 truncate" title={currentUploadFile}>
+                📁 {currentUploadFile}
+              </p>
+            )}
+            <ProgressBar progress={uploadProgress} className="mb-2" />
+            {uploadedBytes > 0 && totalBytes > 0 && (
+              <div className="flex justify-between text-xs text-blue-600">
+                <span>{(uploadedBytes / (1024 * 1024)).toFixed(2)} MB</span>
+                <span>از {(totalBytes / (1024 * 1024)).toFixed(2)} MB</span>
+              </div>
+            )}
           </div>
         )}
         
