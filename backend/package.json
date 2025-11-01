@@ -25,7 +25,11 @@
     "seed:old-users": "ts-node prisma/seed-old-users.ts",
     "prisma:seed-old-data": "node prisma/seed-old-data.js",
     "import:old-users": "ts-node scripts/import-old-users.ts",
-    "import:old-users-csv": "ts-node scripts/import-old-users-csv.ts"
+    "import:old-users-csv": "ts-node scripts/import-old-users-csv.ts",
+    "clean": "./clean.sh",
+    "clean:all": "rm -rf dist uploads/*",
+    "clean:build": "rm -rf dist",
+    "clean:uploads": "rm -rf uploads/*"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
