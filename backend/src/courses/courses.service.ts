@@ -291,14 +291,38 @@ export class CoursesService {
     }
     
     if (files?.courseVideos && files.courseVideos.length > 0) {
+      const existingVideoCount = await this.prisma.video.count({
+        where: { courseId: id },
+      });
+      
       for (let i = 0; i < files.courseVideos.length; i++) {
         const videoFile = files.courseVideos[i];
         await this.prisma.video.create({
           data: {
-            title: `ویدیو ${i + 1}`,
-            description: `ویدیو ${i + 1} از دوره`,
+            title: `Video ${existingVideoCount + i + 1}`,
+            description: `Video ${existingVideoCount + i + 1} of the course`,
             videoFile: videoFile.filename,
-            order: i + 1,
+            order: existingVideoCount + i + 1,
+            courseId: id,
+            published: true,
+          },
+        });
+      }
+    }
+
+    if (files?.courseAudios && files.courseAudios.length > 0) {
+      const existingAudioCount = await this.prisma.audio.count({
+        where: { courseId: id },
+      });
+      
+      for (let i = 0; i < files.courseAudios.length; i++) {
+        const audioFile = files.courseAudios[i];
+        await this.prisma.audio.create({
+          data: {
+            title: `Audio File ${existingAudioCount + i + 1}`,
+            description: `Audio File ${existingAudioCount + i + 1} of the course`,
+            audioFile: audioFile.filename,
+            order: existingAudioCount + i + 1,
             courseId: id,
             published: true,
           },
