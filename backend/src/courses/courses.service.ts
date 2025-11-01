@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateCourseDto, UpdateCourseDto, EnrollCourseDto } from './dto/course.dto';
 import { UrlService } from '../common/services/url.service';
+import { statSync, existsSync } from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class CoursesService {
@@ -11,6 +13,48 @@ export class CoursesService {
     private prisma: PrismaService,
     private urlService: UrlService,
   ) {}
+
+  // Get actual file size from disk
+  private getFileSize(filename: string, fallbackSize?: number): number {
+    const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+    const filePath = join(uploadPath, filename);
+    
+    // Try different paths
+    const possiblePaths = [
+      filePath,
+      join(process.cwd(), 'uploads', filename),
+      join('/app/uploads', filename),
+      join('/app', filename),
+    ];
+    
+    for (const path of possiblePaths) {
+      if (existsSync(path)) {
+        try {
+          const stat = statSync(path);
+          // If we got a valid size from disk, use it
+          if (stat.size > 0) {
+            return stat.size;
+          }
+          // If file exists but size is 0, and we have fallback, use fallback
+          if (stat.size === 0 && fallbackSize && fallbackSize > 0) {
+            this.logger.warn(`File ${filename} exists but size is 0, using fallback size: ${fallbackSize} bytes`);
+            return fallbackSize;
+          }
+          return stat.size;
+        } catch (error: any) {
+          this.logger.warn(`Error getting file size for ${path}: ${error.message}`);
+        }
+      }
+    }
+    
+    // If file not found, return fallback size if available
+    if (fallbackSize && fallbackSize > 0) {
+      this.logger.warn(`File ${filename} not found on disk, using fallback size: ${fallbackSize} bytes`);
+      return fallbackSize;
+    }
+    
+    return 0;
+  }
 
   async create(createCourseDto: CreateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[] }) {                                                               
     const courseData: any = { ...createCourseDto };
@@ -47,9 +91,13 @@ export class CoursesService {
       const introVideoUrl = this.urlService.getFileUrl(introVideoFile.filename);
       const introVideoStreamUrl = `${this.urlService.getBaseUrl()}/api/courses/${course.id}/intro-video/stream`;
       
+      // Get actual file size from disk (with fallback to file.size)
+      const fileSize = this.getFileSize(introVideoFile.filename, introVideoFile.size || 0);
+      const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+      
       this.logger.log(`--- ویدیو معرفی دوره ---`);
       this.logger.log(`نام فایل: ${introVideoFile.filename}`);
-      this.logger.log(`اندازه فایل: ${(introVideoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`اندازه فایل: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
       this.logger.log(`نوع فایل: ${introVideoFile.mimetype}`);
       this.logger.log(`لینک فایل: ${introVideoUrl}`);
       this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
@@ -74,10 +122,14 @@ export class CoursesService {
         const videoUrl = this.urlService.getFileUrl(videoFile.filename);
         const videoStreamUrl = `${this.urlService.getBaseUrl()}/api/videos/${video.id}/stream`;
         
+        // Get actual file size from disk (with fallback to file.size)
+        const fileSize = this.getFileSize(videoFile.filename, videoFile.size || 0);
+        const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+        
         this.logger.log(`ویدیو ${i + 1}:`);
         this.logger.log(`  - شناسه: ${video.id}`);
         this.logger.log(`  - نام فایل: ${videoFile.filename}`);
-        this.logger.log(`  - اندازه: ${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+        this.logger.log(`  - اندازه: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
         this.logger.log(`  - نوع: ${videoFile.mimetype}`);
         this.logger.log(`  - لینک فایل: ${videoUrl}`);
         this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
@@ -243,11 +295,15 @@ export class CoursesService {
     const introVideoUrl = this.urlService.getFileUrl(file.filename);
     const introVideoStreamUrl = `${this.urlService.getBaseUrl()}/api/courses/${id}/intro-video/stream`;
     
+    // Get actual file size from disk
+    const fileSize = this.getFileSize(file.filename);
+    const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+    
     this.logger.log(`=== آپلود ویدیو معرفی دوره ===`);
     this.logger.log(`شناسه دوره: ${id}`);
     this.logger.log(`عنوان دوره: ${course.title}`);
     this.logger.log(`نام فایل: ${file.filename}`);
-    this.logger.log(`اندازه فایل: ${(file.size / (1024 * 1024)).toFixed(2)} MB`);
+    this.logger.log(`اندازه فایل: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
     this.logger.log(`نوع فایل: ${file.mimetype}`);
     this.logger.log(`لینک فایل: ${introVideoUrl}`);
     this.logger.log(`لینک استریم: ${introVideoStreamUrl}`);
@@ -309,10 +365,14 @@ export class CoursesService {
       const videoUrl = this.urlService.getFileUrl(videoFile.filename);
       const videoStreamUrl = `${this.urlService.getBaseUrl()}/api/videos/${video.id}/stream`;
       
+      // Get actual file size from disk
+      const fileSize = this.getFileSize(videoFile.filename);
+      const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
+      
       this.logger.log(`ویدیو ${existingVideoCount + i + 1}:`);
       this.logger.log(`  - شناسه: ${video.id}`);
       this.logger.log(`  - نام فایل: ${videoFile.filename}`);
-      this.logger.log(`  - اندازه: ${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`  - اندازه: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
       this.logger.log(`  - نوع: ${videoFile.mimetype}`);
       this.logger.log(`  - لینک فایل: ${videoUrl}`);
       this.logger.log(`  - لینک استریم: ${videoStreamUrl}`);
