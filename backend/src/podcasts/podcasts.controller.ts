@@ -34,7 +34,7 @@ export class PodcastsController {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(mp3|wav|ogg|m4a|aac)$/)) {
+      if (file.mimetype.startsWith('audio/')) {
         cb(null, true);
       } else {
         cb(new Error('Only audio files are allowed (mp3, wav, ogg, m4a, aac)'), false);
@@ -206,7 +206,7 @@ export class PodcastsController {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(mp3|wav|ogg|m4a|aac)$/)) {
+      if (file.mimetype.startsWith('audio/')) {
         cb(null, true);
       } else {
         cb(new Error('Only audio files are allowed (mp3, wav, ogg, m4a, aac)'), false);

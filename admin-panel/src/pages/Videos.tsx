@@ -5,6 +5,7 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { videosService } from '../services/api';
 import { Video } from '../types';
+import { truncateWords } from '../utils/text';
 
 const Videos: React.FC = () => {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -125,7 +126,7 @@ const Videos: React.FC = () => {
                             {video.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {video.description}
+                            {truncateWords(video.description || '', 20)}
                           </div>
                         </div>
                       </div>

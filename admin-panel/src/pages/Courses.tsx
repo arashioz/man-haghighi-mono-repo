@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
 import { coursesService, api, videosService } from '../services/api';
 import { Course, Video } from '../types';
+import { truncateWords } from '../utils/text';
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -99,12 +100,6 @@ const Courses: React.FC = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
-
-  const truncateWords = (text:string, wordLimit = 30) => {
-    const words = text.split(" ");
-    if (words.length <= wordLimit) return text;
-    return words.slice(0, wordLimit).join(" ") + "...";
-  };
 
   // Helper function to upload file with progress tracking
   const uploadFileWithProgress = async (
@@ -513,7 +508,7 @@ const Courses: React.FC = () => {
                             {course.title}
                           </div>
                           <div className="text-sm text-gray-500 line-clamp-2">
-                            {course.description ? truncateWords(course.description, 30) : "..."}
+                          {course.description ? truncateWords(course.description, 20) : "..."}
                           </div>
                         </div>
                       </div>
@@ -952,7 +947,7 @@ const Courses: React.FC = () => {
                       </p>
                       {video.description && (
                         <p className="text-xs text-gray-500 truncate mt-1">
-                          {video.description}
+                          {truncateWords(video.description, 20)}
                         </p>
                       )}
                       {video.duration && (

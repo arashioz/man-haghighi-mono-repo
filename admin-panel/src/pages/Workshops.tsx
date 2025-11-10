@@ -9,14 +9,8 @@ import WorkshopTemplate from '../components/WorkshopTemplate';
 import { workshopsService, usersService } from '../services/api';
 import { Workshop, User } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
+import { truncateWords } from '../utils/text';
 import { useAuth } from '../contexts/AuthContext';
-
-const truncateText = (text: string, maxWords: number = 30): string => {
-  if (!text) return '';
-  const words = text.split(' ');
-  if (words.length <= maxWords) return text;
-  return words.slice(0, maxWords).join(' ') + '...';
-};
 
 const Workshops: React.FC = () => {
   const { user } = useAuth();
@@ -368,7 +362,7 @@ const Workshops: React.FC = () => {
                             {workshop.title}
                           </div>
                           <div className="text-sm text-gray-500 leading-relaxed">
-                            {truncateText(workshop.description || '', 30)}
+                            {truncateWords(workshop.description || '', 20)}
                           </div>
                         </div>
                       </div>
