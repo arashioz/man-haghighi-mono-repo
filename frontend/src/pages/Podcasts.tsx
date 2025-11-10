@@ -77,7 +77,7 @@ const Podcasts: React.FC = () => {
               )}
               <audio controls className="w-full mb-4">
                 <source
-                  src={podcast.streamUrl ?? podcast.audioFile ?? undefined}
+                  src={podcast.streamUrl ?? (podcast.audioFile ?? undefined)}
                   type="audio/mpeg"
                 />
                 مرورگر شما از پخش صدا پشتیبانی نمی‌کند.
