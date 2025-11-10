@@ -24,6 +24,20 @@ const Podcasts: React.FC = () => {
     published: false,
   });
   const [newPodcastFile, setNewPodcastFile] = useState<File | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingPodcast, setEditingPodcast] = useState<Podcast | null>(null);
+  const [editPodcast, setEditPodcast] = useState({
+    title: '',
+    description: '',
+    audioLink: '',
+    duration: '',
+    published: false,
+  });
+  const [editPodcastFile, setEditPodcastFile] = useState<File | null>(null);
+  const [isEditSaving, setIsEditSaving] = useState(false);
+  const [editUploadProgress, setEditUploadProgress] = useState(0);
+  const [editCurrentFile, setEditCurrentFile] = useState('');
+  const [editError, setEditError] = useState('');
 
   const fetchPodcasts = useCallback(async () => {
     try {
@@ -54,6 +68,39 @@ const Podcasts: React.FC = () => {
       published: false,
     });
     setNewPodcastFile(null);
+  };
+
+  const openEditModal = (podcast: Podcast) => {
+    setEditingPodcast(podcast);
+    setEditPodcast({
+      title: podcast.title || '',
+      description: podcast.description || '',
+      audioLink: podcast.audioFile && podcast.audioFile.startsWith('http') ? podcast.audioFile : '',
+      duration: podcast.duration ? String(podcast.duration) : '',
+      published: podcast.published,
+    });
+    setEditPodcastFile(null);
+    setEditUploadProgress(0);
+    setEditCurrentFile('');
+    setEditError('');
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingPodcast(null);
+    setEditPodcast({
+      title: '',
+      description: '',
+      audioLink: '',
+      duration: '',
+      published: false,
+    });
+    setEditPodcastFile(null);
+    setIsEditSaving(false);
+    setEditUploadProgress(0);
+    setEditCurrentFile('');
+    setEditError('');
   };
 
   const handleAddPodcast = async (e: React.FormEvent) => {
@@ -114,6 +161,104 @@ const Podcasts: React.FC = () => {
 
       setError(errorMessage);
       setIsUploading(false);
+    }
+  };
+
+  const handleDeletePodcast = async (podcastId: string, title?: string) => {
+    if (!window.confirm(`آیا از حذف پادکست ${title ? `«${title}»` : ''} اطمینان دارید؟`)) {
+      return;
+    }
+
+    try {
+      await podcastsService.delete(podcastId);
+      setPodcasts((prev) => prev.filter((podcast) => podcast.id !== podcastId));
+    } catch (err: any) {
+      let errorMessage = 'خطا در حذف پادکست';
+
+      if (err?.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(', ');
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+    }
+  };
+
+  const handleUpdatePodcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPodcast) {
+      return;
+    }
+
+    if (!editPodcastFile && !editPodcast.audioLink.trim() && !editingPodcast.audioFile) {
+      setEditError('برای پادکست باید فایل صوتی یا لینک معتبر داشته باشید.');
+      return;
+    }
+
+    setIsEditSaving(true);
+    setEditUploadProgress(0);
+    setEditError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('title', editPodcast.title);
+      formData.append('published', String(editPodcast.published));
+
+      if (typeof editPodcast.description === 'string') {
+        formData.append('description', editPodcast.description);
+      }
+
+      if (editPodcast.duration) {
+        formData.append('duration', editPodcast.duration);
+      }
+
+      if (editPodcast.audioLink.trim()) {
+        formData.append('audioFile', editPodcast.audioLink.trim());
+      }
+
+      if (editPodcastFile) {
+        formData.append('audio', editPodcastFile);
+        setEditCurrentFile(editPodcastFile.name);
+      } else {
+        setEditCurrentFile('');
+      }
+
+      const updatedPodcast = await podcastsService.updateWithFile(
+        editingPodcast.id,
+        formData,
+        (progressEvent: any) => {
+          if (progressEvent?.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setEditUploadProgress(percentCompleted);
+          }
+        },
+      );
+
+      setPodcasts((prev) =>
+        prev.map((podcast) => (podcast.id === updatedPodcast.id ? updatedPodcast : podcast)),
+      );
+      closeEditModal();
+    } catch (err: any) {
+      let errorMessage = 'خطا در ویرایش پادکست';
+
+      if (err?.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(', ');
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setEditError(errorMessage);
+    } finally {
+      setIsEditSaving(false);
     }
   };
 
@@ -225,12 +370,22 @@ const Podcasts: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 space-x-reverse">
-                        <button className="text-blue-600 hover:text-blue-900" title="ویرایش">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(podcast)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="ویرایش"
+                        >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button className="text-red-600 hover:text-red-900" title="حذف">
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePodcast(podcast.id, podcast.title)}
+                          className="text-red-600 hover:text-red-900"
+                          title="حذف"
+                        >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
@@ -374,6 +529,159 @@ const Podcasts: React.FC = () => {
               }`}
             >
               {isUploading ? 'در حال آپلود...' : 'ایجاد پادکست'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        title="ویرایش پادکست"
+      >
+        {isEditSaving && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-blue-900">در حال ذخیره تغییرات...</span>
+              <span className="text-sm font-semibold text-blue-700">
+                {editUploadProgress > 0 ? `${editUploadProgress}%` : ''}
+              </span>
+            </div>
+            {editCurrentFile && (
+              <p className="text-xs text-blue-700 mb-2 truncate" title={editCurrentFile}>
+                📁 {editCurrentFile}
+              </p>
+            )}
+            {editUploadProgress > 0 && <ProgressBar progress={editUploadProgress} />}
+          </div>
+        )}
+
+        {editError && (
+          <div className="mb-4 p-3 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm">
+            {editError}
+          </div>
+        )}
+
+        <form onSubmit={handleUpdatePodcast} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              عنوان پادکست
+            </label>
+            <input
+              type="text"
+              value={editPodcast.title}
+              onChange={(e) => setEditPodcast({ ...editPodcast, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              disabled={isEditSaving}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              توضیحات
+            </label>
+            <textarea
+              value={editPodcast.description}
+              onChange={(e) => setEditPodcast({ ...editPodcast, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+              disabled={isEditSaving}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              فایل صوتی
+            </label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setEditPodcastFile(file);
+                setEditCurrentFile(file?.name || '');
+              }}
+              className="w-full text-sm"
+              disabled={isEditSaving}
+            />
+            {editPodcastFile && (
+              <p className="mt-1 text-xs text-green-600">
+                ✓ {editPodcastFile.name} ({(editPodcastFile.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            )}
+            {!editPodcastFile && editingPodcast?.audioFile && (
+              <p className="mt-1 text-xs text-blue-600 truncate">
+                فایل فعلی: {' '}
+                <a
+                  href={editingPodcast.streamUrl || editingPodcast.audioFile || undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  مشاهده/دانلود
+                </a>
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              لینک فایل صوتی (اختیاری)
+            </label>
+            <input
+              type="url"
+              value={editPodcast.audioLink}
+              onChange={(e) => setEditPodcast({ ...editPodcast, audioLink: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="https://example.com/audio.mp3"
+              disabled={isEditSaving}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              مدت زمان (ثانیه)
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={editPodcast.duration}
+              onChange={(e) => setEditPodcast({ ...editPodcast, duration: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="مثلاً 1800"
+              disabled={isEditSaving}
+            />
+          </div>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              checked={editPodcast.published}
+              onChange={(e) => setEditPodcast({ ...editPodcast, published: e.target.checked })}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              disabled={isEditSaving}
+            />
+            <label className="mr-2 block text-sm text-gray-900">
+              منتشر شده
+            </label>
+          </div>
+          <div className="flex justify-end space-x-2 space-x-reverse pt-4">
+            <button
+              type="button"
+              onClick={closeEditModal}
+              disabled={isEditSaving}
+              className={`px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
+                isEditSaving
+                  ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
+                  : 'text-gray-700 bg-gray-100 border-gray-300 hover:bg-gray-200'
+              }`}
+            >
+              انصراف
+            </button>
+            <button
+              type="submit"
+              disabled={isEditSaving}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg transition-colors ${
+                isEditSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {isEditSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
             </button>
           </div>
         </form>

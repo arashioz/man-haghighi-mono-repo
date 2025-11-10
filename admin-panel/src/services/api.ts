@@ -453,6 +453,16 @@ export const podcastsService = {
     return response.data;
   },
 
+  updateWithFile: async (id: string, formData: FormData, onProgress?: (progressEvent: any) => void): Promise<Podcast> => {
+    const response = await api.patch(`/podcasts/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
+    return response.data;
+  },
+
   delete: async (id: string): Promise<void> => {
     await api.delete(`/podcasts/${id}`);
   },
