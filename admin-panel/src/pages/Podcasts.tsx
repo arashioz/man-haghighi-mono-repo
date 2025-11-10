@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import ProgressBar from '../components/ProgressBar';
 import { podcastsService } from '../services/api';
 import { Podcast } from '../types';
 
@@ -11,42 +12,107 @@ const Podcasts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadFile, setCurrentUploadFile] = useState<string>('');
   const [newPodcast, setNewPodcast] = useState({
     title: '',
     description: '',
-    audioFile: '',
+    audioLink: '',
+    duration: '',
     published: false,
   });
+  const [newPodcastFile, setNewPodcastFile] = useState<File | null>(null);
+
+  const fetchPodcasts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await podcastsService.getAll();
+      setPodcasts(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت پادکست‌ها');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchPodcasts = async () => {
-      try {
-        const data = await podcastsService.getAll();
-        setPodcasts(data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'خطا در دریافت پادکست‌ها');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPodcasts();
-  }, []);
+  }, [fetchPodcasts]);
+
+  const resetModalState = () => {
+    setIsModalOpen(false);
+    setIsUploading(false);
+    setUploadProgress(0);
+    setCurrentUploadFile('');
+    setNewPodcast({
+      title: '',
+      description: '',
+      audioLink: '',
+      duration: '',
+      published: false,
+    });
+    setNewPodcastFile(null);
+  };
 
   const handleAddPodcast = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!newPodcastFile && !newPodcast.audioLink.trim()) {
+      setError('لطفاً یک فایل صوتی آپلود یا لینک صوتی معتبر وارد کنید');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setError('');
+
     try {
-      const createdPodcast = await podcastsService.create(newPodcast);
-      setPodcasts([...podcasts, createdPodcast]);
-      setIsModalOpen(false);
-      setNewPodcast({
-        title: '',
-        description: '',
-        audioFile: '',
-        published: false,
+      const formData = new FormData();
+      formData.append('title', newPodcast.title);
+      formData.append('published', String(newPodcast.published));
+
+      if (newPodcast.description) {
+        formData.append('description', newPodcast.description);
+      }
+
+      if (newPodcast.duration) {
+        formData.append('duration', newPodcast.duration);
+      }
+
+      if (newPodcast.audioLink) {
+        formData.append('audioFile', newPodcast.audioLink);
+      }
+
+      if (newPodcastFile) {
+        formData.append('audio', newPodcastFile);
+        setCurrentUploadFile(newPodcastFile.name);
+      }
+
+      const createdPodcast = await podcastsService.createWithFile(formData, (progressEvent: any) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
       });
+
+      setPodcasts((prev) => [createdPodcast, ...prev]);
+      resetModalState();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در ایجاد پادکست');
+      let errorMessage = 'خطا در ایجاد پادکست';
+
+      if (err?.response?.data?.message) {
+        if (Array.isArray(err.response.data.message)) {
+          errorMessage = err.response.data.message.join(', ');
+        } else {
+          errorMessage = err.response.data.message;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
+      setIsUploading(false);
     }
   };
 
@@ -108,21 +174,39 @@ const Podcasts: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {podcasts.map((podcast) => (
-                  <tr key={podcast.id} className="hover:bg-gray-50">
+                  <tr key={podcast.id} className="hover:bg-gray-50 align-top">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                      <div className="flex items-start gap-4">
                         <div className="flex-shrink-0 h-10 w-10">
                           <div className="h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center text-white font-medium">
                             {podcast.title?.[0] || 'P'}
                           </div>
                         </div>
-                        <div className="mr-4">
-                          <div className="text-sm font-medium text-gray-900">
+                        <div className="space-y-2">
+                          <div className="text-sm font-semibold text-gray-900">
                             {podcast.title}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {podcast.description}
-                          </div>
+                          {podcast.description && (
+                            <div className="text-sm text-gray-500 line-clamp-2">
+                              {podcast.description}
+                            </div>
+                          )}
+                          <audio controls className="w-full">
+                            <source src={podcast.streamUrl || podcast.audioFile || undefined} />
+                            مرورگر شما از پخش صدا پشتیبانی نمی‌کند.
+                          </audio>
+                          {(podcast.streamUrl || podcast.audioFile) && (
+                            <div className="text-xs text-blue-600">
+                              <a
+                                href={podcast.streamUrl || podcast.audioFile || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline"
+                              >
+                                مشاهده لینک پخش
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -140,12 +224,12 @@ const Podcasts: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 space-x-reverse">
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button className="text-blue-600 hover:text-blue-900" title="ویرایش">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button className="text-red-600 hover:text-red-900" title="حذف">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
@@ -171,9 +255,23 @@ const Podcasts: React.FC = () => {
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={resetModalState}
         title="پادکست جدید"
       >
+        {isUploading && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-blue-900">در حال آپلود فایل صوتی...</span>
+              <span className="text-sm font-semibold text-blue-700">{uploadProgress}%</span>
+            </div>
+            {currentUploadFile && (
+              <p className="text-xs text-blue-700 mb-2 truncate" title={currentUploadFile}>
+                📁 {currentUploadFile}
+              </p>
+            )}
+            <ProgressBar progress={uploadProgress} />
+          </div>
+        )}
         <form onSubmit={handleAddPodcast} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -182,7 +280,7 @@ const Podcasts: React.FC = () => {
             <input
               type="text"
               value={newPodcast.title}
-              onChange={(e) => setNewPodcast({...newPodcast, title: e.target.value})}
+              onChange={(e) => setNewPodcast({ ...newPodcast, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -193,28 +291,61 @@ const Podcasts: React.FC = () => {
             </label>
             <textarea
               value={newPodcast.description}
-              onChange={(e) => setNewPodcast({...newPodcast, description: e.target.value})}
+              onChange={(e) => setNewPodcast({ ...newPodcast, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              لینک فایل صوتی
+              فایل صوتی
+            </label>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setNewPodcastFile(file);
+                setCurrentUploadFile(file?.name || '');
+              }}
+              className="w-full text-sm"
+            />
+            {newPodcastFile && (
+              <p className="mt-1 text-xs text-green-600">
+                ✓ {newPodcastFile.name} ({(newPodcastFile.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              یا لینک فایل صوتی (اختیاری)
             </label>
             <input
               type="url"
-              value={newPodcast.audioFile}
-              onChange={(e) => setNewPodcast({...newPodcast, audioFile: e.target.value})}
+              value={newPodcast.audioLink}
+              onChange={(e) => setNewPodcast({ ...newPodcast, audioLink: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="https://example.com/audio.mp3"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              مدت زمان (ثانیه) - اختیاری
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={newPodcast.duration}
+              onChange={(e) => setNewPodcast({ ...newPodcast, duration: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="مثلاً 1800"
             />
           </div>
           <div className="flex items-center">
             <input
               type="checkbox"
               checked={newPodcast.published}
-              onChange={(e) => setNewPodcast({...newPodcast, published: e.target.checked})}
+              onChange={(e) => setNewPodcast({ ...newPodcast, published: e.target.checked })}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label className="mr-2 block text-sm text-gray-900">
@@ -224,16 +355,24 @@ const Podcasts: React.FC = () => {
           <div className="flex justify-end space-x-2 space-x-reverse pt-4">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+              onClick={resetModalState}
+              disabled={isUploading}
+              className={`px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
+                isUploading
+                  ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed'
+                  : 'text-gray-700 bg-gray-100 border-gray-300 hover:bg-gray-200'
+              }`}
             >
               انصراف
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700"
+              disabled={isUploading}
+              className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg transition-colors ${
+                isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              ایجاد پادکست
+              {isUploading ? 'در حال آپلود...' : 'ایجاد پادکست'}
             </button>
           </div>
         </form>

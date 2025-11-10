@@ -404,9 +404,38 @@ export const podcastsService = {
     return response.data;
   },
 
-  create: async (data: Omit<Podcast, 'id' | 'createdAt' | 'updatedAt'>): Promise<Podcast> => {
-    const response = await api.post('/podcasts', data);
-    return response.data;
+  create: async (data: {
+    title: string;
+    description?: string;
+    audioLink?: string;
+    duration?: number | string;
+    published?: boolean;
+    audioFile?: File;
+  }): Promise<Podcast> => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+
+    if (typeof data.published !== 'undefined') {
+      formData.append('published', String(data.published));
+    }
+
+    if (data.description) {
+      formData.append('description', data.description);
+    }
+
+    if (typeof data.duration !== 'undefined' && data.duration !== null && data.duration !== '') {
+      formData.append('duration', String(data.duration));
+    }
+
+    if (data.audioLink) {
+      formData.append('audioFile', data.audioLink);
+    }
+
+    if (data.audioFile) {
+      formData.append('audio', data.audioFile);
+    }
+
+    return podcastsService.createWithFile(formData);
   },
 
   createWithFile: async (formData: FormData, onProgress?: (progressEvent: any) => void): Promise<Podcast> => {

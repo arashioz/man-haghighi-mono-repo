@@ -87,10 +87,11 @@ export interface Podcast {
   id: string;
   title: string;
   description?: string;
-  audioFile: string;
+  audioFile: string | null;
+  streamUrl?: string | null;
   duration?: number;
   published: boolean;
-  publishedAt?: string;
+  publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
