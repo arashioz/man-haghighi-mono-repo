@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
 import { slidersService } from '../services/api';
 import { Slider } from '../types';
+import { truncateWords } from '../utils/text';
 
 const Sliders: React.FC = () => {
   const [sliders, setSliders] = useState<Slider[]>([]);
@@ -227,7 +228,7 @@ const Sliders: React.FC = () => {
                             {slider.title}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {slider.description}
+                            {truncateWords(slider.description || '', 20)}
                           </div>
                         </div>
                       </div>

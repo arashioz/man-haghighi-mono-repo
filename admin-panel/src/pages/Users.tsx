@@ -4,6 +4,7 @@ import { User, Course } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import { truncateWords } from '../utils/text';
 
 const AddIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -858,7 +859,9 @@ const Users: React.FC = () => {
                         <>
                           <h4 className="font-medium text-gray-900">{enrollment.course.title}</h4>
                           {enrollment.course.description && (
-                            <p className="text-sm text-gray-600 mt-2 line-clamp-2">{enrollment.course.description}</p>
+                            <p className="text-sm text-gray-600 mt-2">
+                              {truncateWords(enrollment.course.description, 20)}
+                            </p>
                           )}
                           <div className="flex justify-between items-center mt-3">
                             {enrollment.course.price && (

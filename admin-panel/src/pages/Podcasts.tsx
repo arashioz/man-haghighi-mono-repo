@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
 import { podcastsService } from '../services/api';
 import { Podcast } from '../types';
+import { truncateWords } from '../utils/text';
 
 const Podcasts: React.FC = () => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
@@ -187,8 +188,8 @@ const Podcasts: React.FC = () => {
                             {podcast.title}
                           </div>
                           {podcast.description && (
-                            <div className="text-sm text-gray-500 line-clamp-2">
-                              {podcast.description}
+                            <div className="text-sm text-gray-500">
+                              {truncateWords(podcast.description, 20)}
                             </div>
                           )}
                           <audio controls className="w-full">
