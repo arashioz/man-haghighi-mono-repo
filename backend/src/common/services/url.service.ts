@@ -82,7 +82,24 @@ export class UrlService {
     };
   }
 
-  
+  processPodcastData(podcast: any): any {
+    if (!podcast) return podcast;
+
+    const streamUrl = podcast.id
+      ? `${this.baseUrl}/api/podcasts/${podcast.id}/stream`
+      : null;
+
+    return {
+      ...podcast,
+      audioFile: this.getFileUrl(podcast.audioFile),
+      streamUrl,
+    };
+  }
+
+  processPodcastsData(podcasts: any[]): any[] {
+    return podcasts.map((podcast) => this.processPodcastData(podcast));
+  }
+
   processCoursesData(courses: any[]): any[] {
     return courses.map(course => this.processCourseData(course));
   }
