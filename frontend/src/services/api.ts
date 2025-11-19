@@ -1,18 +1,37 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, RegisterCredentials, User, Slider, Article, Podcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop } from '../types';
+import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop } from '../types';
 
-// Use dynamic API URL based on environment
+const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
+const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
+
+const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+
+const isLocalHost = (hostname: string) =>
+  hostname === 'localhost' || hostname === '127.0.0.1';
+
 const getApiBaseUrl = () => {
-  // If running in browser, use environment variable or server IP
+  const envUrl = process.env.REACT_APP_API_URL?.trim();
+
   if (typeof window !== 'undefined') {
-    // Use environment variable if available, otherwise use server IP
-    return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
+    const hostname = window.location.hostname;
+
+    if (isLocalHost(hostname)) {
+      if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+        return normalizeUrl(envUrl);
+      }
+      return DEFAULT_LOCAL_API;
+    }
   }
-  // If running in server-side (SSR), use environment variable or server IP
-  return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
+
+  if (envUrl) {
+    return normalizeUrl(envUrl);
+  }
+
+  return DEFAULT_SERVER_API;
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
+export const API_ORIGIN = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -71,6 +90,11 @@ export const authService = {
     const response = await api.get('/auth/profile');
     return response.data;
   },
+
+  updateProfile: async (payload: UpdateProfilePayload): Promise<AuthResponse> => {
+    const response = await api.patch('/auth/profile', payload);
+    return response.data;
+  },
 };
 
 export const slidersService = {
@@ -95,6 +119,18 @@ export const articlesService = {
 export const podcastsService = {
   getPublished: async (): Promise<Podcast[]> => {
     const response = await api.get('/podcasts/published');
+    return response.data;
+  },
+};
+
+export const videoPodcastsService = {
+  getPublished: async (): Promise<VideoPodcast[]> => {
+    const response = await api.get('/video-podcasts/published');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<VideoPodcast> => {
+    const response = await api.get(`/video-podcasts/${id}`);
     return response.data;
   },
 };

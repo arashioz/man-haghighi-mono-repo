@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { videosService, coursesService } from '../services/api';
+import { videosService, coursesService, API_ORIGIN } from '../services/api';
 import { Video, Course, VideoStreamInfo } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
@@ -39,19 +39,14 @@ const VideoPlayer: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get video stream info (which includes all video details)
       const streamData = await videosService.getVideoStreamUrl(videoId!);
       setVideoInfo(streamData);
       
-      // Get fresh token and create stream URL with current token
       const token = localStorage.getItem('token');
-      // Use streamUrl from backend (which should include /api prefix)
-      // But also create a fresh one with current token in case backend URL is stale
-      const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
-      const baseUrl = apiBaseUrl.replace('/api', '');
+
+      const baseUrl = API_ORIGIN;
       
-      // TEMPORARY: Use test endpoint without auth for debugging
-      const USE_TEST_ENDPOINT = true; // Set to false to use normal endpoint
+      const USE_TEST_ENDPOINT = true; 
       const streamUrl = USE_TEST_ENDPOINT
         ? `${baseUrl}/api/videos/${videoId}/stream-test`
         : (token 
@@ -84,7 +79,6 @@ const VideoPlayer: React.FC = () => {
       
       setVideoUrl(streamUrl);
       
-      // Get course details and all course videos
       if (streamData.courseId) {
         const [courseData, videosData] = await Promise.all([
           coursesService.getById(streamData.courseId),

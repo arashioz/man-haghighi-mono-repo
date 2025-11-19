@@ -5,6 +5,7 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import RichTextEditor from '../components/RichTextEditor';
 import SeoPreview from '../components/SeoPreview';
+import ProgressBar from '../components/ProgressBar';
 import { articlesService } from '../services/api';
 import { Article } from '../types';
 
@@ -16,6 +17,12 @@ const Articles: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'advanced'>('editor');
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
+  const [editFeaturedImageFile, setEditFeaturedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   const [newArticle, setNewArticle] = useState({
     title: '',
@@ -116,12 +123,58 @@ const Articles: React.FC = () => {
     });
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFeaturedImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setEditFeaturedImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      await articlesService.create(newArticle);
+      // Create article first
+      const createdArticle = await articlesService.create(newArticle);
+      
+      // Upload featured image if selected
+      if (featuredImageFile) {
+        setIsUploadingImage(true);
+        setUploadProgress(0);
+        try {
+          await articlesService.uploadFeaturedImage(createdArticle.id, featuredImageFile, (progressEvent: any) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percentCompleted);
+            }
+          });
+        } catch (imgErr: any) {
+          console.error('Error uploading image:', imgErr);
+          setError('مقاله ایجاد شد اما آپلود عکس با خطا مواجه شد: ' + (imgErr.response?.data?.message || imgErr.message));
+        } finally {
+          setIsUploadingImage(false);
+          setUploadProgress(0);
+        }
+      }
+
       setIsModalOpen(false);
       setNewArticle({
         title: '',
@@ -136,6 +189,8 @@ const Articles: React.FC = () => {
         tags: [],
         published: false,
       });
+      setFeaturedImageFile(null);
+      setImagePreview(null);
       fetchArticles();
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ایجاد مقاله');
@@ -144,6 +199,8 @@ const Articles: React.FC = () => {
 
   const handleEditArticle = (article: Article) => {
     setEditingArticle(article);
+    setEditFeaturedImageFile(null);
+    setEditImagePreview(article.featuredImage || null);
     setIsEditModalOpen(true);
   };
 
@@ -169,16 +226,48 @@ const Articles: React.FC = () => {
     if (!editingArticle) return;
 
     try {
+      // Update article first
       const updatedArticle = await articlesService.update(editingArticle.id, editingArticle);
-      if (Array.isArray(articles)) {
-        setArticles(articles.map(article => 
-          article.id === editingArticle.id ? updatedArticle : article
-        ));
+      
+      // Upload new featured image if selected
+      if (editFeaturedImageFile) {
+        setIsUploadingImage(true);
+        setUploadProgress(0);
+        try {
+          const articleWithImage = await articlesService.uploadFeaturedImage(editingArticle.id, editFeaturedImageFile, (progressEvent: any) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percentCompleted);
+            }
+          });
+          if (Array.isArray(articles)) {
+            setArticles(articles.map(article => 
+              article.id === editingArticle.id ? articleWithImage : article
+            ));
+          } else {
+            setArticles([]);
+          }
+        } catch (imgErr: any) {
+          console.error('Error uploading image:', imgErr);
+          setError('مقاله به‌روزرسانی شد اما آپلود عکس با خطا مواجه شد: ' + (imgErr.response?.data?.message || imgErr.message));
+        } finally {
+          setIsUploadingImage(false);
+          setUploadProgress(0);
+        }
       } else {
-        setArticles([]);
+        if (Array.isArray(articles)) {
+          setArticles(articles.map(article => 
+            article.id === editingArticle.id ? updatedArticle : article
+          ));
+        } else {
+          setArticles([]);
+        }
       }
+      
       setIsEditModalOpen(false);
       setEditingArticle(null);
+      setEditFeaturedImageFile(null);
+      setEditImagePreview(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ویرایش مقاله');
     }
@@ -340,7 +429,12 @@ const Articles: React.FC = () => {
       {/* Add Article Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setFeaturedImageFile(null);
+          setImagePreview(null);
+          setActiveTab('editor');
+        }}
         title="مقاله جدید"
         size="large"
       >
@@ -435,6 +529,36 @@ const Articles: React.FC = () => {
                   rows={3}
                   placeholder="خلاصه‌ای کوتاه از مقاله..."
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  عکس شاخص
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {imagePreview && (
+                  <div className="mt-3">
+                    <img
+                      src={imagePreview}
+                      alt="پیش‌نمایش"
+                      className="max-w-full h-48 object-cover rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+                {isUploadingImage && (
+                  <div className="mt-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">در حال آپلود عکس...</span>
+                      <span className="text-sm text-gray-600">{Math.round(uploadProgress)}%</span>
+                    </div>
+                    <ProgressBar progress={uploadProgress} />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -614,6 +738,263 @@ const Articles: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Edit Article Modal */}
+      {editingArticle && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingArticle(null);
+            setEditFeaturedImageFile(null);
+            setEditImagePreview(null);
+          }}
+          title="ویرایش مقاله"
+          size="large"
+        >
+          <form onSubmit={handleUpdateArticle} className="space-y-4">
+            {/* Tabs */}
+            <div className="border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8 space-x-reverse">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('editor')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'editor'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  ویرایشگر
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('seo')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'seo'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  تنظیمات SEO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('advanced')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'advanced'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  پیشرفته
+                </button>
+              </nav>
+            </div>
+
+            {/* Editor Tab */}
+            {activeTab === 'editor' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    عنوان مقاله *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingArticle.title}
+                    onChange={(e) => setEditingArticle({...editingArticle, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Slug (نامک)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingArticle.slug}
+                    onChange={(e) => setEditingArticle({...editingArticle, slug: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
+                    dir="ltr"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    محتوای مقاله *
+                  </label>
+                  <RichTextEditor
+                    value={editingArticle.content}
+                    onChange={(value) => setEditingArticle({...editingArticle, content: value})}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    خلاصه مقاله
+                  </label>
+                  <textarea
+                    value={editingArticle.excerpt || ''}
+                    onChange={(e) => setEditingArticle({...editingArticle, excerpt: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="خلاصه‌ای کوتاه از مقاله..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    عکس شاخص
+                  </label>
+                  {editImagePreview && !editFeaturedImageFile && (
+                    <div className="mb-3">
+                      <img
+                        src={editImagePreview}
+                        alt="عکس فعلی"
+                        className="max-w-full h-48 object-cover rounded-lg border border-gray-300"
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {editImagePreview && editFeaturedImageFile && (
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-600 mb-2">پیش‌نمایش عکس جدید:</p>
+                      <img
+                        src={editImagePreview}
+                        alt="پیش‌نمایش"
+                        className="max-w-full h-48 object-cover rounded-lg border border-gray-300"
+                      />
+                    </div>
+                  )}
+                  {isUploadingImage && (
+                    <div className="mt-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600">در حال آپلود عکس...</span>
+                        <span className="text-sm text-gray-600">{Math.round(uploadProgress)}%</span>
+                      </div>
+                      <ProgressBar progress={uploadProgress} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SEO Tab */}
+            {activeTab === 'seo' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <SeoPreview
+                      title={editingArticle.metaTitle || editingArticle.title}
+                      description={editingArticle.metaDescription}
+                      slug={editingArticle.slug}
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      عنوان سئو (Meta Title)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingArticle.metaTitle || ''}
+                      onChange={(e) => setEditingArticle({...editingArticle, metaTitle: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="اگر خالی باشد، از عنوان مقاله استفاده می‌شود"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      توضیحات سئو (Meta Description)
+                    </label>
+                    <textarea
+                      value={editingArticle.metaDescription || ''}
+                      onChange={(e) => setEditingArticle({...editingArticle, metaDescription: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="توضیحات مختصری که در نتایج جستجو نمایش داده می‌شود (120-160 کاراکتر)"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      کلمه کلیدی اصلی
+                    </label>
+                    <input
+                      type="text"
+                      value={editingArticle.focusKeyword || ''}
+                      onChange={(e) => setEditingArticle({...editingArticle, focusKeyword: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="کلمه کلیدی اصلی مقاله"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Advanced Tab */}
+            {activeTab === 'advanced' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    نویسنده
+                  </label>
+                  <input
+                    type="text"
+                    value={editingArticle.author || ''}
+                    onChange={(e) => setEditingArticle({...editingArticle, author: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="نام نویسنده مقاله"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={editingArticle.published}
+                    onChange={(e) => setEditingArticle({...editingArticle, published: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label className="mr-2 block text-sm text-gray-900">
+                    انتشار مقاله
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2 space-x-reverse pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingArticle(null);
+                  setEditFeaturedImageFile(null);
+                  setEditImagePreview(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                انصراف
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={isUploadingImage}
+              >
+                {isUploadingImage ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

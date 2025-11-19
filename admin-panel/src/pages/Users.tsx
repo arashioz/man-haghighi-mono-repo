@@ -51,6 +51,11 @@ const Users: React.FC = () => {
     password: '',
     firstName: '',
     lastName: '',
+    education: '',
+    university: '',
+    job: '',
+    state: '',
+    gender: '',
     role: 'USER' as 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER',
     isActive: true,
     selectedCourses: [] as string[],
@@ -215,6 +220,11 @@ const Users: React.FC = () => {
       if (newUser.email.trim()) userData.email = newUser.email.trim();
       if (newUser.firstName.trim()) userData.firstName = newUser.firstName.trim();
       if (newUser.lastName.trim()) userData.lastName = newUser.lastName.trim();
+      if (newUser.education.trim()) userData.education = newUser.education.trim();
+      if (newUser.university.trim()) userData.university = newUser.university.trim();
+      if (newUser.job.trim()) userData.job = newUser.job.trim();
+      if (newUser.state.trim()) userData.state = newUser.state.trim();
+      if (newUser.gender.trim()) userData.gender = newUser.gender.trim();
 
       const createdUser = await usersService.create(userData);
       setUsers([...users, createdUser]);
@@ -241,6 +251,11 @@ const Users: React.FC = () => {
         password: '',
         firstName: '',
         lastName: '',
+        education: '',
+        university: '',
+        job: '',
+        state: '',
+        gender: '',
         role: 'USER',
         isActive: true,
         selectedCourses: [],
@@ -288,6 +303,11 @@ const Users: React.FC = () => {
         firstName: editingUser.firstName,
         lastName: editingUser.lastName,
         isActive: editingUser.isActive,
+        education: editingUser.education,
+        university: editingUser.university,
+        job: editingUser.job,
+        state: editingUser.state,
+        gender: editingUser.gender,
       };
       
       const updatedUser = await usersService.update(editingUser.id, updateData);
@@ -331,6 +351,20 @@ const Users: React.FC = () => {
     );
   };
 
+  const profileFieldsConfig = [
+    { key: 'education', label: 'تحصیلات' },
+    { key: 'university', label: 'دانشگاه' },
+    { key: 'job', label: 'شغل' },
+    { key: 'state', label: 'استان' },
+    { key: 'gender', label: 'جنسیت' },
+  ] as const;
+
+  const getMissingProfileFields = (user: User) =>
+    profileFieldsConfig.filter((field) => {
+      const value = user[field.key as keyof User];
+      return !value;
+    });
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -365,6 +399,71 @@ const Users: React.FC = () => {
             <div className="mr-3">
               <p className="text-sm text-red-800">{error}</p>
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                تحصیلات
+              </label>
+              <input
+                type="text"
+                value={newUser.education}
+                onChange={(e) => setNewUser({...newUser, education: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="مثلاً: کارشناسی ارشد"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                دانشگاه
+              </label>
+              <input
+                type="text"
+                value={newUser.university}
+                onChange={(e) => setNewUser({...newUser, university: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="نام دانشگاه"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                شغل
+              </label>
+              <input
+                type="text"
+                value={newUser.job}
+                onChange={(e) => setNewUser({...newUser, job: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="عنوان شغلی"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                استان
+              </label>
+              <input
+                type="text"
+                value={newUser.state}
+                onChange={(e) => setNewUser({...newUser, state: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="محل سکونت"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              جنسیت
+            </label>
+            <select
+              value={newUser.gender}
+              onChange={(e) => setNewUser({...newUser, gender: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">انتخاب نشده</option>
+              <option value="female">زن</option>
+              <option value="male">مرد</option>
+              <option value="other">سایر</option>
+            </select>
           </div>
         </div>
       )}
@@ -451,6 +550,19 @@ const Users: React.FC = () => {
                         <div className="text-sm text-gray-500">
                           {user.phone || user.email}
                         </div>
+                      {user.isOld && (
+                        <div className="mt-1 text-xs">
+                          {getMissingProfileFields(user).length === 0 ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-700">
+                              پروفایل تکمیل شده
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                              نیاز به تکمیل: {getMissingProfileFields(user).map((field) => field.label).join('، ')}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       </div>
                     </div>
                   </td>
@@ -964,6 +1076,71 @@ const Users: React.FC = () => {
                 onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  تحصیلات
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.education || ''}
+                  onChange={(e) => setEditingUser({...editingUser, education: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="مثلاً: کارشناسی ارشد"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  دانشگاه
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.university || ''}
+                  onChange={(e) => setEditingUser({...editingUser, university: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="نام دانشگاه"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  شغل
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.job || ''}
+                  onChange={(e) => setEditingUser({...editingUser, job: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="عنوان شغلی"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  استان
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.state || ''}
+                  onChange={(e) => setEditingUser({...editingUser, state: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="محل سکونت"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                جنسیت
+              </label>
+              <select
+                value={editingUser.gender || ''}
+                onChange={(e) => setEditingUser({...editingUser, gender: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">انتخاب نشده</option>
+                <option value="female">زن</option>
+                <option value="male">مرد</option>
+                <option value="other">سایر</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

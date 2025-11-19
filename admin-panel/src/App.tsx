@@ -14,7 +14,7 @@ import Sliders from './pages/Sliders';
 import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
 import Courses from './pages/Courses';
-import Videos from './pages/Videos';
+import VideoPodcasts from './pages/VideoPodcasts';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -45,7 +45,7 @@ function App() {
                     <Route path="/articles" element={<Articles />} />
                     <Route path="/podcasts" element={<Podcasts />} />
                     <Route path="/courses" element={<Courses />} />
-                    <Route path="/videos" element={<Videos />} />
+                    <Route path="/video-podcasts" element={<VideoPodcasts />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

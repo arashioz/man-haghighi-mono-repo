@@ -1,15 +1,37 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, Course, Video, Audio, Workshop, WorkshopParticipant } from '../types';
+import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, VideoPodcast, Course, Video, Audio, Workshop, WorkshopParticipant } from '../types';
+
+const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
+const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
+
+const normalizeUrl = (url: string) => url.replace(/\/$/, '');
+
+const isLocalHost = (hostname: string) =>
+  hostname === 'localhost' || hostname === '127.0.0.1';
 
 const getApiBaseUrl = () => {
+  const envUrl = process.env.REACT_APP_API_URL?.trim();
+
   if (typeof window !== 'undefined') {
-    // Use environment variable if available, otherwise use server IP
-    return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
+    const hostname = window.location.hostname;
+
+    if (isLocalHost(hostname)) {
+      if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
+        return normalizeUrl(envUrl);
+      }
+      return DEFAULT_LOCAL_API;
+    }
   }
-  return process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
+
+  if (envUrl) {
+    return normalizeUrl(envUrl);
+  }
+
+  return DEFAULT_SERVER_API;
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
+export const API_ORIGIN = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -304,11 +326,12 @@ export const articlesService = {
     await api.delete(`/articles/${id}`);
   },
 
-  uploadFeaturedImage: async (id: string, file: File): Promise<Article> => {
+  uploadFeaturedImage: async (id: string, file: File, onProgress?: (progressEvent: any) => void): Promise<Article> => {
     const formData = new FormData();
     formData.append('image', file);
     const response = await api.patch(`/articles/${id}/featured-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: onProgress,
     });
     return response.data;
   },
@@ -504,6 +527,138 @@ export const podcastsService = {
       responseType: 'blob'
     });
     return response.data;
+  },
+};
+
+export const videoPodcastsService = {
+  getAll: async (): Promise<VideoPodcast[]> => {
+    const response = await api.get('/video-podcasts');
+    return response.data;
+  },
+
+  getPublished: async (): Promise<VideoPodcast[]> => {
+    const response = await api.get('/video-podcasts/published');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<VideoPodcast> => {
+    const response = await api.get(`/video-podcasts/${id}`);
+    return response.data;
+  },
+
+  create: async (data: {
+    title: string;
+    description?: string;
+    videoLink?: string;
+    thumbnail?: string;
+    duration?: number | string;
+    published?: boolean;
+    publishedAt?: string;
+    videoFile?: File;
+  }): Promise<VideoPodcast> => {
+    const formData = new FormData();
+    formData.append('title', data.title);
+
+    if (typeof data.published !== 'undefined') {
+      formData.append('published', String(data.published));
+    }
+
+    if (data.description) {
+      formData.append('description', data.description);
+    }
+
+    if (data.thumbnail) {
+      formData.append('thumbnail', data.thumbnail);
+    }
+
+    if (data.publishedAt) {
+      formData.append('publishedAt', data.publishedAt);
+    }
+
+    if (typeof data.duration !== 'undefined' && data.duration !== null && data.duration !== '') {
+      formData.append('duration', String(data.duration));
+    }
+
+    if (data.videoLink) {
+      formData.append('videoFile', data.videoLink);
+    }
+
+    if (data.videoFile) {
+      formData.append('video', data.videoFile);
+    }
+
+    return videoPodcastsService.createWithFile(formData);
+  },
+
+  createWithFile: async (formData: FormData, onProgress?: (progressEvent: any) => void): Promise<VideoPodcast> => {
+    const response = await api.post('/video-podcasts', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
+    return response.data;
+  },
+
+  update: async (id: string, data: {
+    title?: string;
+    description?: string;
+    videoLink?: string;
+    thumbnail?: string;
+    duration?: number | string;
+    published?: boolean;
+    publishedAt?: string | null;
+    videoFile?: File;
+  }): Promise<VideoPodcast> => {
+    const formData = new FormData();
+
+    if (typeof data.title !== 'undefined') {
+      formData.append('title', data.title);
+    }
+
+    if (typeof data.description !== 'undefined') {
+      formData.append('description', data.description);
+    }
+
+    if (typeof data.thumbnail !== 'undefined') {
+      formData.append('thumbnail', data.thumbnail);
+    }
+
+    if (typeof data.duration !== 'undefined' && data.duration !== null && data.duration !== '') {
+      formData.append('duration', String(data.duration));
+    }
+
+    if (typeof data.published !== 'undefined') {
+      formData.append('published', String(data.published));
+    }
+
+    if (typeof data.publishedAt !== 'undefined' && data.publishedAt !== null) {
+      formData.append('publishedAt', data.publishedAt);
+    }
+
+    if (typeof data.videoLink !== 'undefined') {
+      formData.append('videoFile', data.videoLink || '');
+    }
+
+    if (data.videoFile) {
+      formData.append('video', data.videoFile);
+    }
+
+    return videoPodcastsService.updateWithFile(id, formData);
+  },
+
+  updateWithFile: async (id: string, formData: FormData, onProgress?: (progressEvent: any) => void): Promise<VideoPodcast> => {
+    const response = await api.patch(`/video-podcasts/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/video-podcasts/${id}`);
   },
 };
 

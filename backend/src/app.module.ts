@@ -13,6 +13,7 @@ import { SalesTeamsModule } from './sales-teams/sales-teams.module';
 import { SlidersModule } from './sliders/sliders.module';
 import { ArticlesModule } from './articles/articles.module';
 import { PodcastsModule } from './podcasts/podcasts.module';
+import { VideoPodcastsModule } from './video-podcasts/video-podcasts.module';
 import { CoursesModule } from './courses/courses.module';
 import { VideosModule } from './videos/videos.module';
 import { AudiosModule } from './audios/audios.module';
@@ -43,6 +44,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     SlidersModule,
     ArticlesModule,
     PodcastsModule,
+    VideoPodcastsModule,
     CoursesModule,
     VideosModule,
     AudiosModule,

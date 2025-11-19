@@ -2,27 +2,74 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, PaginationQueryDto } from './dto/user.dto';
 import * as bcrypt from 'bcryptjs';
+import { normalizePhone } from '../common/utils/phone.utils';
+import { Prisma, UserRole } from '@prisma/client';
+
+const baseUserSelect = {
+  id: true,
+  email: true,
+  phone: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  avatar: true,
+  role: true,
+  isActive: true,
+  isOld: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { email, phone, username, password, firstName, lastName, avatar, role, isActive, isOld } = createUserDto;
+    const {
+      email,
+      phone,
+      username,
+      password,
+      firstName,
+      lastName,
+      avatar,
+      role,
+      isActive,
+      isOld,
+    } = createUserDto;
 
-    if (role === 'ADMIN' && !email) {
+    const normalizedEmail = email ? email.trim().toLowerCase() : null;
+    const normalizedPhone = phone ? normalizePhone(phone) : null;
+
+    if (phone && !normalizedPhone) {
+      throw new ConflictException('Invalid phone number format');
+    }
+
+    if (role === 'ADMIN' && !normalizedEmail) {
       throw new ConflictException('Admin users must have an email');
     }
-    if (role !== 'ADMIN' && !phone) {
+    if (role !== 'ADMIN' && !normalizedPhone) {
       throw new ConflictException('Non-admin users must have a phone number');
     }
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
-          ...(email ? [{ email }] : []),
-          ...(phone ? [{ phone }] : []),
-          { username }
+          ...(normalizedEmail ? [
+            {
+              email: {
+                equals: normalizedEmail,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          ] : []),
+          ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+          {
+            username: {
+              equals: username,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          }
         ],
       },
     });
@@ -33,31 +80,22 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const userData: Prisma.UserCreateInput = {
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      username,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      avatar,
+      role: (role ?? 'USER') as UserRole,
+      isActive: isActive ?? true,
+      isOld,
+    };
+
     const user = await this.prisma.user.create({
-      data: {
-        email,
-        phone,
-        username,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        avatar,
-        role: role as any,
-        isActive: isActive ?? true,
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      data: userData,
+      select: baseUserSelect,
     });
 
     return user;
@@ -73,11 +111,11 @@ export class UsersService {
     // Search filter
     if (search && search.trim()) {
       where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { username: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        { lastName: { contains: search, mode: Prisma.QueryMode.insensitive } },
+        { username: { contains: search, mode: Prisma.QueryMode.insensitive } },
         { phone: { contains: search } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
       ];
     }
 
@@ -92,20 +130,7 @@ export class UsersService {
     // Get paginated users
     const users = await this.prisma.user.findMany({
       where,
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        isOld: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: baseUserSelect,
       skip,
       take: limit,
       orderBy: {
@@ -127,20 +152,7 @@ export class UsersService {
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        isOld: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: baseUserSelect,
     });
 
     if (!user) {
@@ -155,18 +167,7 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        isOld: true,
-        createdAt: true,
-        updatedAt: true,
+        ...baseUserSelect,
         oldProducts: {
           select: {
             id: true,
@@ -293,23 +294,160 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     await this.findOne(id);
-    
+
+    const {
+      email,
+      phone,
+      username,
+      firstName,
+      lastName,
+      avatar,
+      isActive,
+      isOld,
+      role,
+      education,
+      university,
+      job,
+      state,
+      gender,
+    } = updateUserDto;
+
+    let normalizedEmail: string | null | undefined;
+    if (email === undefined) {
+      normalizedEmail = undefined;
+    } else if (email === null || email.trim() === '') {
+      normalizedEmail = null;
+    } else {
+      normalizedEmail = email.trim().toLowerCase();
+    }
+
+    let normalizedPhone: string | null | undefined;
+    if (phone === undefined) {
+      normalizedPhone = undefined;
+    } else if (phone === null || phone.trim() === '') {
+      normalizedPhone = null;
+    } else {
+      normalizedPhone = normalizePhone(phone);
+      if (!normalizedPhone) {
+        throw new ConflictException('Invalid phone number format');
+      }
+    }
+
+    if (normalizedEmail) {
+      const emailConflict = await this.prisma.user.findFirst({
+        where: {
+          email: normalizedEmail,
+          NOT: { id },
+        },
+      });
+      if (emailConflict) {
+        throw new ConflictException('Email is already in use');
+      }
+    }
+
+    if (normalizedPhone) {
+      const phoneConflict = await this.prisma.user.findFirst({
+        where: {
+          phone: normalizedPhone,
+          NOT: { id },
+        },
+      });
+      if (phoneConflict) {
+        throw new ConflictException('Phone number is already in use');
+      }
+    }
+
+    if (username) {
+      const usernameConflict = await this.prisma.user.findFirst({
+        where: {
+          username: {
+            equals: username,
+            mode: Prisma.QueryMode.insensitive,
+          },
+          NOT: { id },
+        },
+      });
+      if (usernameConflict) {
+        throw new ConflictException('Username is already in use');
+      }
+    }
+
+    const coerce = (value?: string | null) => {
+      if (value === undefined) {
+        return undefined;
+      }
+      if (value === null) {
+        return null;
+      }
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const updateData: any = {
+      ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
+      ...(normalizedPhone !== undefined ? { phone: normalizedPhone } : {}),
+    };
+
+    if (username !== undefined) {
+      updateData.username = username;
+    }
+
+    const coercedFirstName = coerce(firstName ?? undefined);
+    if (coercedFirstName !== undefined) {
+      updateData.firstName = coercedFirstName;
+    }
+
+    const coercedLastName = coerce(lastName ?? undefined);
+    if (coercedLastName !== undefined) {
+      updateData.lastName = coercedLastName;
+    }
+
+    const coercedAvatar = coerce(avatar ?? undefined);
+    if (coercedAvatar !== undefined) {
+      updateData.avatar = coercedAvatar;
+    }
+
+    const coercedEducation = coerce(education ?? undefined);
+    if (coercedEducation !== undefined) {
+      updateData.education = coercedEducation;
+    }
+
+    const coercedUniversity = coerce(university ?? undefined);
+    if (coercedUniversity !== undefined) {
+      updateData.university = coercedUniversity;
+    }
+
+    const coercedJob = coerce(job ?? undefined);
+    if (coercedJob !== undefined) {
+      updateData.job = coercedJob;
+    }
+
+    const coercedState = coerce(state ?? undefined);
+    if (coercedState !== undefined) {
+      updateData.state = coercedState;
+    }
+
+    const coercedGender = coerce(gender ?? undefined);
+    if (coercedGender !== undefined) {
+      updateData.gender = coercedGender;
+    }
+
+    if (isActive !== undefined) {
+      updateData.isActive = isActive;
+    }
+
+    if (isOld !== undefined) {
+      updateData.isOld = isOld;
+    }
+
+    if (role !== undefined) {
+      updateData.role = role as UserRole;
+    }
+
     return this.prisma.user.update({
       where: { id },
-      data: updateUserDto,
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        avatar: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      data: updateData,
+      select: baseUserSelect,
     });
   }
 

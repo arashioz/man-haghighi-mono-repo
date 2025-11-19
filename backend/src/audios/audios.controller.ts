@@ -37,7 +37,10 @@ export class AudiosController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  findAll() {
+  findAll(@Query('courseId') courseId?: string) {
+    if (courseId) {
+      return this.audiosService.findByCourse(courseId);
+    }
     return this.audiosService.findAll();
   }
 

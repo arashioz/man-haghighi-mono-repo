@@ -1,6 +1,4 @@
-
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+import { API_ORIGIN } from '../services/api';
 
 export const getImageUrl = (imagePath: string | null | undefined): string | null => {
   if (!imagePath) {
@@ -12,10 +10,10 @@ export const getImageUrl = (imagePath: string | null | undefined): string | null
   }
   
   if (imagePath.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${imagePath}`;
+    return `${API_ORIGIN}${imagePath}`;
   }
   
-  return `${API_BASE_URL}/uploads/${imagePath}`;
+  return `${API_ORIGIN}/uploads/${imagePath}`;
 };
 
 

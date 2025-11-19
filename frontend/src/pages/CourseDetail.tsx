@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { coursesService } from '../services/api';
+import { coursesService, API_ORIGIN } from '../services/api';
 import { Course } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
@@ -113,13 +113,13 @@ const CourseDetail: React.FC = () => {
                     controlsList="nodownload"
                     preload="metadata"
                   >
-                    <source 
-                      src={`${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://185.231.112.84:8080'}/api/courses/${id}/intro-video/stream`} 
-                      type="video/mp4" 
+                    <source
+                      src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
+                      type="video/mp4"
                     />
-                    <source 
-                      src={`${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://185.231.112.84:8080'}/api/courses/${id}/intro-video/stream`} 
-                      type="video/webm" 
+                    <source
+                      src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
+                      type="video/webm"
                     />
                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                   </video>
@@ -209,8 +209,7 @@ const CourseDetail: React.FC = () => {
                           : 'border-gray-200 opacity-75'
                       }`}
                       onClick={isEnrolled ? () => {
-                        // Navigate to audio player or play directly
-                        const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
+                        const audioUrl = `${API_ORIGIN}/uploads/${audio.audioFile}`;
                         window.open(audioUrl, '_blank');
                       } : undefined}
                     >
