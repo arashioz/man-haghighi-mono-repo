@@ -79,11 +79,42 @@ export class SlidersController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+  ], {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|webm|mov|avi)$/)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Unsupported file type'), false);
+      }
+    },
+    limits: {
+      fileSize: 100 * 1024 * 1024,
+    },
+  }))
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update slider (Admin only)' })
   @ApiResponse({ status: 200, description: 'Slider updated successfully' })
-  async update(@Param('id') id: string, @Body() updateSliderDto: UpdateSliderDto) {
-    return this.slidersService.update(id, updateSliderDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateSliderDto: UpdateSliderDto,
+    @UploadedFiles() files: { image?: Express.Multer.File[]; video?: Express.Multer.File[] },
+  ) {
+    return this.slidersService.update(id, updateSliderDto, files);
   }
 
   @Delete(':id')

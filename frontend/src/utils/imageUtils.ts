@@ -1,8 +1,7 @@
 /**
  * Utility functions for handling image URLs
  */
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+import { API_ORIGIN } from '../services/api';
 
 /**
  * Convert a file path to a full image URL
@@ -21,11 +20,11 @@ export const getImageUrl = (imagePath: string | null | undefined): string | null
   
   // If it starts with /uploads, return full URL
   if (imagePath.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${imagePath}`;
+    return `${API_ORIGIN}${imagePath}`;
   }
   
   // If it's just a filename, add /uploads/ prefix
-  return `${API_BASE_URL}/uploads/${imagePath}`;
+  return `${API_ORIGIN}/uploads/${imagePath}`;
 };
 
 /**

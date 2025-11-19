@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { coursesService, videosService, audiosService, workshopsService } from '../services/api';
 import { Course, Video, Audio, Workshop } from '../types';
@@ -13,7 +13,21 @@ const UserDashboard: React.FC = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet'>('courses');
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, updateProfile: saveProfile } = useAuth();
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    education: '',
+    university: '',
+    job: '',
+    state: '',
+    gender: '',
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -46,6 +60,87 @@ const UserDashboard: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const resetProfileForm = useCallback(() => {
+    if (!user) {
+      return;
+    }
+    setProfileForm({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      education: user.education || '',
+      university: user.university || '',
+      job: user.job || '',
+      state: user.state || '',
+      gender: user.gender || '',
+    });
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      resetProfileForm();
+    }
+  }, [user, resetProfileForm]);
+
+  useEffect(() => {
+    if (profileSuccess) {
+      const timeout = setTimeout(() => {
+        setProfileSuccess('');
+      }, 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [profileSuccess]);
+
+  const handleProfileChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = event.target;
+    setProfileForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleProfileSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setProfileSaving(true);
+    setProfileError('');
+    setProfileSuccess('');
+
+    try {
+      await saveProfile({
+        firstName: profileForm.firstName.trim() || null,
+        lastName: profileForm.lastName.trim() || null,
+        email: profileForm.email.trim() || null,
+        phone: profileForm.phone.trim() || null,
+        education: profileForm.education.trim() || null,
+        university: profileForm.university.trim() || null,
+        job: profileForm.job.trim() || null,
+        state: profileForm.state.trim() || null,
+        gender: profileForm.gender.trim() || null,
+      });
+      setProfileSuccess('اطلاعات شما با موفقیت به‌روزرسانی شد.');
+    } catch (err: any) {
+      setProfileError(err.response?.data?.message || 'خطا در به‌روزرسانی اطلاعات');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleProfileReset = () => {
+    resetProfileForm();
+    setProfileError('');
+    setProfileSuccess('');
+  };
+
+  const profileFieldsToComplete: Array<'education' | 'university' | 'job' | 'state' | 'gender'> = [
+    'education',
+    'university',
+    'job',
+    'state',
+    'gender',
+  ];
+  const isProfileIncomplete = !!user && profileFieldsToComplete.some((field) => !(user as any)?.[field]);
 
   const handleVideoClick = (videoId: string, courseId: string) => {
     navigate(`/courses/${courseId}/videos/${videoId}`);
@@ -113,6 +208,191 @@ const UserDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {(user?.isOld || isProfileIncomplete) && (
+          <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
+            <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">تکمیل اطلاعات حساب کاربری</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                برای استفاده بهتر از خدمات سایت، لطفاً اطلاعات تماس و سوابق خود را به‌روزرسانی کنید.
+              </p>
+              {user?.isOld && (
+                <p className="text-xs text-indigo-600 mt-2">
+                  حساب شما از سامانه قدیمی منتقل شده است. لطفاً شماره تلفن و سایر اطلاعات را بازبینی نمایید.
+                </p>
+              )}
+            </div>
+            <form onSubmit={handleProfileSubmit} className="p-4 sm:p-6 space-y-4">
+              {profileSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                  {profileSuccess}
+                </div>
+              )}
+              {profileError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                  {profileError}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="profile-firstName" className="block text-sm font-medium text-gray-700">
+                    نام
+                  </label>
+                  <input
+                    id="profile-firstName"
+                    name="firstName"
+                    type="text"
+                    value={profileForm.firstName}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="نام شما"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-lastName" className="block text-sm font-medium text-gray-700">
+                    نام خانوادگی
+                  </label>
+                  <input
+                    id="profile-lastName"
+                    name="lastName"
+                    type="text"
+                    value={profileForm.lastName}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="نام خانوادگی"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700">
+                    شماره تلفن همراه
+                  </label>
+                  <input
+                    id="profile-phone"
+                    name="phone"
+                    type="tel"
+                    value={profileForm.phone}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="09123456789"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700">
+                    ایمیل (اختیاری)
+                  </label>
+                  <input
+                    id="profile-email"
+                    name="email"
+                    type="email"
+                    value={profileForm.email}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="example@email.com"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-education" className="block text-sm font-medium text-gray-700">
+                    مقطع تحصیلی
+                  </label>
+                  <input
+                    id="profile-education"
+                    name="education"
+                    type="text"
+                    value={profileForm.education}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="مثال: کارشناسی ارشد"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-university" className="block text-sm font-medium text-gray-700">
+                    دانشگاه
+                  </label>
+                  <input
+                    id="profile-university"
+                    name="university"
+                    type="text"
+                    value={profileForm.university}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="دانشگاه محل تحصیل"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-job" className="block text-sm font-medium text-gray-700">
+                    شغل
+                  </label>
+                  <input
+                    id="profile-job"
+                    name="job"
+                    type="text"
+                    value={profileForm.job}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="عنوان شغلی"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-state" className="block text-sm font-medium text-gray-700">
+                    استان محل سکونت
+                  </label>
+                  <input
+                    id="profile-state"
+                    name="state"
+                    type="text"
+                    value={profileForm.state}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="مثال: تهران"
+                    disabled={profileSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="profile-gender" className="block text-sm font-medium text-gray-700">
+                    جنسیت
+                  </label>
+                  <select
+                    id="profile-gender"
+                    name="gender"
+                    value={profileForm.gender}
+                    onChange={handleProfileChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    disabled={profileSaving}
+                  >
+                    <option value="">انتخاب کنید</option>
+                    <option value="female">زن</option>
+                    <option value="male">مرد</option>
+                    <option value="other">دیگر</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleProfileReset}
+                  className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  disabled={profileSaving}
+                >
+                  بازنشانی
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  disabled={profileSaving}
+                >
+                  {profileSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
           <div className="border-b border-gray-200 overflow-x-auto">

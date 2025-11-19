@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersService, slidersService, articlesService, podcastsService, coursesService, videosService, salesService, salesTeamsService } from '../services/api';
+import { usersService, slidersService, articlesService, podcastsService, videoPodcastsService, coursesService, salesService, salesTeamsService } from '../services/api';
 import { SalesTeam } from '../types';
 
 const PeopleIcon = () => (
@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
     articles: 0,
     podcasts: 0,
     courses: 0,
-    videos: 0,
+    videoPodcasts: 0,
     salesTeam: 0,
     enrollments: 0,
     workshops: 0,
@@ -81,13 +81,13 @@ const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       try {
         if (user?.role === 'ADMIN') {
-          const [users, sliders, articles, podcasts, courses, videos] = await Promise.all([
+          const [users, sliders, articles, podcasts, courses, videoPodcasts] = await Promise.all([
             usersService.getAll({ page: 1, limit: 1 }), // Just get the total count
             slidersService.getAll(),
             articlesService.getAll(),
             podcastsService.getAll(),
             coursesService.getAll(),
-            videosService.getAll(),
+            videoPodcastsService.getAll(),
           ]);
 
           setStats({
@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
             articles: articles.length || 0,
             podcasts: podcasts.length || 0,
             courses: courses.length || 0,
-            videos: videos.length || 0,
+            videoPodcasts: videoPodcasts.length || 0,
             salesTeam: 0,
             enrollments: 0,
             workshops: 0,
@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
               articles: 0,
               podcasts: 0,
               courses: 0,
-              videos: 0,
+              videoPodcasts: 0,
               salesTeam: managerTeam ? 1 : 0,
               enrollments: 0,
               workshops: 0,
@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
               articles: 0,
               podcasts: 0,
               courses: 0,
-              videos: 0,
+              videoPodcasts: 0,
               salesTeam: 0,
               enrollments: 0,
               workshops: 0,
@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
             articles: 0,
             podcasts: 0,
             courses: 0,
-            videos: 0,
+            videoPodcasts: 0,
             salesTeam: 0,
             enrollments: myReport.enrollments || 0,
             workshops: myReport.workshops || 0,
@@ -183,7 +183,7 @@ const Dashboard: React.FC = () => {
         { title: 'مقالات', value: stats.articles, icon: <ArticleIcon />, color: 'bg-green-500' },
         { title: 'پادکست‌ها', value: stats.podcasts, icon: <PodcastsIcon />, color: 'bg-orange-500' },
         { title: 'دوره‌ها', value: stats.courses, icon: <SchoolIcon />, color: 'bg-purple-500' },
-        { title: 'ویدیوها', value: stats.videos, icon: <VideoLibraryIcon />, color: 'bg-pink-500' },
+        { title: 'ویدیو پادکست‌ها', value: stats.videoPodcasts, icon: <VideoLibraryIcon />, color: 'bg-pink-500' },
       ];
     } else if (user?.role === 'SALES_MANAGER') {
       return [

@@ -17,6 +17,7 @@ export interface Slider {
   title: string;
   description?: string;
   image: string;
+  videoFile?: string;
   link?: string;
   order: number;
   isActive: boolean;
@@ -59,6 +60,20 @@ export interface Podcast {
   updatedAt: string;
 }
 
+export interface VideoPodcast {
+  id: string;
+  title: string;
+  description?: string;
+  videoFile: string | null;
+  streamUrl?: string | null;
+  thumbnail?: string | null;
+  duration?: number;
+  published: boolean;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -72,6 +87,9 @@ export interface Course {
   videos?: Video[];
   audios?: Audio[];
   attachments?: string[];
+  attachmentFiles?: string[];
+  courseVideos?: string[];
+  courseVideoFiles?: string[];
   _count?: {
     enrollments: number;
   };
@@ -158,6 +176,13 @@ export interface RegisterCredentials {
   firstName: string;
   lastName: string;
   role: 'ADMIN' | 'USER';
+}
+
+export interface UpdateProfilePayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  avatar?: string;
 }
 
 export interface Workshop {

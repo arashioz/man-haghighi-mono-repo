@@ -23,7 +23,8 @@ export class CoursesController {
     { name: 'thumbnail', maxCount: 1 },
     { name: 'video', maxCount: 1 },
     { name: 'attachments', maxCount: 10 },
-    { name: 'courseVideos', maxCount: 20 },
+    { name: 'courseVideos', maxCount: 50 },
+    { name: 'courseAudios', maxCount: 50 },
   ], {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -37,7 +38,7 @@ export class CoursesController {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|webm|mov|avi|pdf|doc|docx|txt)$/)) {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|mp4|webm|mov|avi|mkv|mp3|wav|ogg|m4a|aac|pdf|doc|docx|txt)$/)) {
         cb(null, true);
       } else {
         cb(new Error('Unsupported file type'), false);
@@ -245,8 +246,8 @@ export class CoursesController {
     { name: 'thumbnail', maxCount: 1 },
     { name: 'video', maxCount: 1 },
     { name: 'attachments', maxCount: 10 },
-    { name: 'courseVideos', maxCount: 20 },
-    { name: 'courseAudios', maxCount: 20 },
+    { name: 'courseVideos', maxCount: 50 },
+    { name: 'courseAudios', maxCount: 50 },
   ], {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -381,7 +382,7 @@ export class CoursesController {
   @Patch(':id/courseVideos')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @UseInterceptors(FilesInterceptor('courseVideos', 20, {
+  @UseInterceptors(FilesInterceptor('courseVideos', 50, {
     storage: diskStorage({
       destination: (req, file, cb) => {
         const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -413,7 +414,7 @@ export class CoursesController {
   @Patch(':id/courseAudios')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  @UseInterceptors(FilesInterceptor('courseAudios', 20, {
+  @UseInterceptors(FilesInterceptor('courseAudios', 50, {
     storage: diskStorage({
       destination: (req, file, cb) => {
         const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');

@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { slidersService, coursesService, articlesService, podcastsService, workshopsService } from '../services/api';
-import { Slider, Course, Article, Podcast, Workshop } from '../types';
+import { slidersService, coursesService, articlesService, podcastsService, videoPodcastsService, workshopsService } from '../services/api';
+import { Slider, Course, Article, Podcast, VideoPodcast, Workshop } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
+import HomeV2 from '../components/home/HomeV2';
 
 const Home: React.FC = () => {
   const [sliders, setSliders] = useState<Slider[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [videoPodcasts, setVideoPodcasts] = useState<VideoPodcast[]>([]);
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,16 +18,19 @@ const Home: React.FC = () => {
   const [preRegisterModal, setPreRegisterModal] = useState<{isOpen: boolean, workshop: Workshop | null}>({isOpen: false, workshop: null});
   const [preRegisterData, setPreRegisterData] = useState({customerName: '', customerPhone: ''});
   const [preRegisterLoading, setPreRegisterLoading] = useState(false);
+  const [useVersion2, setUseVersion2] = useState(false);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [slidersData, coursesData, articlesData, podcastsData, workshopsData] = await Promise.all([
+        const [slidersData, coursesData, articlesData, podcastsData, videoPodcastsData, workshopsData] = await Promise.all([
           slidersService.getActive(),
           coursesService.getPublished(),
           articlesService.getPublished(),
           podcastsService.getPublished(),
+          videoPodcastsService.getPublished(),
           workshopsService.getActive(),
         ]);
 
@@ -33,6 +38,7 @@ const Home: React.FC = () => {
         setCourses(Array.isArray(coursesData) ? coursesData.slice(0, 6) : []); // نمایش 6 دوره
         setArticles(Array.isArray(articlesData) ? articlesData.slice(0, 3) : []);
         setPodcasts(Array.isArray(podcastsData) ? podcastsData.slice(0, 6) : []); // نمایش 6 پادکست
+        setVideoPodcasts(Array.isArray(videoPodcastsData) ? videoPodcastsData.slice(0, 6) : []); // نمایش 6 ویدیو پادکست
         setWorkshops(Array.isArray(workshopsData) ? workshopsData.slice(0, 3) : []); // نمایش 3 کارگاه فعال
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch data');
@@ -54,6 +60,31 @@ const Home: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [sliders.length]);
+
+  useEffect(() => {
+    videoRefs.current = videoRefs.current.slice(0, sliders.length);
+
+    sliders.forEach((slider, index) => {
+      const videoElement = videoRefs.current[index];
+
+      if (!videoElement) {
+        return;
+      }
+
+      if (slider.videoFile && index === currentSlide) {
+        const playPromise = videoElement.play();
+
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            /* Autoplay might be blocked; ignore silently */
+          });
+        }
+      } else {
+        videoElement.pause();
+        videoElement.currentTime = 0;
+      }
+    });
+  }, [currentSlide, sliders]);
 
   const handlePreRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,8 +125,42 @@ const Home: React.FC = () => {
     );
   }
 
+  const versionToggleButton = (
+    <button
+      onClick={() => setUseVersion2((prev) => !prev)}
+      className="fixed z-[60] left-5 bottom-6 sm:bottom-8 sm:left-8 rounded-full border border-white/40 bg-black/60 px-4 py-2 text-xs font-semibold text-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.8)] backdrop-blur-md transition hover:bg-white/15 hover:border-white/70"
+    >
+      {useVersion2 ? 'بازگشت به نسخه کلاسیک' : 'مشاهده نسخه ۲'}
+    </button>
+  );
+
+  if (useVersion2) {
+    return (
+      <>
+        {versionToggleButton}
+        <HomeV2
+          sliders={sliders}
+          courses={courses}
+          articles={articles}
+          podcasts={podcasts}
+          videoPodcasts={videoPodcasts}
+          workshops={workshops}
+          onBackToClassic={() => setUseVersion2(false)}
+          onOpenPreRegister={(workshop) => {
+            if (workshop) {
+              setPreRegisterModal({ isOpen: true, workshop });
+              return;
+            }
+            alert('در حال حاضر کارگاه فعالی برای ثبت‌نام وجود ندارد.');
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen">
+      {versionToggleButton}
       {/* 1. اسلایدر */}
       <section className="relative">
         {sliders.length > 0 ? (
@@ -109,11 +174,29 @@ const Home: React.FC = () => {
                     index === currentSlide ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
-                  <img
-                    src={slider.image}
-                    alt={slider.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {slider.videoFile ? (
+                    <video
+                      ref={(el) => {
+                        videoRefs.current[index] = el;
+                      }}
+                      src={slider.videoFile}
+                      poster={slider.image || undefined}
+                      className="w-full h-full object-cover"
+                      autoPlay={index === currentSlide}
+                      muted
+                      loop
+                      playsInline
+                      controls={false}
+                    />
+                  ) : slider.image ? (
+                    <img
+                      src={slider.image}
+                      alt={slider.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-900" />
+                  )}
                   <div className="absolute inset-0 bg-black bg-opacity-40"></div>
                   <div className="absolute inset-0 flex items-end justify-start">
                     <div className="text-right text-white max-w-4xl px-4 sm:px-6 md:px-8 pb-20 sm:pb-24 md:pb-16">
@@ -426,40 +509,74 @@ const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((item) => (
-              <div key={item} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
-                <div className="relative">
-                  <img
-                    src={`/images/podcasts/video-podcast-${item}.jpg`}
-                    alt={`پادکست تصویری ${item}`}
-                    className="w-full h-48 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
-                    <div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
-                      <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
+          {videoPodcasts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {videoPodcasts.map((videoPodcast) => (
+                <div key={videoPodcast.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                  <div className="relative">
+                    {videoPodcast.thumbnail ? (
+                      <img
+                        src={videoPodcast.thumbnail}
+                        alt={videoPodcast.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                        <svg className="w-16 h-16 text-white opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
+                      <div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center cursor-pointer">
+                        <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    پادکست تصویری {item}
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    توضیحات پادکست تصویری {item} - استاد قورچیان
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">45 دقیقه</span>
-                    <button className="text-indigo-600 font-semibold hover:text-indigo-700">
-                      تماشا کنید →
-                    </button>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {videoPodcast.title}
+                    </h3>
+                    {videoPodcast.description && (
+                      <p className="text-gray-600 mb-4 line-clamp-2">
+                        {videoPodcast.description}
+                      </p>
+                    )}
+                    <div className="flex justify-between items-center">
+                      {videoPodcast.duration && (
+                        <span className="text-sm text-gray-500">
+                          {Math.floor(videoPodcast.duration / 60)} دقیقه
+                        </span>
+                      )}
+                      <button
+                        onClick={() => navigate(`/video-podcasts/${videoPodcast.id}`)}
+                        className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
+                      >
+                        تماشا کنید →
+                      </button>
+                    </div>
+                    {videoPodcast.publishedAt && (
+                      <p className="text-xs text-gray-400 mt-2">
+                        {formatPersianDate(videoPodcast.publishedAt)}
+                      </p>
+                    )}
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
               </div>
-            ))}
-          </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">ویدیو پادکستی یافت نشد</h3>
+              <p className="text-gray-600">در حال حاضر هیچ ویدیو پادکست منتشر شده‌ای وجود ندارد.</p>
+            </div>
+          )}
         </div>
       </section>
 

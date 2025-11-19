@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import moment from 'moment-jalaali';
 
 interface PersianDatePickerProps {
@@ -8,6 +8,35 @@ interface PersianDatePickerProps {
   className?: string;
 }
 
+const KNOWN_INPUT_FORMATS = [
+  'jYYYY/jMM/jDD HH:mm',
+  'jYYYY/jMM/jDD',
+  'YYYY-MM-DDTHH:mm:ss.SSSZ',
+  'YYYY-MM-DDTHH:mm:ssZ',
+  'YYYY-MM-DDTHH:mm:ss',
+  'YYYY/MM/DD HH:mm',
+  'YYYY/MM/DD',
+];
+
+const parseValue = (value?: string) => {
+  if (!value) {
+    return moment();
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return moment();
+  }
+
+  const parsed = moment(trimmed, KNOWN_INPUT_FORMATS, true);
+  if (parsed.isValid()) {
+    return parsed;
+  }
+
+  const fallback = moment(trimmed);
+  return fallback.isValid() ? fallback : moment();
+};
+
 const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
   value,
   onChange,
@@ -15,19 +44,30 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
   className = ''
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(
-    value ? moment(value) : moment()
-  );
+  const [selectedDate, setSelectedDate] = useState(() => parseValue(value));
+
+  useEffect(() => {
+    setSelectedDate(parseValue(value));
+  }, [value]);
+
+  const currentValueMoment = useMemo(() => {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = parseValue(value);
+    return parsed.isValid() ? parsed : null;
+  }, [value]);
+
+  const displayValue = currentValueMoment
+    ? currentValueMoment.format('jYYYY/jMM/jDD - HH:mm')
+    : '';
 
   const handleDateSelect = (date: moment.Moment) => {
     setSelectedDate(date);
     const persianDateString = date.format('jYYYY/jMM/jDD HH:mm');
     onChange(persianDateString);
     setIsOpen(false);
-  };
-
-  const formatPersianDate = (date: moment.Moment) => {
-    return date.format('jYYYY/jMM/jDD - HH:mm');
   };
 
   const generateCalendarDays = () => {
@@ -58,7 +98,7 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
     <div className={`relative ${className}`}>
       <input
         type="text"
-        value={value ? formatPersianDate(moment(value)) : ''}
+        value={displayValue}
         onClick={() => setIsOpen(!isOpen)}
         placeholder={placeholder}
         readOnly
@@ -108,7 +148,7 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
             {generateCalendarDays().map((day, index) => {
               const isCurrentMonth = day.jMonth() === selectedDate.jMonth();
               const isToday = day.isSame(moment(), 'day');
-              const isSelected = value && day.isSame(moment(value), 'day');
+              const isSelected = !!currentValueMoment && day.isSame(currentValueMoment, 'day');
 
               return (
                 <button

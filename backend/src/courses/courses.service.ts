@@ -73,7 +73,14 @@ export class CoursesService {
     }
     
     if (files?.courseVideos && files.courseVideos.length > 0) {
+      if (files.courseVideos.length > 50) {
+        throw new BadRequestException('حداکثر می‌توانید ۵۰ ویدیو برای هر دوره آپلود کنید');
+      }
       courseData.courseVideos = files.courseVideos.map(file => file.filename);
+    }
+
+    if (files?.courseAudios && files.courseAudios.length > 50) {
+      throw new BadRequestException('حداکثر می‌توانید ۵۰ فایل صوتی برای هر دوره آپلود کنید');
     }
 
     const course = await this.prisma.course.create({
@@ -294,6 +301,10 @@ export class CoursesService {
       const existingVideoCount = await this.prisma.video.count({
         where: { courseId: id },
       });
+
+      if (existingVideoCount + files.courseVideos.length > 50) {
+        throw new BadRequestException('حداکثر تعداد ویدیوهای هر دوره ۵۰ عدد است');
+      }
       
       for (let i = 0; i < files.courseVideos.length; i++) {
         const videoFile = files.courseVideos[i];
@@ -314,6 +325,10 @@ export class CoursesService {
       const existingAudioCount = await this.prisma.audio.count({
         where: { courseId: id },
       });
+
+      if (existingAudioCount + files.courseAudios.length > 50) {
+        throw new BadRequestException('حداکثر تعداد فایل‌های صوتی هر دوره ۵۰ عدد است');
+      }
       
       for (let i = 0; i < files.courseAudios.length; i++) {
         const audioFile = files.courseAudios[i];
@@ -404,9 +419,17 @@ export class CoursesService {
   async uploadCourseVideos(id: string, files: Express.Multer.File[]) {
     const course = await this.findOne(id);
     
+    const currentVideoCount = await this.prisma.video.count({
+      where: { courseId: id },
+    });
+
+    if (currentVideoCount + files.length > 50) {
+      throw new BadRequestException('حداکثر تعداد ویدیوهای هر دوره ۵۰ عدد است');
+    }
+
     const existingVideos = course.courseVideos || [];
     const newVideos = files.map(file => file.filename);
-    const allVideos = [...existingVideos, ...newVideos];
+    const allVideos = [...existingVideos, ...newVideos].slice(0, 50);
     
     const updatedCourse = await this.prisma.course.update({
       where: { id },
@@ -465,6 +488,14 @@ export class CoursesService {
     this.logger.log(`Course Title: ${course.title}`);
     this.logger.log(`New Audios Count: ${files.length}`);
     
+    const currentAudioCount = await this.prisma.audio.count({
+      where: { courseId: id },
+    });
+
+    if (currentAudioCount + files.length > 50) {
+      throw new BadRequestException('حداکثر تعداد فایل‌های صوتی هر دوره ۵۰ عدد است');
+    }
+
     // Create Audio entities for each uploaded course audio
     for (let i = 0; i < files.length; i++) {
       const audioFile = files[i];

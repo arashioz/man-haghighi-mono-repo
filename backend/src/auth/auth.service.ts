@@ -1,8 +1,29 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { Prisma, UserRole } from '@prisma/client';
+import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
+import { normalizePhone } from '../common/utils/phone.utils';
+
+const authUserPublicSelect = {
+  id: true,
+  email: true,
+  phone: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  role: true,
+  isActive: true,
+  isOld: true,
+  education: true,
+  university: true,
+  job: true,
+  state: true,
+  gender: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class AuthService {
@@ -12,21 +33,53 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { email, phone, username, password, firstName, lastName, role } = registerDto;
+    const {
+      email,
+      phone,
+      username,
+      password,
+      firstName,
+      lastName,
+      role,
+      education,
+      university,
+      job,
+      state,
+      gender,
+    } = registerDto;
 
-    if (role === 'ADMIN' && !email) {
+    const normalizedEmail = email ? email.trim().toLowerCase() : null;
+    const normalizedPhone = phone ? normalizePhone(phone) : null;
+
+    if (phone && !normalizedPhone) {
+      throw new UnauthorizedException('Invalid phone number format');
+    }
+
+    if (role === 'ADMIN' && !normalizedEmail) {
       throw new UnauthorizedException('Admin users must have an email');
     }
-    if (role !== 'ADMIN' && !phone) {
+    if (role !== 'ADMIN' && !normalizedPhone) {
       throw new UnauthorizedException('Non-admin users must have a phone number');
     }
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
-          ...(email ? [{ email }] : []),
-          ...(phone ? [{ phone }] : []),
-          { username }
+          ...(normalizedEmail ? [
+            {
+              email: {
+                equals: normalizedEmail,
+                mode: Prisma.QueryMode.insensitive,
+              },
+            },
+          ] : []),
+          ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+          {
+            username: {
+              equals: username,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
         ],
       },
     });
@@ -37,29 +90,32 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const userData: Prisma.UserCreateInput = {
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      username,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: role as UserRole,
+      education: education ?? null,
+      university: university ?? null,
+      job: job ?? null,
+      state: state ?? null,
+      gender: gender ?? null,
+    } as any;
+
     const user = await this.prisma.user.create({
-      data: {
-        email,
-        phone,
-        username,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        role: role as any,
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        createdAt: true,
-      },
+      data: userData,
+      select: authUserPublicSelect as any,
     });
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, phone: user.phone });
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    });
 
     return {
       user,
@@ -70,15 +126,38 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const { login, password } = loginDto;
 
+    const loginInput = login.trim();
+    const normalizedEmail = loginInput.includes('@') ? loginInput.toLowerCase() : null;
+    const normalizedPhone = normalizePhone(loginInput);
+
+    const orConditions: Prisma.UserWhereInput[] = [
+      {
+        username: {
+          equals: loginInput,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      },
+    ];
+
+    if (normalizedEmail) {
+      orConditions.push({
+        email: {
+          equals: normalizedEmail,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      });
+    }
+
+    if (normalizedPhone) {
+      orConditions.push({
+        phone: normalizedPhone,
+      });
+    }
+
     // Try to find user by email OR phone OR username
-    // This allows old users to login with either email or phone if they have both
     const user = await this.prisma.user.findFirst({
       where: {
-        OR: [
-          { email: login },
-          { phone: login },
-          { username: login },
-        ],
+        OR: orConditions,
       },
     });
 
@@ -91,23 +170,33 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const token = this.jwtService.sign({ 
-      sub: user.id, 
-      email: user.email, 
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
       phone: user.phone,
-      role: user.role 
+      role: user.role,
     });
+
+    const legacyUser = user as any;
 
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        phone: user.phone,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        createdAt: user.createdAt,
+        id: legacyUser.id,
+        email: legacyUser.email,
+        phone: legacyUser.phone,
+        username: legacyUser.username,
+        firstName: legacyUser.firstName,
+        lastName: legacyUser.lastName,
+        role: legacyUser.role,
+        isActive: legacyUser.isActive,
+        isOld: legacyUser.isOld,
+        education: legacyUser.education,
+        university: legacyUser.university,
+        job: legacyUser.job,
+        state: legacyUser.state,
+        gender: legacyUser.gender,
+        createdAt: legacyUser.createdAt,
+        updatedAt: legacyUser.updatedAt,
       },
       token,
     };
@@ -116,16 +205,7 @@ export class AuthService {
   async validateUser(payload: any) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        isActive: true,
-      },
+      select: authUserPublicSelect as any,
     });
 
     if (!user || !user.isActive) {
@@ -133,5 +213,125 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {
+    const emailInput = updateProfileDto.email;
+    let normalizedEmail: string | null | undefined;
+    if (emailInput === undefined) {
+      normalizedEmail = undefined;
+    } else if (emailInput === null || emailInput.trim() === '') {
+      normalizedEmail = null;
+    } else {
+      normalizedEmail = emailInput.trim().toLowerCase();
+    }
+
+    const phoneInput = updateProfileDto.phone;
+    let normalizedPhone: string | null | undefined;
+    if (phoneInput === undefined) {
+      normalizedPhone = undefined;
+    } else if (phoneInput === null || phoneInput.trim() === '') {
+      normalizedPhone = null;
+    } else {
+      normalizedPhone = normalizePhone(phoneInput);
+      if (!normalizedPhone) {
+        throw new UnauthorizedException('Invalid phone number format');
+      }
+    }
+
+    if (normalizedEmail) {
+      const emailConflict = await this.prisma.user.findFirst({
+        where: {
+          email: normalizedEmail,
+          NOT: { id: userId },
+        },
+      });
+
+      if (emailConflict) {
+        throw new UnauthorizedException('Email is already in use');
+      }
+    }
+
+    if (normalizedPhone) {
+      const phoneConflict = await this.prisma.user.findFirst({
+        where: {
+          phone: normalizedPhone,
+          NOT: { id: userId },
+        },
+      });
+
+      if (phoneConflict) {
+        throw new UnauthorizedException('Phone number is already in use');
+      }
+    }
+
+    const coerce = (value?: string | null) => {
+      if (value === undefined) {
+        return undefined;
+      }
+      if (value === null) {
+        return null;
+      }
+      const trimmed = value.trim();
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const updateData: any = {
+      ...(normalizedEmail !== undefined ? { email: normalizedEmail } : {}),
+      ...(normalizedPhone !== undefined ? { phone: normalizedPhone } : {}),
+    };
+
+    const firstName = coerce(updateProfileDto.firstName ?? undefined);
+    if (firstName !== undefined) {
+      updateData.firstName = firstName;
+    }
+
+    const lastName = coerce(updateProfileDto.lastName ?? undefined);
+    if (lastName !== undefined) {
+      updateData.lastName = lastName;
+    }
+
+    const education = coerce(updateProfileDto.education ?? undefined);
+    if (education !== undefined) {
+      updateData.education = education;
+    }
+
+    const university = coerce(updateProfileDto.university ?? undefined);
+    if (university !== undefined) {
+      updateData.university = university;
+    }
+
+    const job = coerce(updateProfileDto.job ?? undefined);
+    if (job !== undefined) {
+      updateData.job = job;
+    }
+
+    const state = coerce(updateProfileDto.state ?? undefined);
+    if (state !== undefined) {
+      updateData.state = state;
+    }
+
+    const gender = coerce(updateProfileDto.gender ?? undefined);
+    if (gender !== undefined) {
+      updateData.gender = gender;
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: authUserPublicSelect as any,
+    });
+
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    });
+
+    return {
+      user,
+      token,
+    };
   }
 }

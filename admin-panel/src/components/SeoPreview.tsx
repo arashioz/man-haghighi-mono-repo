@@ -11,7 +11,7 @@ const SeoPreview: React.FC<SeoPreviewProps> = ({
   title, 
   description, 
   slug, 
-  baseUrl = 'https://haghighi.com/articles/' 
+  baseUrl = 'https://manehaghighi.com/articles/' 
 }) => {
   const displayUrl = `${baseUrl}${slug}`.toLowerCase();
   const displayTitle = title || 'عنوان مقاله شما';

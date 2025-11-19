@@ -57,12 +57,17 @@ export class UrlService {
   processCourseData(course: any): any {
     if (!course) return course;
 
+    const attachmentFiles = Array.isArray(course.attachments) ? [...course.attachments] : [];
+    const courseVideoFiles = Array.isArray(course.courseVideos) ? [...course.courseVideos] : [];
+
     return {
       ...course,
       thumbnail: this.getFileUrl(course.thumbnail),
       videoFile: this.getFileUrl(course.videoFile),
-      attachments: this.getFileUrls(course.attachments),
-      courseVideos: this.getFileUrls(course.courseVideos),
+      attachments: this.getFileUrls(attachmentFiles),
+      courseVideos: this.getFileUrls(courseVideoFiles),
+      attachmentFiles,
+      courseVideoFiles,
       videos: course.videos?.map((video: any) => ({
         ...video,
         thumbnail: this.getFileUrl(video.thumbnail),
@@ -98,6 +103,25 @@ export class UrlService {
 
   processPodcastsData(podcasts: any[]): any[] {
     return podcasts.map((podcast) => this.processPodcastData(podcast));
+  }
+
+  processVideoPodcastData(videoPodcast: any): any {
+    if (!videoPodcast) return videoPodcast;
+
+    const streamUrl = videoPodcast.id
+      ? `${this.baseUrl}/api/video-podcasts/${videoPodcast.id}/stream`
+      : null;
+
+    return {
+      ...videoPodcast,
+      videoFile: this.getFileUrl(videoPodcast.videoFile),
+      thumbnail: this.getFileUrl(videoPodcast.thumbnail),
+      streamUrl,
+    };
+  }
+
+  processVideoPodcastsData(videoPodcasts: any[]): any[] {
+    return videoPodcasts.map((videoPodcast) => this.processVideoPodcastData(videoPodcast));
   }
 
   processCoursesData(courses: any[]): any[] {

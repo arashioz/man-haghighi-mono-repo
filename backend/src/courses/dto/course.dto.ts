@@ -42,6 +42,11 @@ export class CreateCourseDto {
   @IsString({ each: true })
   courseVideos?: string[];
 
+  @ApiProperty({ example: ['audio1.mp3', 'audio2.mp3'] })
+  @IsOptional()
+  @IsString({ each: true })
+  courseAudios?: string[];
+
   @ApiProperty({ example: true })
   @Transform(({ value }) => {
     if (typeof value === 'string') {

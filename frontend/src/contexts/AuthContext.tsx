@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, LoginCredentials, RegisterCredentials } from '../types';
+import { User, LoginCredentials, RegisterCredentials, UpdateProfilePayload } from '../types';
 import { authService } from '../services/api';
 
 interface AuthContextType {
@@ -7,6 +7,7 @@ interface AuthContextType {
   token: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
+  updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
   logout: () => void;
   loading: boolean;
 }
@@ -88,11 +89,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const updateProfile = async (payload: UpdateProfilePayload) => {
+    try {
+      const response = await authService.updateProfile(payload);
+      setUser(response.user);
+      setToken(response.token);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      return response.user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const value = {
     user,
     token,
     login,
     register,
+    updateProfile,
     logout,
     loading,
   };

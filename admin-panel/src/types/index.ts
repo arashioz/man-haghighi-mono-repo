@@ -96,6 +96,20 @@ export interface Podcast {
   updatedAt: string;
 }
 
+export interface VideoPodcast {
+  id: string;
+  title: string;
+  description?: string;
+  videoFile: string | null;
+  streamUrl?: string | null;
+  thumbnail?: string | null;
+  duration?: number;
+  published: boolean;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -105,6 +119,8 @@ export interface Course {
   videoFile?: string;
   attachments?: string[];
   courseVideos?: string[];
+  attachmentFiles?: string[];
+  courseVideoFiles?: string[];
   published: boolean;
   createdAt: string;
   updatedAt: string;

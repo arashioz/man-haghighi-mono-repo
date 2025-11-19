@@ -86,7 +86,7 @@ const getMenuItems = (userRole: string) => {
       { text: 'مقالات', icon: <ArticleIcon />, path: '/articles' },
       { text: 'پادکست‌ها', icon: <PodcastsIcon />, path: '/podcasts' },
       { text: 'دوره‌ها', icon: <SchoolIcon />, path: '/courses' },
-      { text: 'ویدیوها', icon: <VideoLibraryIcon />, path: '/videos' },
+      { text: 'ویدیو پادکست‌ها', icon: <VideoLibraryIcon />, path: '/video-podcasts' },
     ];
   } else if (userRole === 'SALES_MANAGER') {
     return [

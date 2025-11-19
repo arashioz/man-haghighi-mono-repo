@@ -52,6 +52,31 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isOld?: boolean;
+
+  @ApiProperty({ example: 'کارشناسی ارشد', required: false })
+  @IsOptional()
+  @IsString()
+  education?: string;
+
+  @ApiProperty({ example: 'دانشگاه تهران', required: false })
+  @IsOptional()
+  @IsString()
+  university?: string;
+
+  @ApiProperty({ example: 'تحلیل‌گر کسب‌وکار', required: false })
+  @IsOptional()
+  @IsString()
+  job?: string;
+
+  @ApiProperty({ example: 'تهران', required: false })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiProperty({ example: 'female', required: false })
+  @IsOptional()
+  @IsString()
+  gender?: string;
 }
 
 export class AssignSalesPersonDto {
@@ -97,6 +122,11 @@ export class UpdateUserDto {
   @IsString()
   avatar?: string;
 
+  @ApiProperty({ example: 'SALES_MANAGER', enum: ['ADMIN', 'SALES_MANAGER', 'SALES_PERSON', 'USER'], required: false })
+  @IsOptional()
+  @IsString()
+  role?: string;
+
   @ApiProperty({ example: true })
   @IsOptional()
   @IsBoolean()
@@ -106,6 +136,31 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isOld?: boolean;
+
+  @ApiProperty({ example: 'کارشناسی ارشد', required: false })
+  @IsOptional()
+  @IsString()
+  education?: string;
+
+  @ApiProperty({ example: 'دانشگاه تهران', required: false })
+  @IsOptional()
+  @IsString()
+  university?: string;
+
+  @ApiProperty({ example: 'تحلیل‌گر کسب‌وکار', required: false })
+  @IsOptional()
+  @IsString()
+  job?: string;
+
+  @ApiProperty({ example: 'تهران', required: false })
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @ApiProperty({ example: 'female', required: false })
+  @IsOptional()
+  @IsString()
+  gender?: string;
 }
 
 export class PaginationQueryDto {

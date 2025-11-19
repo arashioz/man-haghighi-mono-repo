@@ -21,6 +21,17 @@ async function bootstrap() {
   // Enable CORS first (before helmet)
   app.enableCors({
     origin: [
+      'http://localhost',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:8080',
+      'http://localhost:5173',
+      'http://127.0.0.1',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
+      'http://127.0.0.1:5173',
       'http://185.231.112.84',
       'http://185.231.112.84:3000',
       'http://185.231.112.84:3001',
