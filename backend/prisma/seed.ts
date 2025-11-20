@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as fs from 'fs';
+import * as path from 'path';
+import { execSync } from 'child_process';
 
 const prisma = new PrismaClient();
 
@@ -335,6 +338,61 @@ async function main() {
     });
   }
   console.log(`✅ ${audios.length} audios processed`);
+
+  // ✅ 10. Seed old users if file exists
+  const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
+  
+  if (fs.existsSync(jsonPath)) {
+    console.log('');
+    console.log('🔄 Importing old users...');
+    try {
+      // Import old users (this will create users with oldProducts)
+      execSync('npx ts-node prisma/seed-old-users.ts', { stdio: 'inherit' });
+      console.log('✅ Old users imported successfully');
+      
+      // ✅ 11. Enroll old users in courses based on their products
+      console.log('');
+      console.log('🔄 Enrolling old users in courses...');
+      const oldUsers = await prisma.user.findMany({
+        where: { isOld: true },
+        include: { oldProducts: true },
+      });
+      
+      let enrollmentsCreated = 0;
+      for (const user of oldUsers) {
+        // If user has old products, enroll them in all courses
+        if (user.oldProducts && user.oldProducts.length > 0 && courses.length > 0) {
+          for (const course of courses) {
+            try {
+              await prisma.courseEnrollment.upsert({
+                where: {
+                  userId_courseId: {
+                    userId: user.id,
+                    courseId: course.id,
+                  },
+                },
+                update: {},
+                create: {
+                  userId: user.id,
+                  courseId: course.id,
+                },
+              });
+              enrollmentsCreated++;
+            } catch (error) {
+              // Enrollment might already exist, skip
+            }
+          }
+        }
+      }
+      console.log(`✅ ${enrollmentsCreated} course enrollments created for old users`);
+    } catch (error) {
+      console.log('⚠️  Could not import old users:', error.message);
+      console.log('   Continuing with regular seed...');
+    }
+  } else {
+    console.log('');
+    console.log('⚠️  Old users data file not found, skipping old users import');
+  }
 
   console.log('');
   console.log('🎉 Database seeded successfully!');
