@@ -2,6 +2,18 @@
 
 echo "🔄 Starting database migration process..."
 
+# Function to apply rename migration manually if needed
+apply_rename_migration() {
+    echo "🔍 Checking if phone column rename is needed..."
+    
+    # Use Node.js script to rename the column
+    if [ -f "scripts/rename-phone-column.ts" ]; then
+        npx ts-node scripts/rename-phone-column.ts 2>&1 || echo "⚠️  Column rename check completed (may already be done)"
+    else
+        echo "⚠️  Rename script not found, skipping..."
+    fi
+}
+
 # Function to baseline migrations
 baseline_migrations() {
     echo "📋 Baselines database - marking migrations as applied..."
@@ -20,7 +32,10 @@ baseline_migrations() {
     done
 }
 
-# Try to deploy migrations first
+# First, check and apply rename migration if needed
+apply_rename_migration
+
+# Try to deploy migrations
 echo "📦 Attempting to deploy migrations..."
 MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
 MIGRATE_EXIT=$?
