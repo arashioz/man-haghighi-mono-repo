@@ -272,8 +272,8 @@ export class CoursesController {
     },
   }))
   @ApiBearerAuth()
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update course (Admin only)' })
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiOperation({ summary: 'Update course (Admin only). Supports both JSON and multipart/form-data' })
   @ApiResponse({ status: 200, description: 'Course updated successfully' })
   async update(
     @Param('id') id: string, 

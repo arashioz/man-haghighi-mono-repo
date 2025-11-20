@@ -891,9 +891,13 @@ const Courses: React.FC = () => {
             <textarea
               value={newCourse.description}
               onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={2}
+              maxLength={500}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {newCourse.description.length}/500 کاراکتر
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1005,163 +1009,6 @@ const Courses: React.FC = () => {
                 ))
               )}
             </div>
-          </div>
-
-          {courseAudios.length > 0 && (
-            <div className="border-t pt-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <label className="block text-sm font-medium text-gray-700">
-                  فایل‌های صوتی موجود ({courseAudios.length})
-                </label>
-              </div>
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                {courseAudios.map((audio) => (
-                  <div
-                    key={audio.id}
-                    className="p-4 bg-purple-50 border border-purple-200 rounded-lg space-y-3"
-                  >
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div>
-                        <label className="text-xs text-gray-500 mb-1 block">عنوان</label>
-                        <input
-                          type="text"
-                          value={audio.title || ''}
-                          onChange={(e) => handleAudioFieldChange(audio.id, 'title', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-xs text-gray-500 mb-1 block">ترتیب</label>
-                          <input
-                            type="number"
-                            value={audio.order ?? 0}
-                            onChange={(e) => handleAudioFieldChange(audio.id, 'order', Number(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                            min={0}
-                          />
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={audio.published}
-                            onChange={(e) => handleAudioFieldChange(audio.id, 'published', e.target.checked)}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                          />
-                          <span className="mr-2 text-sm text-gray-700">منتشر شده</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1 block">توضیحات</label>
-                      <textarea
-                        value={audio.description || ''}
-                        onChange={(e) => handleAudioFieldChange(audio.id, 'description', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
-                        rows={2}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      {audio.audioFile ? (
-                        <a
-                          href={audio.audioFile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800"
-                        >
-                          پخش فایل صوتی
-                        </a>
-                      ) : (
-                        <span>فایل صوتی بارگذاری نشده است.</span>
-                      )}
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSaveAudioChanges(audio)}
-                          className="px-3 py-1 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
-                        >
-                          ذخیره تغییرات
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAudio(audio.id)}
-                          className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          حذف
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-sm font-medium text-gray-700">
-                افزودن فایل‌های صوتی جدید
-              </label>
-              <button
-                type="button"
-                onClick={addNewAudioField}
-                className="flex items-center gap-1 px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                افزودن صوتی
-              </button>
-            </div>
-            {newAudios.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                <svg className="w-12 h-12 mx-auto text-gray-400 mb-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                </svg>
-                <p className="text-sm text-gray-500">هیچ فایل صوتی جدیدی اضافه نشده است</p>
-                <p className="text-xs text-gray-400 mt-1">برای افزودن جلسه جدید روی «افزودن صوتی» کلیک کنید</p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {newAudios.map((audio, index) => (
-                  <div key={audio.id} className="flex items-start gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    <div className="flex-shrink-0 w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text"
-                        placeholder="عنوان فایل صوتی (مثلاً: جلسه 1 - مقدمه)"
-                        value={audio.title}
-                        onChange={(e) => updateNewAudioField(audio.id, 'title', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        onChange={(e) => updateNewAudioField(audio.id, 'file', e.target.files?.[0] || null)}
-                        className="w-full text-sm"
-                      />
-                      {audio.file && (
-                        <p className="text-xs text-green-600">
-                          ✓ {audio.file.name} ({(audio.file.size / (1024 * 1024)).toFixed(2)} MB)
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeNewAudioField(audio.id)}
-                      className="flex-shrink-0 text-red-600 hover:text-red-800 p-1"
-                      title="حذف"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Dynamic Audio Upload */}
@@ -1324,9 +1171,13 @@ const Courses: React.FC = () => {
             <textarea
               value={editingCourse?.description || ''}
               onChange={(e) => setEditingCourse(prev => prev ? {...prev, description: e.target.value} : null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={2}
+              maxLength={500}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {editingCourse?.description?.length || 0}/500 کاراکتر
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
