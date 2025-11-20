@@ -22,8 +22,12 @@ RUN npm run build
 # Create uploads directory
 RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 
+# Copy migration script
+COPY scripts/migrate.sh /app/scripts/migrate.sh
+RUN chmod +x /app/scripts/migrate.sh
+
 # Expose port
 EXPOSE 3000
 
 # Start the app
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]
+CMD ["sh", "-c", "/app/scripts/migrate.sh && npm run start:prod"]
