@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
+import VideoPodcasts from './pages/VideoPodcasts';
 import Courses from './pages/Courses';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,6 +14,7 @@ import UserDashboard from './pages/UserDashboard';
 import ArticleDetail from './pages/ArticleDetail';
 import CourseDetail from './pages/CourseDetail';
 import VideoPlayer from './pages/VideoPlayer';
+import VideoPodcastDetail from './pages/VideoPodcastDetail';
 
 function App() {
   return (
@@ -25,6 +27,8 @@ function App() {
             <Route path="/articles" element={<Articles />} />
             <Route path="/articles/:slug" element={<ArticleDetail />} />
             <Route path="/podcasts" element={<Podcasts />} />
+            <Route path="/video-podcasts" element={<VideoPodcasts />} />
+            <Route path="/video-podcasts/:id" element={<VideoPodcastDetail />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
             <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />

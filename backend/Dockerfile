@@ -26,4 +26,4 @@ RUN mkdir -p /app/uploads && chmod 777 /app/uploads
 EXPOSE 3000
 
 # Start the app
-CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]

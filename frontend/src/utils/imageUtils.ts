@@ -13,6 +13,14 @@ export const getImageUrl = (imagePath: string | null | undefined): string | null
     return null;
   }
   
+  // Filter out placeholder service URLs that may not resolve
+  if (imagePath.includes('via.placeholder.com') || 
+      imagePath.includes('placeholder.com') ||
+      imagePath.includes('dummyimage.com') ||
+      imagePath.startsWith('FFFFFF')) {
+    return null;
+  }
+  
   // If it's already a full URL, return as is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
