@@ -339,59 +339,29 @@ async function main() {
   }
   console.log(`✅ ${audios.length} audios processed`);
 
-  // ✅ 10. Seed old users if file exists
+  // ✅ 10. Seed old users and courses using seed-old-data.ts
   const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
+  const usersJsonPath = path.join(process.cwd(), 'moc-old-data', 'users.json');
   
-  if (fs.existsSync(jsonPath)) {
+  if (fs.existsSync(jsonPath) || fs.existsSync(usersJsonPath)) {
     console.log('');
-    console.log('🔄 Importing old users...');
+    console.log('🔄 Importing old users and creating legacy courses...');
     try {
-      // Import old users (this will create users with oldProducts)
-      execSync('npx ts-node prisma/seed-old-users.ts', { stdio: 'inherit' });
-      console.log('✅ Old users imported successfully');
-      
-      // ✅ 11. Enroll old users in courses based on their products
-      console.log('');
-      console.log('🔄 Enrolling old users in courses...');
-      const oldUsers = await prisma.user.findMany({
-        where: { isOld: true },
-        include: { oldProducts: true },
-      });
-      
-      let enrollmentsCreated = 0;
-      for (const user of oldUsers) {
-        // If user has old products, enroll them in all courses
-        if (user.oldProducts && user.oldProducts.length > 0 && courses.length > 0) {
-          for (const course of courses) {
-            try {
-              await prisma.courseEnrollment.upsert({
-                where: {
-                  userId_courseId: {
-                    userId: user.id,
-                    courseId: course.id,
-                  },
-                },
-                update: {},
-                create: {
-                  userId: user.id,
-                  courseId: course.id,
-                },
-              });
-              enrollmentsCreated++;
-            } catch (error) {
-              // Enrollment might already exist, skip
-            }
-          }
-        }
-      }
-      console.log(`✅ ${enrollmentsCreated} course enrollments created for old users`);
-    } catch (error) {
-      console.log('⚠️  Could not import old users:', error.message);
+      // Import old users using seed-old-data.ts
+      // This will:
+      // 1. Import old users with their products
+      // 2. Create legacy courses from old products
+      // 3. Enroll users in their legacy courses
+      execSync('npx ts-node prisma/seed-old-data.ts', { stdio: 'inherit' });
+      console.log('✅ Old users and legacy courses imported successfully');
+    } catch (error: any) {
+      console.log('⚠️  Could not import old users:', error.message || error);
       console.log('   Continuing with regular seed...');
     }
   } else {
     console.log('');
     console.log('⚠️  Old users data file not found, skipping old users import');
+    console.log('   Looking for: final_merged_data.json or users.json in moc-old-data folder');
   }
 
   console.log('');
