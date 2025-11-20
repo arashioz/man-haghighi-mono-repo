@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
+import { uploadsService, API_ORIGIN } from '../services/api';
 
 interface RichTextEditorProps {
   value: string;
@@ -59,6 +60,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const editorContainerRef = useRef<HTMLDivElement | null>(null);
   const quillRef = useRef<Quill | null>(null);
   const suppressChangeRef = useRef(false);
+  const isInitializedRef = useRef(false);
 
   const sanitizedValue = value ?? '';
 
@@ -97,12 +99,99 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     onChange(normalized);
   }, [onChange]);
 
+  // Setup image upload handler
+  const setupImageHandler = useCallback((quill: Quill) => {
+    const toolbar = quill.getModule('toolbar') as any;
+    if (toolbar && typeof toolbar.addHandler === 'function') {
+      toolbar.addHandler('image', () => {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.click();
+
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return;
+
+          // Check file size (max 10MB)
+          if (file.size > 10 * 1024 * 1024) {
+            alert('حجم فایل نباید بیشتر از 10 مگابایت باشد');
+            return;
+          }
+
+          // Check file type
+          if (!file.type.match(/^image\/(jpg|jpeg|png|gif|webp)$/)) {
+            alert('فقط فایل‌های تصویری مجاز هستند (JPG, PNG, GIF, WebP)');
+            return;
+          }
+
+          const range = quill.getSelection(true);
+          if (!range) return;
+
+          const placeholderText = 'در حال آپلود عکس...';
+          const placeholderLength = placeholderText.length;
+          const insertIndex = range.index;
+
+          // Insert a placeholder
+          quill.insertText(insertIndex, placeholderText, 'user');
+          quill.setSelection(insertIndex + placeholderLength);
+
+          try {
+            // Upload image
+            const response = await uploadsService.uploadImage(file);
+            let imageUrl = response.original || response.processed || response.thumbnail;
+            
+            if (!imageUrl) {
+              throw new Error('آدرس عکس دریافت نشد');
+            }
+
+            // Construct full URL if it's a relative path
+            if (imageUrl.startsWith('/')) {
+              imageUrl = `${API_ORIGIN}${imageUrl}`;
+            }
+
+            // Remove placeholder and insert image at the original position
+            quill.deleteText(insertIndex, placeholderLength);
+            quill.insertEmbed(insertIndex, 'image', imageUrl, 'user');
+          } catch (error: any) {
+            // Remove placeholder on error - find it by searching from the insert position
+            try {
+              const text = quill.getText(insertIndex, placeholderLength);
+              if (text === placeholderText) {
+                quill.deleteText(insertIndex, placeholderLength);
+                quill.setSelection(insertIndex);
+              }
+            } catch (e) {
+              // If deletion fails, try to find and remove the placeholder
+              const fullText = quill.getText();
+              const foundIndex = fullText.indexOf(placeholderText);
+              if (foundIndex !== -1) {
+                quill.deleteText(foundIndex, placeholderLength);
+                quill.setSelection(foundIndex);
+              }
+            }
+            alert('خطا در آپلود عکس: ' + (error.response?.data?.message || error.message || 'خطای نامشخص'));
+          }
+        };
+      });
+    }
+  }, []);
+
+  // Initialize Quill only once
   useEffect(() => {
-    if (!editorContainerRef.current || quillRef.current) {
+    if (!editorContainerRef.current || isInitializedRef.current) {
       return;
     }
 
-    const quill = new Quill(editorContainerRef.current, {
+    // Store ref value to avoid stale closure in cleanup
+    const editorElement = editorContainerRef.current;
+
+    // Clear any existing content
+    if (editorElement.firstChild) {
+      editorElement.innerHTML = '';
+    }
+
+    const quill = new Quill(editorElement, {
       theme: 'snow',
       modules,
       formats,
@@ -110,7 +199,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     });
 
     quillRef.current = quill;
+    isInitializedRef.current = true;
     applyEditorStyling(quill);
+    setupImageHandler(quill);
 
     quill.on('text-change', handleTextChange);
 
@@ -119,23 +210,31 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     suppressChangeRef.current = false;
 
     return () => {
-      quill.off('text-change', handleTextChange);
-      quillRef.current = null;
+      if (quillRef.current) {
+        quillRef.current.off('text-change', handleTextChange);
+        // Properly destroy Quill instance
+        if (editorElement) {
+          editorElement.innerHTML = '';
+        }
+        quillRef.current = null;
+        isInitializedRef.current = false;
+      }
     };
-  }, [applyEditorStyling, formats, handleTextChange, modules, placeholder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only initialize once
 
+  // Update content when value prop changes (but not from user input)
   useEffect(() => {
     const quill = quillRef.current;
-    if (!quill) {
+    if (!quill || !isInitializedRef.current) {
       return;
     }
 
     const currentHtml = quill.root.innerHTML;
     const normalizedIncoming = sanitizedValue || '';
+    const normalizedCurrent = currentHtml === EMPTY_EDITOR_HTML ? '' : currentHtml;
 
-    if (
-      normalizedIncoming === (currentHtml === EMPTY_EDITOR_HTML ? '' : currentHtml)
-    ) {
+    if (normalizedIncoming === normalizedCurrent) {
       return;
     }
 
@@ -143,13 +242,19 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const selection = quill.getSelection();
     quill.clipboard.dangerouslyPasteHTML(normalizedIncoming);
     if (selection) {
-      quill.setSelection(selection);
+      // Try to restore selection, but only if it's still valid
+      try {
+        quill.setSelection(selection);
+      } catch (e) {
+        // Selection might be invalid after content change, ignore
+      }
     }
     suppressChangeRef.current = false;
   }, [sanitizedValue]);
 
+  // Update styling when height or placeholder changes
   useEffect(() => {
-    if (quillRef.current) {
+    if (quillRef.current && isInitializedRef.current) {
       applyEditorStyling(quillRef.current);
     }
   }, [applyEditorStyling]);

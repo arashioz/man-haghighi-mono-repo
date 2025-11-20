@@ -9,6 +9,11 @@ export interface User {
   role: 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER';
   isActive: boolean;
   isOld?: boolean;
+  education?: string;
+  university?: string;
+  job?: string;
+  state?: string;
+  gender?: string;
   createdAt: string;
   updatedAt: string;
   parentId?: string;

@@ -281,7 +281,7 @@ export class CoursesService {
   }
 
   async update(id: string, updateCourseDto: UpdateCourseDto, files?: { thumbnail?: Express.Multer.File[], video?: Express.Multer.File[], attachments?: Express.Multer.File[], courseVideos?: Express.Multer.File[], courseAudios?: Express.Multer.File[] }) {
-    await this.findOne(id);
+    const course = await this.findOne(id);
     
     const updateData: any = { ...updateCourseDto };
     
@@ -293,8 +293,20 @@ export class CoursesService {
       updateData.videoFile = files.video[0].filename;
     }
     
+    // Handle attachments: merge existing from DTO with new files
+    if (updateCourseDto.attachments && Array.isArray(updateCourseDto.attachments)) {
+      // Use attachments from DTO (frontend sends existing attachments to keep)
+      updateData.attachments = updateCourseDto.attachments;
+    } else if (course.attachments && Array.isArray(course.attachments)) {
+      // Keep existing attachments if not specified
+      updateData.attachments = course.attachments;
+    }
+    
+    // If new attachment files are uploaded, append them to existing attachments
     if (files?.attachments && files.attachments.length > 0) {
-      updateData.attachments = files.attachments.map(file => file.filename);
+      const newAttachmentFilenames = files.attachments.map(file => file.filename);
+      const existingAttachments = updateData.attachments || [];
+      updateData.attachments = [...existingAttachments, ...newAttachmentFilenames];
     }
     
     if (files?.courseVideos && files.courseVideos.length > 0) {

@@ -75,7 +75,7 @@ const Articles: React.FC = () => {
     return title
       .toLowerCase()
       .replace(/\s+/g, '-')
-      .replace(/[^\u0600-\u06FFa-z0-9\-]/g, '')
+      .replace(/[^\u0600-\u06FFa-z0-9-]/g, '')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
   };
@@ -570,7 +570,7 @@ const Articles: React.FC = () => {
                 <div className="col-span-2">
                   <SeoPreview
                     title={newArticle.metaTitle || newArticle.title}
-                    description={newArticle.metaDescription}
+                    description={newArticle.metaDescription || ''}
                     slug={newArticle.slug}
                   />
                 </div>
@@ -894,7 +894,7 @@ const Articles: React.FC = () => {
                   <div className="col-span-2">
                     <SeoPreview
                       title={editingArticle.metaTitle || editingArticle.title}
-                      description={editingArticle.metaDescription}
+                      description={editingArticle.metaDescription || ''}
                       slug={editingArticle.slug}
                     />
                   </div>

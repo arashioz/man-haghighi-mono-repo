@@ -8,6 +8,12 @@ export interface User {
   avatar?: string;
   role: 'ADMIN' | 'USER';
   isActive: boolean;
+  isOld?: boolean;
+  education?: string;
+  university?: string;
+  job?: string;
+  state?: string;
+  gender?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -179,10 +185,16 @@ export interface RegisterCredentials {
 }
 
 export interface UpdateProfilePayload {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  avatar?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  avatar?: string | null;
+  education?: string | null;
+  university?: string | null;
+  job?: string | null;
+  state?: string | null;
+  gender?: string | null;
 }
 
 export interface Workshop {

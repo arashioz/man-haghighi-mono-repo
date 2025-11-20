@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, type Variants } from 'framer-motion';
+import { motion, type Variants, useScroll, useTransform } from 'framer-motion';
 import {
   Slider,
   Course,
@@ -9,6 +9,7 @@ import {
   VideoPodcast,
   Workshop,
 } from '../../types';
+import { getImageUrl, getImageUrlWithFallback } from '../../utils/imageUtils';
 
 type HomeV2Props = {
   sliders: Slider[];
@@ -51,6 +52,20 @@ const curatedAssets = {
     '/assets/homeV2/Drifter.jpg',
   ],
   videoPoster: '/assets/homeV2/Sexual Energy Transmutation.jpg',
+  mentorImages: [
+    '/assets/homeV2/Qodrat Namahdood5.jpg',
+    '/assets/homeV2/Pedar Nakhodagah6.jpg',
+    '/assets/homeV2/DSC_0514 (1).jpg',
+    '/assets/homeV2/Emotional Podcast2.jpg',
+  ],
+  podcastCovers: [
+    '/assets/homeV2/Cast box Cover6.jpg',
+    '/assets/homeV2/Soundcloud Header1.jpg',
+    '/assets/homeV2/Soundcloud Header2.jpg',
+    '/assets/homeV2/Cover CD Getting The Hang of wound Healing3.jpg',
+    '/assets/homeV2/Energy-Pool-Moarefi.jpg',
+    '/assets/homeV2/Ehsase-Arzeshmandi-Moarefi.jpg',
+  ],
 };
 
 const HomeV2: React.FC<HomeV2Props> = ({
@@ -70,12 +85,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
       return {
         type: 'video' as const,
         source: sliders[0].videoFile,
-        poster: sliders[0].image ?? curatedAssets.heroImage,
+        poster: getImageUrl(sliders[0].image) ?? curatedAssets.heroImage,
       };
     }
 
     if (sliders[0]?.image) {
-      return { type: 'image' as const, source: sliders[0].image };
+      return { type: 'image' as const, source: getImageUrl(sliders[0].image) ?? '' };
     }
 
     if (curatedAssets.heroImage) {
@@ -135,7 +150,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
   const galleryImages = useMemo(() => {
     const sources = sliders
-      .map((slide) => slide.image)
+      .map((slide) => getImageUrl(slide.image))
       .filter((image): image is string => Boolean(image));
 
     return Array.from(new Set([...sources, ...curatedAssets.gallery])).slice(0, 4);
@@ -177,8 +192,29 @@ const HomeV2: React.FC<HomeV2Props> = ({
   }, [articles]);
 
   const highlightedVideo = videoPodcasts[0] ?? null;
-  const videoPoster = highlightedVideo?.thumbnail ?? curatedAssets.videoPoster;
+  const videoPoster = highlightedVideo?.thumbnail 
+    ? getImageUrl(highlightedVideo.thumbnail) ?? curatedAssets.videoPoster
+    : curatedAssets.videoPoster;
   const primaryWorkshop = workshops[0] ?? null;
+
+  const featuredArticles = useMemo(() => {
+    return articles.slice(0, 3);
+  }, [articles]);
+
+  const featuredPodcasts = useMemo(() => {
+    return podcasts.slice(0, 6);
+  }, [podcasts]);
+
+  // Parallax refs for mentor section
+  const mentorSectionRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: mentorSectionRef,
+    offset: ['start end', 'end start'],
+  });
+
+  const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
+  const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-30%']);
+  const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
 
   const handlePrimaryCta = () => {
     if (primaryWorkshop) {
@@ -411,6 +447,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   src={missionImage}
                   alt="Mission placeholder"
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = curatedAssets.missionImage;
+                  }}
                 />
               ) : (
                 <div className="h-[420px] w-full bg-gradient-to-br from-[#1a1a1a] to-black" />
@@ -476,6 +516,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   src={videoPoster}
                   alt={highlightedVideo?.title ?? 'Video placeholder'}
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = curatedAssets.videoPoster;
+                  }}
                 />
               ) : (
                 <div className="h-[360px] w-full bg-[radial-gradient(circle,_rgba(250,204,21,0.2),_transparent_70%)]" />
@@ -512,17 +556,351 @@ const HomeV2: React.FC<HomeV2Props> = ({
               <motion.div
                 key={`${image}-${index}`}
                 variants={fadeUp}
-                whileHover={{ y: -4 }}
-                className="group relative h-64 overflow-hidden rounded-[30px] border border-white/10"
+                whileHover={{ y: -4, scale: 1.05 }}
+                className="group relative h-64 overflow-hidden rounded-[30px] border border-white/10 cursor-pointer"
               >
-                <img src={image} alt={`gallery-${index}`} className="h-full w-full object-cover" />
+                <img 
+                  src={image} 
+                  alt={`gallery-${index}`} 
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = curatedAssets.gallery[index % curatedAssets.gallery.length] || curatedAssets.gallery[0];
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 opacity-0 transition group-hover:opacity-100" />
-                <div className="absolute bottom-4 left-4 text-xs uppercase tracking-[0.4em] text-white/70">
-                  Placeholder
+                <div className="absolute bottom-4 left-4 text-xs uppercase tracking-[0.4em] text-white/70 opacity-0 group-hover:opacity-100 transition">
+                  Gallery {index + 1}
                 </div>
               </motion.div>
             ))}
           </div>
+        </section>
+
+        {/* Mentor Section - فراز قورچیان */}
+        <section 
+          ref={mentorSectionRef}
+          className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-[#040404] via-[#0a0a0a] to-[#040404]" />
+          
+          {/* Parallax Background Images */}
+          <motion.div 
+            style={{ y: y1, opacity }}
+            className="absolute inset-0 pointer-events-none"
+          >
+            <div className="absolute top-0 right-0 w-1/3 h-full">
+              <img
+                src={curatedAssets.mentorImages[0]}
+                alt=""
+                className="w-full h-full object-cover opacity-20 blur-sm"
+              />
+            </div>
+            <div className="absolute bottom-0 left-0 w-1/3 h-full">
+              <img
+                src={curatedAssets.mentorImages[1]}
+                alt=""
+                className="w-full h-full object-cover opacity-20 blur-sm"
+              />
+            </div>
+          </motion.div>
+
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-8">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="grid gap-12 lg:grid-cols-2 lg:items-center"
+            >
+              <motion.div variants={fadeUp} className="space-y-6">
+                <motion.p
+                  variants={fadeUp}
+                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                >
+                  Meet The Mentor
+                </motion.p>
+                <motion.h2 
+                  variants={fadeUp} 
+                  className="text-4xl font-bold sm:text-5xl lg:text-6xl"
+                >
+                  فراز قورچیان
+                  <br />
+                  <span className="text-yellow-400">مربی تحول و رشد شخصی</span>
+                </motion.h2>
+                <motion.p 
+                  variants={fadeUp} 
+                  className="text-lg leading-relaxed text-white/80"
+                >
+                  با بیش از یک دهه تجربه در زمینه کوچینگ، روانشناسی تحول و مهندسی رشد شخصی، 
+                  فراز قورچیان خالق Engine Transformation است. رویکرد او ترکیبی از علم، 
+                  تجربه و انرژی است که به هزاران نفر کمک کرده تا نسخه بهتری از خودشان بسازند.
+                </motion.p>
+                <motion.p 
+                  variants={fadeUp} 
+                  className="text-base leading-relaxed text-white/70"
+                >
+                  هر برنامه، هر کارگاه و هر لحظه از این سفر با دقت طراحی شده تا تو را 
+                  به سمت تحولی واقعی و پایدار هدایت کند. این فقط یک برنامه نیست؛ 
+                  این یک انقلاب شخصی است.
+                </motion.p>
+                <motion.div variants={fadeUp} className="flex flex-wrap gap-4 pt-4">
+                  <button
+                    onClick={() => navigate('/about')}
+                    className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                  >
+                    درباره مربی
+                  </button>
+                  <button
+                    onClick={() => navigate('/workshops')}
+                    className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                  >
+                    کارگاه‌ها
+                  </button>
+                </motion.div>
+              </motion.div>
+
+              <motion.div 
+                variants={fadeUp}
+                style={{ y: y2 }}
+                className="relative"
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {curatedAssets.mentorImages.slice(0, 4).map((img, idx) => (
+                    <motion.div
+                      key={idx}
+                      whileHover={{ scale: 1.05, zIndex: 10 }}
+                      className={`relative overflow-hidden rounded-[24px] border border-white/20 bg-white/5 backdrop-blur ${
+                        idx === 0 ? 'col-span-2 h-64' : 'h-48'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Mentor ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      {idx === 0 && (
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <p className="text-xs uppercase tracking-[0.5em] text-yellow-400 mb-2">
+                            Vision & Mission
+                          </p>
+                          <p className="text-white/90 text-sm font-medium">
+                            ساختن آینده‌ای که منتظرش بودی
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* Podcasts Section */}
+        <section className="border-t border-white/10 py-16 sm:py-24">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="mb-10 flex flex-col gap-4">
+              <motion.p
+                variants={fadeUp}
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+              >
+                Podcasts
+              </motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
+                پادکست‌های پرانرژی
+              </motion.h2>
+              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70">
+                مجموعه پادکست‌های الهام‌بخش برای تحول ذهنی، رشد شخصی و ساخت زندگی قدرتمند.
+                هر اپیزود یک قدم به سمت نسخه بهتر از خودت.
+              </motion.p>
+            </div>
+            
+            {featuredPodcasts.length > 0 ? (
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {featuredPodcasts.map((podcast, index) => {
+                  const coverImage = curatedAssets.podcastCovers[index % curatedAssets.podcastCovers.length];
+                  return (
+                    <motion.div
+                      key={podcast.id}
+                      variants={fadeUp}
+                      whileHover={{ y: -8, scale: 1.02 }}
+                      onClick={() => navigate(`/podcasts/${podcast.id}`)}
+                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30"
+                    >
+                      <div className="relative h-64 overflow-hidden">
+                        <img
+                          src={coverImage}
+                          alt={podcast.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="rounded-full bg-white/20 backdrop-blur p-4">
+                            <svg
+                              className="w-12 h-12 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                        {podcast.duration && (
+                          <div className="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur rounded-full">
+                            <span className="text-xs text-white">
+                              {Math.floor(podcast.duration / 60)}:{(podcast.duration % 60).toString().padStart(2, '0')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                          {podcast.title}
+                        </h3>
+                        {podcast.description && (
+                          <p className="text-sm text-white/70 mb-4 line-clamp-2 leading-relaxed">
+                            {podcast.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs uppercase tracking-[0.3em] text-yellow-400">
+                            گوش دادن
+                          </span>
+                          <svg
+                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+                <p className="text-white/60">پادکستی برای نمایش وجود ندارد</p>
+                <button
+                  onClick={() => navigate('/podcasts')}
+                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                >
+                  مشاهده همه پادکست‌ها
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </section>
+
+        {/* Articles Section */}
+        <section className="border-t border-white/10 py-16 sm:py-24">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="mb-10 flex flex-col gap-4">
+              <motion.p
+                variants={fadeUp}
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+              >
+                Articles
+              </motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
+                مقالات برتر
+              </motion.h2>
+              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70">
+                مجموعه مقالات منتخب ما که برای تحول ذهنی و پیشرفت شخصی طراحی شده‌اند.
+                هر مقاله یک راهنمای عملی برای ساخت زندگی بهتر.
+              </motion.p>
+            </div>
+            {featuredArticles.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-3">
+                {featuredArticles.map((article, index) => {
+                  const articleImage = article.featuredImage 
+                    ? getImageUrlWithFallback(article.featuredImage, curatedAssets.gallery[index % curatedAssets.gallery.length])
+                    : curatedAssets.gallery[index % curatedAssets.gallery.length];
+                  
+                  return (
+                    <motion.div
+                      key={article.id}
+                      variants={fadeUp}
+                      whileHover={{ y: -8, scale: 1.02 }}
+                      onClick={() => navigate(`/articles/${article.slug}`)}
+                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                    >
+                      <div className="relative h-56 overflow-hidden">
+                        <img
+                          src={articleImage}
+                          alt={article.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                        <div className="absolute top-4 right-4">
+                          <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                            مقاله
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                          {article.title}
+                        </h3>
+                        {article.excerpt && (
+                          <p className="text-sm text-white/70 mb-4 line-clamp-3 leading-relaxed">
+                            {article.excerpt}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                          <span className="text-xs uppercase tracking-[0.3em] text-yellow-400">
+                            مطالعه بیشتر
+                          </span>
+                          <svg
+                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+                <p className="text-white/60">مقالاتی برای نمایش وجود ندارد</p>
+                <button
+                  onClick={() => navigate('/articles')}
+                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                >
+                  مشاهده همه مقالات
+                </button>
+              </div>
+            )}
+          </motion.div>
         </section>
 
         <section className="border-t border-white/10 py-16 sm:py-24">
@@ -544,7 +922,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 whileHover={{ y: -4 }}
                 className="rounded-[32px] border border-white/10 bg-[#0a0a0a] p-8"
               >
-                <p className="text-sm leading-relaxed text-white/80">“{testimonial.quote}”</p>
+                <p className="text-sm leading-relaxed text-white/80">"{testimonial.quote}"</p>
                 <div className="mt-6 text-xs uppercase tracking-[0.5em] text-yellow-400">
                   {testimonial.name}
                 </div>
