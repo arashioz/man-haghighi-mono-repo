@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { join } from 'path';
 import { existsSync, statSync, unlinkSync } from 'fs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { UrlService } from '../common/services/url.service';
 import { CreateVideoPodcastDto, UpdateVideoPodcastDto } from './dto/video-podcast.dto';
+
+const execAsync = promisify(exec);
 
 @Injectable()
 export class VideoPodcastsService {
@@ -89,11 +93,44 @@ export class VideoPodcastsService {
     }
   }
 
+  /**
+   * Attempts to extract video duration using ffprobe (if available)
+   * Returns duration in seconds, or null if extraction fails
+   */
+  private async extractVideoDuration(videoPath: string): Promise<number | null> {
+    try {
+      // Try to use ffprobe to get duration
+      const { stdout } = await execAsync(
+        `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`
+      );
+      const duration = parseFloat(stdout.trim());
+      if (!isNaN(duration) && duration > 0) {
+        return Math.round(duration);
+      }
+    } catch (error: any) {
+      // ffprobe not available or failed - this is okay, duration can be set manually
+      this.logger.debug(`Could not extract duration from video (ffprobe may not be installed): ${error.message}`);
+    }
+    return null;
+  }
+
   async create(createDto: CreateVideoPodcastDto, video?: Express.Multer.File) {
     const data: any = { ...createDto };
 
     if (video) {
       data.videoFile = video.filename;
+      
+      // Try to extract duration automatically if not provided and ffprobe is available
+      if (!data.duration) {
+        const videoPath = this.resolveFilePath(video.filename);
+        if (existsSync(videoPath)) {
+          const extractedDuration = await this.extractVideoDuration(videoPath);
+          if (extractedDuration) {
+            data.duration = extractedDuration;
+            this.logger.log(`Auto-extracted duration: ${extractedDuration} seconds`);
+          }
+        }
+      }
     }
 
     if (!data.videoFile) {
@@ -121,6 +158,7 @@ export class VideoPodcastsService {
       this.logger.log(`Filename: ${video.filename}`);
       this.logger.log(`File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
       this.logger.log(`File Type: ${video.mimetype}`);
+      this.logger.log(`Duration: ${created.duration ? `${created.duration} seconds` : 'Not set'}`);
       this.logger.log(`File URL: ${fileUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
       this.logger.log(`=== End Video Podcast Log ===\n`);
@@ -179,6 +217,18 @@ export class VideoPodcastsService {
 
     if (video) {
       data.videoFile = video.filename;
+      
+      // Try to extract duration automatically if not provided and ffprobe is available
+      if (!data.duration) {
+        const videoPath = this.resolveFilePath(video.filename);
+        if (existsSync(videoPath)) {
+          const extractedDuration = await this.extractVideoDuration(videoPath);
+          if (extractedDuration) {
+            data.duration = extractedDuration;
+            this.logger.log(`Auto-extracted duration: ${extractedDuration} seconds`);
+          }
+        }
+      }
     }
 
     if (typeof data.published === 'boolean') {
@@ -210,6 +260,7 @@ export class VideoPodcastsService {
       this.logger.log(`Filename: ${video.filename}`);
       this.logger.log(`File Size: ${fileSizeMB} MB (${fileSize.toLocaleString()} bytes)`);
       this.logger.log(`File Type: ${video.mimetype}`);
+      this.logger.log(`Duration: ${updated.duration ? `${updated.duration} seconds` : 'Not set'}`);
       this.logger.log(`File URL: ${fileUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
       this.logger.log(`=== End Video Podcast Log ===\n`);

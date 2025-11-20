@@ -33,6 +33,14 @@ export class UrlService {
       return null;
     }
     
+    // Filter out placeholder service URLs that may not resolve
+    if (filePath.includes('via.placeholder.com') || 
+        filePath.includes('placeholder.com') ||
+        filePath.includes('dummyimage.com') ||
+        filePath.startsWith('FFFFFF')) {
+      return null;
+    }
+    
     if (filePath.startsWith('http://') || filePath.startsWith('https://')){
       return filePath;
     }

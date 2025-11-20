@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { slidersService, coursesService, articlesService, podcastsService, videoPodcastsService, workshopsService } from '../services/api';
 import { Slider, Course, Article, Podcast, VideoPodcast, Workshop } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
+import { getImageUrl, getImageUrlWithFallback } from '../utils/imageUtils';
 import HomeV2 from '../components/home/HomeV2';
+import Layout from '../components/Layout';
 
 const Home: React.FC = () => {
   const [sliders, setSliders] = useState<Slider[]>([]);
@@ -138,6 +140,7 @@ const Home: React.FC = () => {
     return (
       <>
         {versionToggleButton}
+        <div className="fixed top-0 left-0 right-0 z-50" data-version2="true" />
         <HomeV2
           sliders={sliders}
           courses={courses}
@@ -514,19 +517,26 @@ const Home: React.FC = () => {
               {videoPodcasts.map((videoPodcast) => (
                 <div key={videoPodcast.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
                   <div className="relative">
-                    {videoPodcast.thumbnail ? (
-                      <img
-                        src={videoPodcast.thumbnail}
-                        alt={videoPodcast.title}
-                        className="w-full h-48 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                        <svg className="w-16 h-16 text-white opacity-50" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
-                      </div>
-                    )}
+                    {(() => {
+                      const thumbnailUrl = getImageUrl(videoPodcast.thumbnail);
+                      return thumbnailUrl ? (
+                        <img
+                          src={thumbnailUrl}
+                          alt={videoPodcast.title}
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                          <svg className="w-16 h-16 text-white opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      );
+                    })()}
                     <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-300">
                       <div className="w-16 h-16 bg-white bg-opacity-90 rounded-full flex items-center justify-center cursor-pointer">
                         <svg className="w-8 h-8 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">

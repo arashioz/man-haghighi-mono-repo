@@ -10,6 +10,7 @@ import {
   Workshop,
 } from '../../types';
 import { getImageUrl, getImageUrlWithFallback } from '../../utils/imageUtils';
+import { API_ORIGIN } from '../../services/api';
 
 type HomeV2Props = {
   sliders: Slider[];
@@ -114,26 +115,26 @@ const HomeV2: React.FC<HomeV2Props> = ({
     'حقیقت بنیادین: تنها کسانی رشد می‌کنند که رشد را انتخاب و مهندسی می‌کنند.',
     'این Engine مخصوص توست؛ برای تجربه یک برتری واقعی و ساخت نسخه بهتر از خودت.',
     'ایجاد تغییر، ایجاد تحول؛ برای شروعی دوباره و ساخت آینده‌ای که منتظرش بودی.',
-    'Discover your unstoppable potential.',
-    'Be your own project · بگذار زندگی‌ات نسخه V2 شود.',
+    'پتانسیل بی‌پایان خود را کشف کن.',
+    'پروژه زندگی‌ات را خودت بساز · بگذار زندگی‌ات نسخه V2 شود.',
   ];
 
   const pillars = [
     {
-      label: 'Growth',
-      title: 'Growth Mastery',
+      label: 'رشد',
+      title: 'تسلط بر رشد',
       description:
         'ترکیبی از تمرین ذهنی، راهبردهای تجاری و نظم شخصی که سرعت رشد تو را تثبیت می‌کند و استاندارد تازه‌ای می‌سازد.',
     },
     {
-      label: 'Transformation',
-      title: 'Transformation Engine',
+      label: 'تحول',
+      title: 'موتور تحول',
       description:
         'باورهای قدیمی دوباره نوشته می‌شوند؛ هویت تازه خلق می‌شود و مسیر با وضوح طلایی هدایت خواهد شد.',
     },
     {
-      label: 'Power',
-      title: 'Relentless Power',
+      label: 'قدرت',
+      title: 'قدرت بی‌امان',
       description:
         'قدرت نامحدود یعنی انرژی × احساس × اقدام. این ستون برای تثبیت قدرت شخصی و جمعی طراحی شده است.',
     },
@@ -193,7 +194,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
   const highlightedVideo = videoPodcasts[0] ?? null;
   const videoPoster = highlightedVideo?.thumbnail 
-    ? getImageUrl(highlightedVideo.thumbnail) ?? curatedAssets.videoPoster
+    ? (getImageUrl(highlightedVideo.thumbnail) ?? curatedAssets.videoPoster)
     : curatedAssets.videoPoster;
   const primaryWorkshop = workshops[0] ?? null;
 
@@ -205,16 +206,174 @@ const HomeV2: React.FC<HomeV2Props> = ({
     return podcasts.slice(0, 6);
   }, [podcasts]);
 
-  // Parallax refs for mentor section
+  // Hero slider state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const heroSlides = useMemo(() => {
+    const slideImages = [
+      curatedAssets.heroImage,
+      curatedAssets.gallery[1],
+      curatedAssets.gallery[2],
+      curatedAssets.gallery[3],
+      curatedAssets.missionImage,
+    ];
+    return slideImages.filter(Boolean);
+  }, []);
+
+  // Auto-rotate hero slider
+  useEffect(() => {
+    if (heroSlides.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [heroSlides.length]);
+
+  // Events slider state
+  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const featuredWorkshops = useMemo(() => {
+    return workshops.slice(0, 6);
+  }, [workshops]);
+
+  // Auto-rotate events slider
+  useEffect(() => {
+    if (featuredWorkshops.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentEventIndex((prev) => (prev + 1) % featuredWorkshops.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [featuredWorkshops.length]);
+
+  // Audio player state
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Parallax refs for sections
+  const podcastSectionRef = useRef<HTMLDivElement>(null);
   const mentorSectionRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
+  
+  const { scrollYProgress: podcastScrollProgress } = useScroll({
+    target: podcastSectionRef,
+    offset: ['start end', 'end start'],
+  });
+
+  const { scrollYProgress: mentorScrollProgress } = useScroll({
     target: mentorSectionRef,
     offset: ['start end', 'end start'],
   });
 
-  const y1 = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
-  const y2 = useTransform(scrollYProgress, [0, 1], ['0%', '-30%']);
-  const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
+  const podcastY1 = useTransform(podcastScrollProgress, [0, 1], ['0%', '30%']);
+  const podcastY2 = useTransform(podcastScrollProgress, [0, 1], ['0%', '-30%']);
+  const podcastOpacity = useTransform(podcastScrollProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
+
+  const mentorY1 = useTransform(mentorScrollProgress, [0, 1], ['0%', '30%']);
+  const mentorY2 = useTransform(mentorScrollProgress, [0, 1], ['0%', '-30%']);
+  const mentorOpacity = useTransform(mentorScrollProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
+
+  // Audio player handlers
+  const handlePlayPause = (podcast: Podcast) => {
+    const audioUrl = podcast.streamUrl || (podcast.audioFile ? `${API_ORIGIN}/uploads/${podcast.audioFile}` : null);
+    
+    if (!audioUrl) {
+      alert('فایل صوتی در دسترس نیست');
+      return;
+    }
+
+    if (currentPlayingId === podcast.id) {
+      // Toggle play/pause for current podcast
+      if (audioRef) {
+        if (isPlaying) {
+          audioRef.pause();
+          setIsPlaying(false);
+        } else {
+          audioRef.play();
+          setIsPlaying(true);
+        }
+      }
+    } else {
+      // Play new podcast
+      if (audioRef) {
+        audioRef.pause();
+        audioRef.removeEventListener('timeupdate', () => {});
+        audioRef.removeEventListener('loadedmetadata', () => {});
+        audioRef.removeEventListener('ended', () => {});
+      }
+      
+      const newAudio = new Audio(audioUrl);
+      newAudio.addEventListener('loadedmetadata', () => {
+        setDuration(newAudio.duration);
+      });
+      newAudio.addEventListener('timeupdate', () => {
+        setCurrentTime(newAudio.currentTime);
+      });
+      newAudio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentPlayingId(null);
+        setCurrentTime(0);
+      });
+      
+      newAudio.play();
+      setAudioRef(newAudio);
+      setCurrentPlayingId(podcast.id);
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (audioRef) {
+      const newTime = (parseFloat(e.target.value) / 100) * duration;
+      audioRef.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleJumpBackward = () => {
+    if (audioRef) {
+      audioRef.currentTime = Math.max(0, audioRef.currentTime - 30);
+    }
+  };
+
+  const handleJumpForward = () => {
+    if (audioRef) {
+      audioRef.currentTime = Math.min(duration, audioRef.currentTime + 30);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (featuredPodcasts.length > 0) {
+      const currentIndex = featuredPodcasts.findIndex(p => p.id === currentPlayingId);
+      const prevIndex = currentIndex > 0 ? currentIndex - 1 : featuredPodcasts.length - 1;
+      handlePlayPause(featuredPodcasts[prevIndex]);
+    }
+  };
+
+  const handleNext = () => {
+    if (featuredPodcasts.length > 0) {
+      const currentIndex = featuredPodcasts.findIndex(p => p.id === currentPlayingId);
+      const nextIndex = (currentIndex + 1) % featuredPodcasts.length;
+      handlePlayPause(featuredPodcasts[nextIndex]);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioRef) {
+        audioRef.pause();
+        audioRef.src = '';
+      }
+    };
+  }, [audioRef]);
+
+  const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handlePrimaryCta = () => {
     if (primaryWorkshop) {
@@ -233,31 +392,48 @@ const HomeV2: React.FC<HomeV2Props> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#040404] text-white">
+    <div className="min-h-screen bg-[#040404] text-white" dir="rtl">
+      {/* Hero Slider Section */}
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0">
-          {heroMedia.type === 'video' && (
-            <video
-              className="h-full w-full object-cover"
-              src={heroMedia.source}
-              poster={heroMedia.poster}
-              autoPlay
-              playsInline
-              muted
-              loop
-            />
-          )}
-          {heroMedia.type === 'image' && (
-            <img
-              src={heroMedia.source}
-              alt="Hero background"
-              className="h-full w-full object-cover"
-            />
-          )}
-          {heroMedia.type === 'gradient' && (
-            <div className="h-full w-full bg-[radial-gradient(circle_at_top,_rgba(120,120,120,0.4),_transparent_70%)]" />
-          )}
+          {/* Slider Background Images */}
+          {heroSlides.map((slide, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: currentSlide === index ? 1 : 0,
+                scale: currentSlide === index ? 1 : 1.1,
+              }}
+              transition={{ duration: 1.5, ease: 'easeInOut' }}
+              className="absolute inset-0"
+            >
+              <img
+                src={slide}
+                alt={`Hero slide ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+            </motion.div>
+          ))}
           <div className="absolute inset-0 bg-gradient-to-b from-black via-black/70 to-[#040404]" />
+          
+          {/* Slider Indicators */}
+          {heroSlides.length > 1 && (
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+              {heroSlides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    currentSlide === index
+                      ? 'w-8 bg-yellow-400'
+                      : 'w-2 bg-white/30 hover:bg-white/50'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-start gap-12 px-4 pb-24 pt-20 sm:px-8 sm:pt-24">
@@ -266,13 +442,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
               className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.6em] text-yellow-400"
               variants={fadeUp}
             >
-              <span>Version 2</span>
+              <span>نسخه ۲</span>
               <span className="h-1 w-1 rounded-full bg-yellow-400" />
               <span>Engine Transformation</span>
             </motion.span>
             <motion.h1
               variants={fadeUp}
-              className="mt-6 text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl"
+              className="mt-6 text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl text-right"
             >
               Engine Transformation 2.0
               <br />
@@ -280,7 +456,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="mt-6 max-w-3xl text-lg text-white/70 sm:text-xl"
+              className="mt-6 max-w-3xl text-lg text-white/70 sm:text-xl text-right"
             >
               ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار:
               تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این Engine مخصوص توست برای تجربه یک برتری واقعی،
@@ -291,13 +467,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 onClick={handlePrimaryCta}
                 className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
               >
-                Start The Engine
+                شروع موتور
               </button>
               <button
                 onClick={() => navigate('/about')}
                 className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
               >
-                Meet The Mentor
+                ملاقات با مربی
               </button>
             </motion.div>
           </motion.div>
@@ -325,6 +501,281 @@ const HomeV2: React.FC<HomeV2Props> = ({
       </section>
 
       <main className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-8">
+        {/* Events that liberate - Animated Slider */}
+        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+          {/* Background Images */}
+          <div className="absolute inset-0">
+            {curatedAssets.gallery.slice(0, 3).map((img, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, scale: 1.1 }}
+                whileInView={{ opacity: 0.15, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, delay: idx * 0.3 }}
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${img})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(40px)',
+                }}
+              />
+            ))}
+          </div>
+          
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="mb-12 text-center"
+            >
+              <motion.p
+                variants={fadeUp}
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+              >
+                رویدادها
+              </motion.p>
+              <motion.h2 variants={fadeUp} className="text-5xl font-bold sm:text-6xl lg:text-7xl mb-6 text-right">
+                رویدادهایی که آزادت می‌کنند
+              </motion.h2>
+              <motion.p variants={fadeUp} className="text-xl text-white/80 max-w-3xl mx-auto text-right">
+                رویدادهایی که تو را آزاد می‌کنند و به سمت تحول واقعی هدایت می‌کنند
+              </motion.p>
+            </motion.div>
+
+            {featuredWorkshops.length > 0 ? (
+              <div className="relative">
+                <div className="overflow-hidden rounded-[40px]">
+                  <motion.div
+                    key={currentEventIndex}
+                    initial={{ opacity: 0, x: 100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ duration: 0.8, ease: 'easeInOut' }}
+                    className="relative"
+                  >
+                    {featuredWorkshops.map((workshop, index) => {
+                      if (index !== currentEventIndex) return null;
+                      const bgImage = curatedAssets.gallery[index % curatedAssets.gallery.length];
+                      
+                      return (
+                        <div
+                          key={workshop.id}
+                          className="relative min-h-[500px] sm:min-h-[600px] rounded-[40px] overflow-hidden border border-white/20"
+                        >
+                          {/* Background Image */}
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: `url(${bgImage})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/60" />
+                          </div>
+
+                          <div className="relative grid lg:grid-cols-2 gap-8 items-center min-h-[500px] sm:min-h-[600px] p-8 sm:p-12">
+                            <motion.div
+                              initial={{ opacity: 0, y: 30 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.3 }}
+                              className="space-y-6"
+                            >
+                              <div className="inline-block px-4 py-2 bg-yellow-400/20 backdrop-blur rounded-full border border-yellow-400/30">
+                                <span className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">
+                                  {workshop.isActive ? 'رویداد فعال' : 'رویداد آتی'}
+                                </span>
+                              </div>
+                              <h3 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight">
+                                {workshop.title}
+                              </h3>
+                              {workshop.description && (
+                                <p className="text-lg text-white/80 leading-relaxed">
+                                  {workshop.description}
+                                </p>
+                              )}
+                              <div className="flex flex-wrap gap-4 pt-4">
+                                <button
+                                  onClick={() => onOpenPreRegister(workshop)}
+                                  className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                                >
+                                  ثبت نام
+                                </button>
+                                <button
+                                  onClick={() => navigate(`/workshops/${workshop.id}`)}
+                                  className="rounded-full border border-white/30 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                                >
+                                  جزئیات بیشتر
+                                </button>
+                              </div>
+                            </motion.div>
+
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.5 }}
+                              className="relative h-full min-h-[300px] rounded-3xl overflow-hidden border border-white/20"
+                            >
+                              <img
+                                src={bgImage}
+                                alt={workshop.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            </motion.div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                </div>
+
+                {/* Event Navigation */}
+                {featuredWorkshops.length > 1 && (
+                  <div className="flex items-center justify-center gap-4 mt-8">
+                    <button
+                      onClick={() => setCurrentEventIndex((prev) => (prev - 1 + featuredWorkshops.length) % featuredWorkshops.length)}
+                      className="p-3 rounded-full border border-white/20 hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <div className="flex gap-2">
+                      {featuredWorkshops.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setCurrentEventIndex(index)}
+                          className={`h-2 rounded-full transition-all ${
+                            currentEventIndex === index
+                              ? 'w-8 bg-yellow-400'
+                              : 'w-2 bg-white/30 hover:bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentEventIndex((prev) => (prev + 1) % featuredWorkshops.length)}
+                      className="p-3 rounded-full border border-white/20 hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]/50 backdrop-blur">
+                <p className="text-white/60">رویدادی برای نمایش وجود ندارد</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Master every area of your life - Video Section */}
+        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+          {/* Background Images with Parallax */}
+          <div className="absolute inset-0">
+            {curatedAssets.mentorImages.slice(0, 2).map((img, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 0.2 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5 }}
+                className={`absolute inset-0 ${idx === 0 ? 'left-0 w-1/2' : 'right-0 w-1/2'}`}
+                style={{
+                  backgroundImage: `url(${img})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(60px)',
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="grid lg:grid-cols-2 gap-12 items-center"
+            >
+              <motion.div variants={fadeUp} className="space-y-6">
+                <motion.p
+                  variants={fadeUp}
+                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                >
+                  سیستم تحول
+                </motion.p>
+                <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-right">
+                  تسلط بر تمام جنبه‌های زندگی
+                </motion.h2>
+                <motion.p variants={fadeUp} className="text-xl text-white/80 leading-relaxed text-right">
+                  فاصله بین جایی که هستی و جایی که می‌خواهی باشی را با سیستم اثبات‌شده علمی Engine Transformation ببند.
+                </motion.p>
+                <motion.p variants={fadeUp} className="text-lg text-white/70 leading-relaxed text-right">
+                  این سیستم برای تحول در تمام جنبه‌های زندگی طراحی شده است: ذهن، ثروت، سلامت، روابط، 
+                  کسب‌وکار و رهبری. هر بخش با دقت مهندسی شده تا تو را به سمت نسخه بهتر از خودت هدایت کند.
+                </motion.p>
+                <motion.div variants={fadeUp} className="flex flex-wrap gap-4 pt-4">
+                  <button
+                    onClick={() => navigate('/courses')}
+                    className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                  >
+                    شروع کنید
+                  </button>
+                  <button
+                    onClick={() => navigate('/about')}
+                    className="rounded-full border border-white/30 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                  >
+                    درباره سیستم
+                  </button>
+                </motion.div>
+              </motion.div>
+
+              <motion.div
+                variants={fadeUp}
+                className="relative rounded-[40px] overflow-hidden border border-white/20 shadow-2xl"
+              >
+                {highlightedVideo?.streamUrl || highlightedVideo?.videoFile ? (
+                  <video
+                    className="w-full h-auto"
+                    src={highlightedVideo.streamUrl || highlightedVideo.videoFile || undefined}
+                    poster={videoPoster}
+                    controls
+                    autoPlay={false}
+                    playsInline
+                  />
+                ) : (
+                  <div className="relative aspect-video bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center">
+                    <img
+                      src={videoPoster}
+                      alt="Video placeholder"
+                      className="w-full h-full object-cover opacity-50"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <button
+                        onClick={handleVideoCta}
+                        className="rounded-full bg-white/20 backdrop-blur p-6 hover:bg-white/30 transition-colors"
+                      >
+                        <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          </div>
+        </section>
+
         <section className="border-t border-white/10 py-16 sm:py-24">
           <motion.div
             variants={stagger}
@@ -337,12 +788,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
               variants={fadeUp}
               className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
             >
-              Power Statement
+              بیانیه قدرت
             </motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
-              Manifesto of Engine Transformation V2
+            <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
+              مانیفست Engine Transformation V2
             </motion.h2>
-            <motion.p variants={fadeUp} className="max-w-4xl text-lg text-white/70">
+            <motion.p variants={fadeUp} className="max-w-4xl text-lg text-white/70 text-right">
               Engine Transformation برای تجربه یک برتری واقعی خلق شده است؛ تغییری که همزمان سینمایی، عمیق و عملی باشد.
               این Manifesto از انرژی رویدادهای Tony Robbins الهام گرفته تا ذهن، احساس و اقدام را هم‌راستا کند.
             </motion.p>
@@ -366,74 +817,197 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </motion.div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
-          <div className="mb-12 flex flex-col gap-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
-              3 Transformation Pillars
-            </p>
-            <h2 className="text-4xl font-bold sm:text-5xl">Growth · Transformation · Power</h2>
-            <p className="max-w-3xl text-lg text-white/70">
-              سه ستون اصلی برنامه ما برای مهندسی یک زندگی قدرتمند: رشد هدفمند، تحول درونی و قدرت بی‌امان.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {pillars.map((pillar) => (
+        {/* Robbins equals results */}
+        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+          {/* Background Images */}
+          <div className="absolute inset-0">
+            {curatedAssets.gallery.slice(0, 2).map((img, idx) => (
               <motion.div
-                key={pillar.title}
-                variants={fadeUp}
-                whileHover={{ y: -6 }}
-                className="rounded-[32px] border border-white/10 bg-gradient-to-b from-[#111] via-[#0b0b0b] to-black p-8"
-              >
-                <p className="text-xs uppercase tracking-[0.6em] text-yellow-500">{pillar.label}</p>
-                <h3 className="mt-4 text-2xl font-semibold">{pillar.title}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-white/70">
-                  {pillar.description}
-                </p>
-              </motion.div>
+                key={idx}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 0.15 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, delay: idx * 0.3 }}
+                className={`absolute ${idx === 0 ? 'top-0 left-0 w-1/2' : 'top-0 right-0 w-1/2'} h-full`}
+                style={{
+                  backgroundImage: `url(${img})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(60px)',
+                }}
+              />
             ))}
           </div>
-        </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
             <motion.div
               variants={stagger}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.3 }}
-              className="space-y-6"
+              className="text-center"
             >
-              <motion.p
-                variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
-              >
-                About · Mission
-              </motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
-                Engine Transformation برای ساختن آینده‌ای است که منتظرش بودی
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl lg:text-6xl mb-8 text-right">
+                Engine Transformation برابر است با نتایج
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-base leading-relaxed text-white/70">
-                ما تغییر را جرقه می‌زنیم و تحول را تثبیت می‌کنیم. هر برنامه با کوچینگ عمیق، داده‌محوری و تجربه‌ای
-                سینمایی طراحی شده تا تو را به نسخه دوم زندگی‌ات پرتاب کند و وضوح تازه‌ای بسازد.
+              <motion.p variants={fadeUp} className="max-w-4xl mx-auto text-xl text-white/80 leading-relaxed mb-12 text-right">
+                به بیش از ۱۰۰ میلیون نفر در سراسر جهان بپیوندید که با ابزارهای Engine Transformation به دستاوردهای خارق‌العاده رسیده‌اند. 
+                داستان‌های آن‌ها تصویری از آنچه برای تو هم ممکن است را ترسیم می‌کند. یک مطالعه از آزمایشگاه ژنتیک Snyder دانشگاه استنفورد 
+                مزایای پایدار برای شرکت‌کنندگان رویدادها را نشان داده است از جمله:
               </motion.p>
-              <motion.div
-                variants={stagger}
-                className="grid gap-6 sm:grid-cols-2"
-              >
-                {missionHighlights.map((item) => (
+
+              {/* Statistics Grid */}
+              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 mb-12">
+                <motion.div
+                  variants={fadeUp}
+                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
+                >
                   <motion.div
-                    key={item.label}
-                    variants={fadeUp}
-                    className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center"
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.2, type: 'spring' }}
+                    className="text-5xl font-black text-yellow-400 mb-4"
                   >
-                    <p className="text-3xl font-black text-yellow-400">{item.value}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.4em] text-white/60">
-                      {item.label}
-                    </p>
+                    300%
                   </motion.div>
-                ))}
+                  <p className="text-sm text-white/70 uppercase tracking-wider">
+                    افزایش در عملکرد شناختی
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  variants={fadeUp}
+                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3, type: 'spring' }}
+                    className="text-5xl font-black text-yellow-400 mb-4"
+                  >
+                    139%
+                  </motion.div>
+                  <p className="text-sm text-white/70 uppercase tracking-wider">
+                    افزایش در بیوشیمی عملکرد
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  variants={fadeUp}
+                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.4, type: 'spring' }}
+                    className="text-5xl font-black text-yellow-400 mb-4"
+                  >
+                    100M+
+                  </motion.div>
+                  <p className="text-sm text-white/70 uppercase tracking-wider">
+                    نفر که به نتایج خارق‌العاده رسیده‌اند
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  variants={fadeUp}
+                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5, type: 'spring' }}
+                    className="text-5xl font-black text-yellow-400 mb-4"
+                  >
+                    ∞
+                  </motion.div>
+                  <p className="text-sm text-white/70 uppercase tracking-wider">
+                    پتانسیل تحول پایدار
+                  </p>
+                </motion.div>
+              </div>
+
+              <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-4">
+                <button
+                  onClick={() => navigate('/workshops')}
+                  className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                >
+                  بیشتر بدانید
+                </button>
+                <button
+                  onClick={() => navigate('/courses')}
+                  className="rounded-full border border-white/30 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                >
+                  کاوش برنامه‌ها
+                </button>
               </motion.div>
             </motion.div>
+          </div>
+        </section>
+
+        {/* About · Mission - Enhanced with Background */}
+        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+          {/* Background Images */}
+          <div className="absolute inset-0">
+            <motion.div
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 0.15 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.5 }}
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${curatedAssets.missionImage})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(60px)',
+              }}
+            />
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <motion.div
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.3 }}
+                className="space-y-6"
+              >
+                <motion.p
+                  variants={fadeUp}
+                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                >
+                  درباره · ماموریت
+                </motion.p>
+                <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl lg:text-6xl text-right">
+                  Engine Transformation برای ساختن آینده‌ای است که منتظرش بودی
+                </motion.h2>
+                <motion.p variants={fadeUp} className="text-lg leading-relaxed text-white/80 text-right">
+                  ما تغییر را جرقه می‌زنیم و تحول را تثبیت می‌کنیم. هر برنامه با کوچینگ عمیق، داده‌محوری و تجربه‌ای
+                  سینمایی طراحی شده تا تو را به نسخه دوم زندگی‌ات پرتاب کند و وضوح تازه‌ای بسازد.
+                </motion.p>
+                <motion.div
+                  variants={stagger}
+                  className="grid gap-6 sm:grid-cols-2"
+                >
+                  {missionHighlights.map((item) => (
+                    <motion.div
+                      key={item.label}
+                      variants={fadeUp}
+                      className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur"
+                    >
+                      <p className="text-3xl font-black text-yellow-400">{item.value}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.4em] text-white/60">
+                        {item.label}
+                      </p>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </motion.div>
 
             <motion.div
               variants={fadeUp}
@@ -457,13 +1031,14 @@ const HomeV2: React.FC<HomeV2Props> = ({
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
               <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/20 bg-black/30 p-6 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.5em] text-white/60">Placeholder imagery</p>
+                <p className="text-xs uppercase tracking-[0.5em] text-white/60">تصویر جایگزین</p>
                 <p className="mt-3 text-lg text-white/80">
                   فضای تصویری سینمایی برای پرتره‌ها یا ویدیوهای رویداد؛ جایی که انرژی مربی، نور طلایی و احساس جمعیت
                   ثبت می‌شود.
                 </p>
               </div>
             </motion.div>
+            </div>
           </div>
         </section>
 
@@ -480,12 +1055,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 variants={fadeUp}
                 className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
               >
-                Video / Image Block
+                بلوک ویدیو / تصویر
               </motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
-                Feel the Crowd · Hear the Roar · Decide Again
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
+                انرژی جمعیت را حس کن · فریاد را بشنو · دوباره تصمیم بگیر
               </motion.h2>
-              <motion.p variants={fadeUp} className="text-base leading-relaxed text-white/70">
+              <motion.p variants={fadeUp} className="text-base leading-relaxed text-white/70 text-right">
                 این بلوک برای ویدیو یا تصویر سینمایی طراحی شده است تا مخاطب انرژی سالن، نورهای طلایی و لحظه تصمیم
                 دوباره را حس کند؛ همان لحظه‌ای که نسخه دوم زندگی‌اش را می‌بیند.
               </motion.p>
@@ -494,13 +1069,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   onClick={handleVideoCta}
                   className="rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black transition hover:bg-white/90"
                 >
-                  Play The Film
+                  پخش فیلم
                 </button>
                 <button
                   onClick={() => navigate('/video-podcasts')}
                   className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
                 >
-                  Library
+                  کتابخانه
                 </button>
               </motion.div>
             </motion.div>
@@ -527,13 +1102,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center">
                 <span className="text-xs uppercase tracking-[0.6em] text-white/70">
-                  Placeholder for cinematic video
+                  جایگزین برای ویدیو سینمایی
                 </span>
                 <button
                   onClick={handleVideoCta}
                   className="rounded-full bg-white/15 px-6 py-2 text-sm font-semibold uppercase tracking-widest text-white backdrop-blur hover:bg-white/25"
                 >
-                  Watch Preview
+                  تماشای پیش‌نمایش
                 </button>
               </div>
             </motion.div>
@@ -543,10 +1118,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
         <section className="border-t border-white/10 py-16 sm:py-24">
           <div className="mb-10 flex flex-col gap-4">
             <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
-              Gallery
+              گالری
             </p>
-            <h2 className="text-4xl font-bold sm:text-5xl">Immersion Gallery</h2>
-            <p className="max-w-3xl text-base text-white/70">
+            <h2 className="text-4xl font-bold sm:text-5xl text-right">گالری غوطه‌وری</h2>
+            <p className="max-w-3xl text-base text-white/70 text-right">
               تصاویری با کنتراست بالا، نور دراماتیک و انرژی انسانی از آرشیو Engine Transformation؛ به‌سادگی با گالری
               اختصاصی شما جایگزین می‌شود.
             </p>
@@ -569,11 +1144,289 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 opacity-0 transition group-hover:opacity-100" />
-                <div className="absolute bottom-4 left-4 text-xs uppercase tracking-[0.4em] text-white/70 opacity-0 group-hover:opacity-100 transition">
-                  Gallery {index + 1}
+                <div className="absolute bottom-4 right-4 text-xs uppercase tracking-[0.4em] text-white/70 opacity-0 group-hover:opacity-100 transition">
+                  گالری {index + 1}
                 </div>
               </motion.div>
             ))}
+          </div>
+        </section>
+
+        {/* Podcasts Section - Tony Robbins Style */}
+        <section 
+          ref={podcastSectionRef}
+          className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden"
+        >
+          {/* Background Images */}
+          <div className="absolute inset-0">
+            {curatedAssets.podcastCovers.slice(0, 3).map((img, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 0.1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, delay: idx * 0.2 }}
+                className={`absolute ${idx === 0 ? 'top-0 left-0 w-1/3' : idx === 1 ? 'top-0 right-0 w-1/3' : 'bottom-0 left-1/2 transform -translate-x-1/2 w-1/3'} h-full`}
+                style={{
+                  backgroundImage: `url(${img})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(80px)',
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+            >
+              {/* Header */}
+              <div className="mb-10 flex flex-wrap items-center justify-between gap-2.5 md:flex-row md:gap-5">
+                <motion.h3 variants={fadeUp} className="text-lg font-medium tracking-tighter text-white text-right">
+                  پادکست Engine Transformation
+                </motion.h3>
+                <motion.a
+                  variants={fadeUp}
+                  href="/podcasts"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/podcasts');
+                  }}
+                  className="group flex gap-2 items-center font-medium opacity-60 hover:opacity-100 duration-500 w-auto"
+                >
+                  <span>کاوش اپیزودها</span>
+                  <svg viewBox="0 0 20 20" className="h-5 w-5 fill-current duration-500 group-hover:translate-x-1 rotate-0">
+                    <title>Carat</title>
+                    <path d="M10.9724 10.0006L6.84766 5.87577L8.02616 4.69727L13.3295 10.0006L8.02616 15.3038L6.84766 14.1253L10.9724 10.0006Z" />
+                  </svg>
+                </motion.a>
+              </div>
+
+              {featuredPodcasts.length > 0 ? (
+                <ul className="grid grid-cols-1 items-center gap-12 rounded-2xl bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 p-5 md:p-10 lg:grid-cols-2">
+                  {/* Featured Player - First Podcast */}
+                  <li className="mx-auto flex max-w-md flex-col items-center space-y-8 p-4">
+                    {featuredPodcasts[0] && (() => {
+                      const featuredPodcast = featuredPodcasts[0];
+                      const coverImage = curatedAssets.podcastCovers[0];
+                      const isCurrentlyPlaying = currentPlayingId === featuredPodcast.id;
+                      const audioUrl = featuredPodcast.streamUrl || (featuredPodcast.audioFile ? `${API_ORIGIN}/uploads/${featuredPodcast.audioFile}` : null);
+                      const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+                      return (
+                        <>
+                          <a
+                            href={`/podcasts/${featuredPodcast.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/podcasts/${featuredPodcast.id}`);
+                            }}
+                            className="block"
+                          >
+                            <div className="relative h-64 w-64 overflow-hidden rounded-xl shadow-xl">
+                              <img
+                                alt={featuredPodcast.title}
+                                loading="lazy"
+                                width={256}
+                                height={256}
+                                className="absolute inset-0 h-full w-full object-cover"
+                                src={coverImage}
+                              />
+                            </div>
+                          </a>
+                          <div className="text-center w-full">
+                            <span className="text-label s mb-2 flex w-full flex-wrap items-center space-x-1 opacity-60 justify-center text-sm">
+                              <span>پادکست</span>
+                              <span className="mx-2 h-1 w-1 rounded-full bg-white opacity-60"></span>
+                              <span>{featuredPodcast.publishedAt ? new Date(featuredPodcast.publishedAt).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : 'اخیر'}</span>
+                            </span>
+                            <a
+                              href={`/podcasts/${featuredPodcast.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigate(`/podcasts/${featuredPodcast.id}`);
+                              }}
+                              className="block"
+                            >
+                              <h3 className="text-xl text-white hover:text-yellow-400 transition-colors text-right">
+                                {featuredPodcast.title}
+                              </h3>
+                            </a>
+                          </div>
+                          <div className="w-full">
+                            <div className="w-full">
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={isCurrentlyPlaying ? progressPercent : 0}
+                                onChange={handleSeek}
+                                className="related-podcasts-progress-bar rounded-full bg-white/10 w-full h-1 cursor-pointer accent-yellow-400"
+                                style={{
+                                  background: `linear-gradient(to right, rgb(250, 204, 21) 0%, rgb(250, 204, 21) ${progressPercent}%, rgba(255, 255, 255, 0.1) ${progressPercent}%, rgba(255, 255, 255, 0.1) 100%)`
+                                }}
+                                disabled={!isCurrentlyPlaying}
+                              />
+                            </div>
+                            <div className="relative flex w-full justify-between pt-2 text-xs text-white/60" dir="ltr">
+                              <span>{formatTime(isCurrentlyPlaying ? currentTime : 0)}</span>
+                              <span>{formatTime(duration || featuredPodcast.duration || 0)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-center space-x-8">
+                            <button
+                              onClick={handlePrevious}
+                              disabled={featuredPodcasts.length <= 1}
+                              aria-label="go to previous"
+                              className={`transition-all duration-200 hover:scale-105 ${featuredPodcasts.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}`}
+                            >
+                              <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" height="24" width="24" className="text-white">
+                                <path fill="none" d="M0 0h24v24H0z"></path>
+                                <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"></path>
+                              </svg>
+                            </button>
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={handleJumpBackward}
+                                disabled={!isCurrentlyPlaying}
+                                aria-label="jump backward"
+                                className={`transition-all duration-200 hover:scale-105 ${!isCurrentlyPlaying ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}`}
+                              >
+                                <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" className="h-10 w-10 text-white">
+                                  <path fill="none" d="M0 0h24v24H0V0z"></path>
+                                  <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-2.44 8.49h.45c.21 0 .37-.05.48-.16s.16-.25.16-.43a.538.538 0 0 0-.15-.39c-.05-.05-.11-.09-.18-.11s-.16-.04-.25-.04c-.08 0-.15.01-.22.03s-.13.05-.18.1-.09.09-.12.15-.05.13-.05.2h-.85a1.06 1.06 0 0 1 .41-.85c.13-.1.27-.18.44-.23s.35-.08.54-.08c.21 0 .41.03.59.08s.33.13.46.23.23.23.3.38.11.33.11.53a.842.842 0 0 1-.17.52 1.1 1.1 0 0 1-.48.39c.24.09.42.21.54.39s.18.38.18.61c0 .2-.04.38-.12.53s-.18.29-.32.39-.29.19-.48.24-.38.08-.6.08c-.18 0-.36-.02-.53-.07s-.33-.12-.46-.23-.25-.23-.33-.38-.12-.34-.12-.55h.85c0 .08.02.15.05.22s.07.12.13.17.12.09.2.11.16.04.25.04c.1 0 .19-.01.27-.04s.15-.07.2-.12.1-.11.13-.18.04-.15.04-.24c0-.11-.02-.21-.05-.29s-.08-.15-.14-.2-.13-.09-.22-.11-.18-.04-.29-.04h-.47v-.65zm5.74.75c0 .32-.03.6-.1.82s-.17.42-.29.57-.28.26-.45.33-.37.1-.59.1-.41-.03-.59-.1-.33-.18-.46-.33-.23-.34-.3-.57-.11-.5-.11-.82v-.74c0-.32.03-.6.1-.82s.17-.42.29-.57.28-.26.45-.33.37-.1.59-.1.41.03.59.1.33.18.46.33.23.34.3.57.11.5.11.82v.74zm-.85-.86c0-.19-.01-.35-.04-.48s-.07-.23-.12-.31-.11-.14-.19-.17-.16-.05-.25-.05-.18.02-.25.05-.14.09-.19.17-.09.18-.12.31-.04.29-.04.48v.97c0 .19.01.35.04.48s.07.24.12.32.11.14.19.17.16.05.25.05.18-.02.25-.05.14-.09.19-.17.09-.19.11-.32c.03-.13.04-.29.04-.48v-.97z"></path>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handlePlayPause(featuredPodcast)}
+                              disabled={!audioUrl}
+                              aria-label="Play"
+                              className={`relative h-[72px] w-[72px] rounded-full text-black hover:scale-105 transition-transform ${isCurrentlyPlaying && isPlaying ? 'bg-yellow-400' : 'bg-white'} ${!audioUrl ? 'opacity-15 cursor-not-allowed' : ''}`}
+                            >
+                              {isCurrentlyPlaying && isPlaying ? (
+                                <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform h-8 w-8">
+                                  <path fill="none" d="M0 0h24v24H0z"></path>
+                                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"></path>
+                                </svg>
+                              ) : (
+                                <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform h-8 w-8">
+                                  <path fill="none" d="M0 0h24v24H0z"></path>
+                                  <path d="M8 5v14l11-7z"></path>
+                                </svg>
+                              )}
+                            </button>
+                            <button
+                              onClick={handleJumpForward}
+                              disabled={!isCurrentlyPlaying}
+                              aria-label="jump forward"
+                              className={`transition-all duration-200 hover:scale-105 ${!isCurrentlyPlaying ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}`}
+                            >
+                              <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" className="h-10 w-10 text-white">
+                                <path fill="none" d="M0 0h24v24H0z"></path>
+                                <path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2z"></path>
+                                <path d="M10.06 15.38c-.29 0-.62-.17-.62-.54h-.85c0 .97.9 1.23 1.45 1.23.87 0 1.51-.46 1.51-1.25 0-.66-.45-.9-.71-1 .11-.05.65-.32.65-.92 0-.21-.05-1.22-1.44-1.22-.62 0-1.4.35-1.4 1.16h.85c0-.34.31-.48.57-.48.59 0 .58.5.58.54 0 .52-.41.59-.63.59h-.46v.66h.45c.65 0 .7.42.7.64 0 .32-.21.59-.65.59zM13.85 11.68c-.14 0-1.44-.08-1.44 1.82v.74c0 1.9 1.31 1.82 1.44 1.82.14 0 1.44.09 1.44-1.82v-.74c.01-1.91-1.3-1.82-1.44-1.82zm.6 2.67c0 .77-.21 1.03-.59 1.03s-.6-.26-.6-1.03v-.97c0-.75.22-1.01.59-1.01.38 0 .6.26.6 1.01v.97z"></path>
+                              </svg>
+                            </button>
+                          </div>
+                          <button
+                            onClick={handleNext}
+                            disabled={featuredPodcasts.length <= 1}
+                            aria-label="go to next"
+                            className={`transition-all duration-200 hover:scale-105 ${featuredPodcasts.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}`}
+                          >
+                            <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" height="24" width="24" className="text-white">
+                              <path fill="none" d="M0 0h24v24H0z"></path>
+                              <path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </>
+                      );
+                    })()}
+                  </li>
+
+                  {/* Other Podcasts List */}
+                  <div className="divide-y divide-yellow-400/20">
+                    {featuredPodcasts.slice(1).map((podcast, index) => {
+                      const coverImage = curatedAssets.podcastCovers[(index + 1) % curatedAssets.podcastCovers.length];
+                      const audioUrl = podcast.streamUrl || (podcast.audioFile ? `${API_ORIGIN}/uploads/${podcast.audioFile}` : null);
+                      
+                      return (
+                        <li key={podcast.id} className="flex w-full gap-4 py-4 md:items-center">
+                          <a
+                            href={`/podcasts/${podcast.id}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/podcasts/${podcast.id}`);
+                            }}
+                            className="block"
+                          >
+                            <div className="relative h-20 w-20 overflow-hidden rounded-lg">
+                              <img
+                                alt={podcast.title}
+                                loading="lazy"
+                                width={80}
+                                height={80}
+                                className="absolute inset-0 h-full object-cover"
+                                src={coverImage}
+                              />
+                            </div>
+                          </a>
+                          <div className="flex w-full flex-col items-start md:flex-row md:items-center">
+                            <div className="mb-3 flex-grow md:mb-0">
+                              <span className="text-label s mb-2 flex w-full flex-wrap items-center space-x-1 opacity-60 text-sm">
+                                <span>پادکست</span>
+                                <span className="mx-2 h-1 w-1 rounded-full bg-white opacity-60"></span>
+                                <span>{podcast.publishedAt ? new Date(podcast.publishedAt).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long', day: 'numeric' }) : 'اخیر'}</span>
+                              </span>
+                              <a
+                                href={`/podcasts/${podcast.id}`}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigate(`/podcasts/${podcast.id}`);
+                                }}
+                                className="block"
+                              >
+                                <h3 className="text-base leading-none tracking-tighter text-white hover:text-yellow-400 transition-colors text-right">
+                                  {podcast.title}
+                                </h3>
+                              </a>
+                            </div>
+                            <button
+                              onClick={() => handlePlayPause(podcast)}
+                              disabled={!audioUrl}
+                              className={`cursor-pointer group inline-flex items-center justify-center gap-2 font-medium text-center tracking-wide rounded-full duration-500 border border-yellow-400/30 bg-yellow-400/20 hover:bg-yellow-400/30 text-white w-auto text-xs py-1.5 md:py-2.5 px-3 md:px-4 transition-all ${!audioUrl ? 'opacity-30 cursor-not-allowed' : ''}`}
+                            >
+                              <svg viewBox="0 0 24 24" fill="transparent" className="flex h-6 w-6 fill-current">
+                                <title>Play</title>
+                                <path d="M17.2335 11.1362C17.895 11.5221 17.895 12.4779 17.2335 12.8638L6.50387 19.1227C5.83721 19.5116 5 19.0308 5 18.259L5 5.74104C5 4.96925 5.83721 4.48838 6.50387 4.87726L17.2335 11.1362Z" />
+                              </svg>
+                              <span>
+                                <span className="text-nowrap leading-none">گوش دهید</span>
+                              </span>
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </div>
+                </ul>
+              ) : (
+                <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]/50 backdrop-blur">
+                  <p className="text-white/60">پادکستی برای نمایش وجود ندارد</p>
+                  <button
+                    onClick={() => navigate('/podcasts')}
+                    className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                  >
+                    مشاهده همه پادکست‌ها
+                  </button>
+                </div>
+              )}
+            </motion.div>
           </div>
         </section>
 
@@ -586,7 +1439,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           
           {/* Parallax Background Images */}
           <motion.div 
-            style={{ y: y1, opacity }}
+            style={{ y: mentorY1, opacity: mentorOpacity }}
             className="absolute inset-0 pointer-events-none"
           >
             <div className="absolute top-0 right-0 w-1/3 h-full">
@@ -618,11 +1471,11 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   variants={fadeUp}
                   className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
                 >
-                  Meet The Mentor
+                  ملاقات با مربی
                 </motion.p>
                 <motion.h2 
                   variants={fadeUp} 
-                  className="text-4xl font-bold sm:text-5xl lg:text-6xl"
+                  className="text-4xl font-bold sm:text-5xl lg:text-6xl text-right"
                 >
                   فراز قورچیان
                   <br />
@@ -630,7 +1483,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 </motion.h2>
                 <motion.p 
                   variants={fadeUp} 
-                  className="text-lg leading-relaxed text-white/80"
+                  className="text-lg leading-relaxed text-white/80 text-right"
                 >
                   با بیش از یک دهه تجربه در زمینه کوچینگ، روانشناسی تحول و مهندسی رشد شخصی، 
                   فراز قورچیان خالق Engine Transformation است. رویکرد او ترکیبی از علم، 
@@ -638,7 +1491,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 </motion.p>
                 <motion.p 
                   variants={fadeUp} 
-                  className="text-base leading-relaxed text-white/70"
+                  className="text-base leading-relaxed text-white/70 text-right"
                 >
                   هر برنامه، هر کارگاه و هر لحظه از این سفر با دقت طراحی شده تا تو را 
                   به سمت تحولی واقعی و پایدار هدایت کند. این فقط یک برنامه نیست؛ 
@@ -662,7 +1515,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
               <motion.div 
                 variants={fadeUp}
-                style={{ y: y2 }}
+                style={{ y: mentorY2 }}
                 className="relative"
               >
                 <div className="grid grid-cols-2 gap-4">
@@ -683,9 +1536,9 @@ const HomeV2: React.FC<HomeV2Props> = ({
                       {idx === 0 && (
                         <div className="absolute bottom-4 left-4 right-4">
                           <p className="text-xs uppercase tracking-[0.5em] text-yellow-400 mb-2">
-                            Vision & Mission
+                            چشم‌انداز و ماموریت
                           </p>
-                          <p className="text-white/90 text-sm font-medium">
+                          <p className="text-white/90 text-sm font-medium text-right">
                             ساختن آینده‌ای که منتظرش بودی
                           </p>
                         </div>
@@ -698,113 +1551,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        {/* Podcasts Section */}
-        <section className="border-t border-white/10 py-16 sm:py-24">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-          >
-            <div className="mb-10 flex flex-col gap-4">
-              <motion.p
-                variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
-              >
-                Podcasts
-              </motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
-                پادکست‌های پرانرژی
-              </motion.h2>
-              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70">
-                مجموعه پادکست‌های الهام‌بخش برای تحول ذهنی، رشد شخصی و ساخت زندگی قدرتمند.
-                هر اپیزود یک قدم به سمت نسخه بهتر از خودت.
-              </motion.p>
-            </div>
-            
-            {featuredPodcasts.length > 0 ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {featuredPodcasts.map((podcast, index) => {
-                  const coverImage = curatedAssets.podcastCovers[index % curatedAssets.podcastCovers.length];
-                  return (
-                    <motion.div
-                      key={podcast.id}
-                      variants={fadeUp}
-                      whileHover={{ y: -8, scale: 1.02 }}
-                      onClick={() => navigate(`/podcasts/${podcast.id}`)}
-                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30"
-                    >
-                      <div className="relative h-64 overflow-hidden">
-                        <img
-                          src={coverImage}
-                          alt={podcast.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="rounded-full bg-white/20 backdrop-blur p-4">
-                            <svg
-                              className="w-12 h-12 text-white"
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          </div>
-                        </div>
-                        {podcast.duration && (
-                          <div className="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur rounded-full">
-                            <span className="text-xs text-white">
-                              {Math.floor(podcast.duration / 60)}:{(podcast.duration % 60).toString().padStart(2, '0')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
-                          {podcast.title}
-                        </h3>
-                        {podcast.description && (
-                          <p className="text-sm text-white/70 mb-4 line-clamp-2 leading-relaxed">
-                            {podcast.description}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs uppercase tracking-[0.3em] text-yellow-400">
-                            گوش دادن
-                          </span>
-                          <svg
-                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 8l4 4m0 0l-4 4m4-4H3"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
-                <p className="text-white/60">پادکستی برای نمایش وجود ندارد</p>
-                <button
-                  onClick={() => navigate('/podcasts')}
-                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
-                >
-                  مشاهده همه پادکست‌ها
-                </button>
-              </div>
-            )}
-          </motion.div>
-        </section>
 
         {/* Articles Section */}
         <section className="border-t border-white/10 py-16 sm:py-24">
@@ -819,12 +1565,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 variants={fadeUp}
                 className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
               >
-                Articles
+                مقالات
               </motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl">
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
                 مقالات برتر
               </motion.h2>
-              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70">
+              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70 text-right">
                 مجموعه مقالات منتخب ما که برای تحول ذهنی و پیشرفت شخصی طراحی شده‌اند.
                 هر مقاله یک راهنمای عملی برای ساخت زندگی بهتر.
               </motion.p>
@@ -906,10 +1652,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
         <section className="border-t border-white/10 py-16 sm:py-24">
           <div className="mb-10 flex flex-col gap-4">
             <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
-              Testimonials
+              نظرات
             </p>
-            <h2 className="text-4xl font-bold sm:text-5xl">Voices of Transformation</h2>
-            <p className="max-w-3xl text-base text-white/70">
+            <h2 className="text-4xl font-bold sm:text-5xl text-right">صداهای تحول</h2>
+            <p className="max-w-3xl text-base text-white/70 text-right">
               روایت‌هایی که نشان می‌دهد وقتی تصمیم می‌گیری پروژه زندگی‌ات را خودت هدایت کنی و قدرت را انتخاب کنی چه
               اتفاقی می‌افتد.
             </p>
@@ -943,12 +1689,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-yellow-500/20 to-transparent" />
             <div className="relative space-y-6">
               <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
-                Final CTA · Your Journey Starts Here
+                فراخوان نهایی · سفر تو از اینجا شروع می‌شود
               </p>
-              <h2 className="text-4xl font-bold sm:text-5xl">
-                Discover your unstoppable potential · Be your own project
+              <h2 className="text-4xl font-bold sm:text-5xl text-right">
+                پتانسیل بی‌پایان خود را کشف کن · پروژه زندگی‌ات را خودت بساز
               </h2>
-              <p className="max-w-3xl text-base text-white/70">
+              <p className="max-w-3xl text-base text-white/70 text-right">
                 این Engine برای ساختن آینده‌ای است که مدت‌ها منتظرش بودی. تصمیم بگیر، اقدام کن و اجازه بده نسخه V2
                 زندگی‌ات روی صحنه طلایی بیاید.
               </p>
@@ -957,13 +1703,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   onClick={handlePrimaryCta}
                   className="rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-black transition hover:bg-white/90"
                 >
-                  Start The Engine
+                  شروع موتور
                 </button>
                 <button
                   onClick={() => navigate('/courses')}
                   className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:border-white hover:bg-white/10"
                 >
-                  Explore Programs
+                  کاوش برنامه‌ها
                 </button>
                 <button
                   onClick={onBackToClassic}
