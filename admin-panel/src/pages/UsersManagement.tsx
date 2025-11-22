@@ -165,6 +165,33 @@ const UsersManagement: React.FC = () => {
     }
   };
 
+  // Phone validation function (matches backend normalizePhone logic)
+  const validatePhone = (phone: string): boolean => {
+    if (!phone || !phone.trim()) {
+      return false;
+    }
+
+    let digits = phone.trim().replace(/[^\d+]/g, '');
+
+    if (!digits) {
+      return false;
+    }
+
+    if (digits.startsWith('+98')) {
+      digits = '0' + digits.slice(3);
+    } else if (digits.startsWith('98') && digits.length >= 11) {
+      digits = '0' + digits.slice(2);
+    } else if (!digits.startsWith('0') && digits.length === 10) {
+      digits = '0' + digits;
+    }
+
+    if (digits.length > 11) {
+      digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
+    }
+
+    return /^0\d{9,10}$/.test(digits);
+  };
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); // Clear any previous errors
@@ -192,6 +219,12 @@ const UsersManagement: React.FC = () => {
     
     if (newUser.role !== 'ADMIN' && !newUser.phone.trim()) {
       setError('کاربران غیرمدیر باید شماره تلفن داشته باشند');
+      return;
+    }
+
+    // Validate phone number format for non-admin users
+    if (newUser.role !== 'ADMIN' && newUser.phone.trim() && !validatePhone(newUser.phone)) {
+      setError('فرمت شماره تلفن نامعتبر است. شماره باید با 0 شروع شود و 10 یا 11 رقم داشته باشد (مثال: 09123456789)');
       return;
     }
     
@@ -270,6 +303,14 @@ const UsersManagement: React.FC = () => {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    
+    setError(''); // Clear any previous errors
+
+    // Validate phone number format if provided and user is not admin
+    if (editingUser.role !== 'ADMIN' && editingUser.phone && editingUser.phone.trim() && !validatePhone(editingUser.phone)) {
+      setError('فرمت شماره تلفن نامعتبر است. شماره باید با 0 شروع شود و 10 یا 11 رقم داشته باشد (مثال: 09123456789)');
+      return;
+    }
     
     try {
       // Only send editable fields
