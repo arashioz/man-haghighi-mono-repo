@@ -518,6 +518,24 @@ const Courses: React.FC = () => {
       return;
     }
 
+    // Validate audio files before upload
+    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/m4a', 'audio/aac', 'audio/flac', 'audio/webm', 'audio/opus'];
+    const allowedAudioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm', '.opus'];
+    
+    for (const audio of audiosToUpload) {
+      if (!audio.file) continue;
+      
+      const fileExtension = audio.file.name.toLowerCase().substring(audio.file.name.lastIndexOf('.'));
+      const isValidType = allowedAudioTypes.includes(audio.file.type);
+      const isValidExtension = allowedAudioExtensions.some(ext => audio.file!.name.toLowerCase().endsWith(ext));
+      
+      if (!isValidType && !isValidExtension) {
+        setError(`فایل صوتی "${audio.file.name}" فرمت نامعتبر دارد. فرمت‌های مجاز: mp3, wav, ogg, m4a, aac, flac, webm, opus`);
+        setIsUploading(false);
+        return;
+      }
+    }
+
     type PendingUpload = {
       url: string;
       fieldName: string;
@@ -601,30 +619,38 @@ const Courses: React.FC = () => {
         const formData = new FormData();
         formData.append(upload.fieldName, upload.file);
 
-        await uploadFileWithProgress(
-          upload.url,
-          formData,
-          upload.file.name,
-          fileSize,
-          uploadedBytesTotal,
-          totalSize || fileSize,
-          (currentFileProgress: number) => {
-            if (!totalSize) {
-              setUploadProgress(currentFileProgress);
-              return;
+        try {
+          await uploadFileWithProgress(
+            upload.url,
+            formData,
+            upload.file.name,
+            fileSize,
+            uploadedBytesTotal,
+            totalSize || fileSize,
+            (currentFileProgress: number) => {
+              if (!totalSize) {
+                setUploadProgress(currentFileProgress);
+                return;
+              }
+              const overallProgress =
+                ((uploadedBytesTotal + (fileSize * currentFileProgress) / 100) / totalSize) * 100;
+              setUploadProgress(Math.min(100, overallProgress));
             }
-            const overallProgress =
-              ((uploadedBytesTotal + (fileSize * currentFileProgress) / 100) / totalSize) * 100;
-            setUploadProgress(Math.min(100, overallProgress));
-          }
-        );
+          );
 
-        uploadedBytesTotal += fileSize;
-        setUploadedBytes(uploadedBytesTotal);
-        if (totalSize) {
-          setUploadProgress((uploadedBytesTotal / totalSize) * 100);
-        } else {
-          setUploadProgress(100);
+          uploadedBytesTotal += fileSize;
+          setUploadedBytes(uploadedBytesTotal);
+          if (totalSize) {
+            setUploadProgress((uploadedBytesTotal / totalSize) * 100);
+          } else {
+            setUploadProgress(100);
+          }
+        } catch (uploadError: any) {
+          // Extract error message from upload error
+          const errorMessage = uploadError?.response?.data?.message || 
+                              uploadError?.message || 
+                              `خطا در اپلود فایل "${upload.file.name}"`;
+          throw new Error(errorMessage);
         }
       }
 

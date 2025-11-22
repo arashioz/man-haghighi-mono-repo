@@ -427,10 +427,17 @@ export class CoursesController {
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(mp3|wav|ogg|m4a|aac)$/)) {
+      const allowedMimeTypes = /(mp3|wav|ogg|m4a|aac|flac|webm|opus)$/i;
+      const allowedExtensions = /\.(mp3|wav|ogg|m4a|aac|flac|webm|opus)$/i;
+      
+      // Check both mimetype and file extension
+      const isValidMimeType = file.mimetype && allowedMimeTypes.test(file.mimetype);
+      const isValidExtension = allowedExtensions.test(file.originalname);
+      
+      if (isValidMimeType || isValidExtension) {
         cb(null, true);
       } else {
-        cb(new Error('Only audio files are allowed'), false);
+        cb(new Error('Only audio files are allowed (mp3, wav, ogg, m4a, aac, flac, webm, opus)'), false);
       }
     },
     limits: { fileSize: 5 * 1024 * 1024 * 1024 }, // 5GB for audio

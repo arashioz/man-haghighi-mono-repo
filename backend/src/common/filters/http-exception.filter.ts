@@ -31,7 +31,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
         status = HttpStatus.PAYLOAD_TOO_LARGE;
         message = 'File size exceeds the allowed limit';
       } else if (exception.message.includes('Unsupported file type') || 
-                 exception.message.includes('Only') && exception.message.includes('files are allowed')) {
+                 (exception.message.includes('Only') && exception.message.includes('files are allowed')) ||
+                 exception.message.includes('Only audio files are allowed') ||
+                 exception.message.includes('Only video files are allowed') ||
+                 exception.message.includes('Only image files are allowed')) {
         status = HttpStatus.BAD_REQUEST;
         message = exception.message;
       } else if (exception.message.includes('upload')) {
