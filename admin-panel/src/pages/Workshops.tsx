@@ -23,6 +23,7 @@ const Workshops: React.FC = () => {
   const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [editingWorkshop, setEditingWorkshop] = useState<Workshop | null>(null);
+  const [editingThumbnail, setEditingThumbnail] = useState<File | null>(null);
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
   const [workshopAccess, setWorkshopAccess] = useState<any[]>([]);
   const [salesPersons, setSalesPersons] = useState<User[]>([]);
@@ -35,6 +36,7 @@ const Workshops: React.FC = () => {
     price: 0,
     isActive: true,
     createdBy: '',
+    thumbnail: null as File | null,
     videos: [] as File[],
     audios: [] as File[],
   });
@@ -63,18 +65,21 @@ const Workshops: React.FC = () => {
     setError('');
 
     try {
-      const workshopData = {
-        title: newWorkshop.title,
-        description: newWorkshop.description,
-        date: newWorkshop.date,
-        location: newWorkshop.location,
-        maxParticipants: newWorkshop.maxParticipants,
-        price: newWorkshop.price,
-        isActive: newWorkshop.isActive,
-        createdBy: user?.id || '',
-      };
+      const formData = new FormData();
+      formData.append('title', newWorkshop.title);
+      formData.append('description', newWorkshop.description || '');
+      formData.append('date', newWorkshop.date);
+      formData.append('location', newWorkshop.location || '');
+      formData.append('maxParticipants', newWorkshop.maxParticipants.toString());
+      formData.append('price', newWorkshop.price.toString());
+      formData.append('isActive', newWorkshop.isActive.toString());
+      formData.append('createdBy', user?.id || '');
       
-      const createdWorkshop = await workshopsService.create(workshopData);
+      if (newWorkshop.thumbnail) {
+        formData.append('thumbnail', newWorkshop.thumbnail);
+      }
+      
+      const createdWorkshop = await workshopsService.createWithThumbnail(formData);
       
       let totalFiles = 0;
       let uploadedFiles = 0;
@@ -105,6 +110,7 @@ const Workshops: React.FC = () => {
         price: 0,
         isActive: true,
         createdBy: '',
+        thumbnail: null,
         videos: [],
         audios: [],
       });
@@ -118,6 +124,7 @@ const Workshops: React.FC = () => {
 
   const handleEditWorkshop = (workshop: Workshop) => {
     setEditingWorkshop(workshop);
+    setEditingThumbnail(null);
     setIsEditModalOpen(true);
   };
 
@@ -126,17 +133,20 @@ const Workshops: React.FC = () => {
     if (!editingWorkshop) return;
 
     try {
-      const updateData: any = {
-        title: editingWorkshop.title,
-        description: editingWorkshop.description,
-        date: editingWorkshop.date,
-        location: editingWorkshop.location,
-        maxParticipants: editingWorkshop.maxParticipants,
-        price: editingWorkshop.price,
-        isActive: editingWorkshop.isActive,
-      };
+      const formData = new FormData();
+      formData.append('title', editingWorkshop.title);
+      formData.append('description', editingWorkshop.description || '');
+      formData.append('date', editingWorkshop.date);
+      formData.append('location', editingWorkshop.location || '');
+      formData.append('maxParticipants', (editingWorkshop.maxParticipants || 0).toString());
+      formData.append('price', editingWorkshop.price.toString());
+      formData.append('isActive', editingWorkshop.isActive.toString());
+      
+      if (editingThumbnail) {
+        formData.append('thumbnail', editingThumbnail);
+      }
 
-      const updatedWorkshop = await workshopsService.update(editingWorkshop.id, updateData);
+      const updatedWorkshop = await workshopsService.updateWithThumbnail(editingWorkshop.id, formData);
       
       setWorkshops(workshops.map(workshop => 
         workshop.id === editingWorkshop.id ? updatedWorkshop : workshop
@@ -144,6 +154,7 @@ const Workshops: React.FC = () => {
       
       setIsEditModalOpen(false);
       setEditingWorkshop(null);
+      setEditingThumbnail(null);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ویرایش کارگاه');
     }
@@ -353,7 +364,18 @@ const Workshops: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center text-white font-medium">
+                          {workshop.thumbnail ? (
+                            <img
+                              src={workshop.thumbnail.startsWith('http') ? workshop.thumbnail : `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${workshop.thumbnail}`}
+                              alt={workshop.title}
+                              className="h-10 w-10 rounded-lg object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
+                          <div className={`h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center text-white font-medium ${workshop.thumbnail ? 'hidden' : ''}`}>
                             {workshop.title?.[0] || 'W'}
                           </div>
                         </div>
@@ -547,10 +569,27 @@ const Workshops: React.FC = () => {
             <input
               type="number"
               value={newWorkshop.price}
-              onChange={(e) => setNewWorkshop({...newWorkshop, price: Number(e.target.value)})}
+              onChange={(e) => setNewWorkshop({...newWorkshop, price: parseFloat(e.target.value) || 0})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
+              step="0.01"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              عکس کارگاه
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setNewWorkshop({...newWorkshop, thumbnail: e.target.files?.[0] || null})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {newWorkshop.thumbnail && (
+              <p className="text-sm text-gray-500 mt-1">
+                {newWorkshop.thumbnail.name} انتخاب شده
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -698,10 +737,36 @@ const Workshops: React.FC = () => {
             <input
               type="number"
               value={editingWorkshop?.price || 0}
-              onChange={(e) => setEditingWorkshop(prev => prev ? {...prev, price: Number(e.target.value)} : null)}
+              onChange={(e) => setEditingWorkshop(prev => prev ? {...prev, price: parseFloat(e.target.value) || 0} : null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
+              step="0.01"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              عکس کارگاه
+            </label>
+            {editingWorkshop?.thumbnail && !editingThumbnail && (
+              <div className="mb-2">
+                <img
+                  src={editingWorkshop.thumbnail.startsWith('http') ? editingWorkshop.thumbnail : `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${editingWorkshop.thumbnail}`}
+                  alt={editingWorkshop.title}
+                  className="h-20 w-20 rounded-lg object-cover border border-gray-300"
+                />
+              </div>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setEditingThumbnail(e.target.files?.[0] || null)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {editingThumbnail && (
+              <p className="text-sm text-gray-500 mt-1">
+                {editingThumbnail.name} انتخاب شده
+              </p>
+            )}
           </div>
           <div className="flex items-center">
             <input

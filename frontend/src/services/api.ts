@@ -141,6 +141,11 @@ export const coursesService = {
     return response.data;
   },
 
+  getForHomepage: async (): Promise<Course[]> => {
+    const response = await api.get('/courses/homepage');
+    return response.data;
+  },
+
   getById: async (id: string): Promise<Course> => {
     const response = await api.get(`/courses/${id}`);
     return response.data;

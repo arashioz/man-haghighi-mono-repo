@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsInt, IsNumber, IsBoolean, IsArray } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateWorkshopDto {
   @IsString()
@@ -19,6 +20,12 @@ export class CreateWorkshopDto {
   @IsInt()
   maxParticipants?: number;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return parseFloat(value);
+    }
+    return value;
+  })
   @IsNumber()
   price: number;
 
@@ -65,6 +72,12 @@ export class UpdateWorkshopDto {
   @IsInt()
   maxParticipants?: number;
 
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return parseFloat(value);
+    }
+    return value;
+  })
   @IsOptional()
   @IsNumber()
   price?: number;

@@ -35,6 +35,7 @@ const Courses: React.FC = () => {
     description: '',
     price: 0,
     published: false,
+    showOnHomepage: true,
     thumbnail: null as File | null,
     video: null as File | null,
     attachments: [] as File[],
@@ -261,6 +262,7 @@ const Courses: React.FC = () => {
         description: newCourse.description,
         price: newCourse.price,
         published: newCourse.published,
+        showOnHomepage: newCourse.showOnHomepage,
       };
 
       const token = localStorage.getItem('token');
@@ -378,6 +380,7 @@ const Courses: React.FC = () => {
         description: '',
         price: 0,
         published: false,
+        showOnHomepage: true,
         thumbnail: null,
         video: null,
         attachments: [],
@@ -604,6 +607,7 @@ const Courses: React.FC = () => {
         description: editingCourse.description,
         price: editingCourse.price,
         published: editingCourse.published,
+        showOnHomepage: editingCourse.showOnHomepage ?? true,
         attachments: attachmentsToKeep,
       };
 
@@ -766,6 +770,9 @@ const Courses: React.FC = () => {
                     وضعیت
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    صفحه اصلی
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     تاریخ ایجاد
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -827,6 +834,15 @@ const Courses: React.FC = () => {
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
                         {course.published ? 'منتشر شده' : 'پیش‌نویس'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        course.showOnHomepage !== false
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {course.showOnHomepage !== false ? '✓ نمایش' : '✗ مخفی'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -1102,16 +1118,29 @@ const Courses: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={newCourse.published}
-              onChange={(e) => setNewCourse({...newCourse, published: e.target.checked})}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label className="mr-2 block text-sm text-gray-900">
-              منتشر شده
-            </label>
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={newCourse.published}
+                onChange={(e) => setNewCourse({...newCourse, published: e.target.checked})}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label className="mr-2 block text-sm text-gray-900">
+                منتشر شده
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={newCourse.showOnHomepage}
+                onChange={(e) => setNewCourse({...newCourse, showOnHomepage: e.target.checked})}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label className="mr-2 block text-sm text-gray-900">
+                نمایش در صفحه اصلی
+              </label>
+            </div>
           </div>
           <div className="flex justify-end space-x-2 space-x-reverse pt-4">
             <button
@@ -1217,16 +1246,32 @@ const Courses: React.FC = () => {
               min="0"
             />
           </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              checked={editingCourse?.published || false}
-              onChange={(e) => setEditingCourse(prev => prev ? {...prev, published: e.target.checked} : null)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label className="mr-2 block text-sm text-gray-900">
-              منتشر شده
-            </label>
+          
+          <div className="border-t pt-4">
+            <div className="flex items-center space-x-4 space-x-reverse mb-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={editingCourse?.published || false}
+                  onChange={(e) => setEditingCourse(prev => prev ? {...prev, published: e.target.checked} : null)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="mr-2 block text-sm text-gray-900">
+                  منتشر شده
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={editingCourse?.showOnHomepage ?? true}
+                  onChange={(e) => setEditingCourse(prev => prev ? {...prev, showOnHomepage: e.target.checked} : null)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label className="mr-2 block text-sm text-gray-900">
+                  نمایش در صفحه اصلی
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="border-t pt-4">

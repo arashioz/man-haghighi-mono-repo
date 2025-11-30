@@ -217,7 +217,7 @@ async function resetOldUserData() {
 }
 
 function loadOldUsers(): { source: 'merged' | 'users.json'; records: NormalizedOldUser[] } {
-  const mergedPath = path.join(__dirname, '../moc-old-data/final_merged_data.json');
+  const mergedPath = path.join(__dirname, '../moc-old-data/final_merged_data_cleaned.json');
   const usersJsonPath = path.join(__dirname, '../moc-old-data/users.json');
 
   if (fs.existsSync(mergedPath)) {
@@ -232,7 +232,7 @@ function loadOldUsers(): { source: 'merged' | 'users.json'; records: NormalizedO
       });
     }
 
-    logSection('Source: final_merged_data.json');
+    logSection('Source: final_merged_data_cleaned.json');
     const metaTotalUsers = rawData.metadata?.total_users ?? records.length;
     const metaUsersWithProducts = rawData.metadata?.users_with_products ?? records.filter(r => (r.products?.length ?? 0) > 0).length;
     const metaProducts = rawData.metadata?.total_products ?? records.reduce((acc, user) => acc + (user.products?.length ?? 0), 0);
@@ -264,7 +264,7 @@ function loadOldUsers(): { source: 'merged' | 'users.json'; records: NormalizedO
     return { source: 'users.json', records };
   }
 
-  throw new Error('No old user data found. Place final_merged_data.json or users.json inside backend/moc-old-data.');
+  throw new Error('No old user data found. Place final_merged_data_cleaned.json or users.json inside backend/moc-old-data.');
 }
 
 async function findExistingUser(email: string | null, phone: string | null, username: string) {
