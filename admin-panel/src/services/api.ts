@@ -980,8 +980,26 @@ export const workshopsService = {
     return response.data;
   },
 
+  createWithThumbnail: async (formData: FormData): Promise<Workshop> => {
+    const response = await api.post('/workshops', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   update: async (id: string, data: Partial<Workshop>): Promise<Workshop> => {
     const response = await api.patch(`/workshops/${id}`, data);
+    return response.data;
+  },
+
+  updateWithThumbnail: async (id: string, formData: FormData): Promise<Workshop> => {
+    const response = await api.patch(`/workshops/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

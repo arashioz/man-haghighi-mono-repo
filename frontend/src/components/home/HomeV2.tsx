@@ -206,18 +206,36 @@ const HomeV2: React.FC<HomeV2Props> = ({
     return podcasts.slice(0, 6);
   }, [podcasts]);
 
-  // Hero slider state
+  // Hero slider state - use dynamic sliders from backend
   const [currentSlide, setCurrentSlide] = useState(0);
   const heroSlides = useMemo(() => {
-    const slideImages = [
+    // First, use sliders from backend
+    const backendSlides = sliders
+      .filter(s => s.isActive)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(s => {
+        if (s.videoFile) {
+          return { type: 'video' as const, source: getImageUrl(s.videoFile) || '', poster: getImageUrl(s.image) || '', data: s };
+        }
+        return { type: 'image' as const, source: getImageUrl(s.image) || '', data: s };
+      })
+      .filter(s => s.source);
+    
+    if (backendSlides.length > 0) {
+      return backendSlides;
+    }
+    
+    // Fallback to curated assets
+    const fallbackSlides = [
       curatedAssets.heroImage,
       curatedAssets.gallery[1],
       curatedAssets.gallery[2],
       curatedAssets.gallery[3],
       curatedAssets.missionImage,
-    ];
-    return slideImages.filter(Boolean);
-  }, []);
+    ].filter(Boolean);
+    
+    return fallbackSlides.map(img => ({ type: 'image' as const, source: img as string }));
+  }, [sliders]);
 
   // Auto-rotate hero slider
   useEffect(() => {
@@ -392,30 +410,50 @@ const HomeV2: React.FC<HomeV2Props> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#040404] text-white" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
       {/* Hero Slider Section */}
       <section className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0">
           {/* Slider Background Images */}
-          {heroSlides.map((slide, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0 }}
-              animate={{
-                opacity: currentSlide === index ? 1 : 0,
-                scale: currentSlide === index ? 1 : 1.1,
-              }}
-              transition={{ duration: 1.5, ease: 'easeInOut' }}
-              className="absolute inset-0"
-            >
-              <img
-                src={slide}
-                alt={`Hero slide ${index + 1}`}
-                className="h-full w-full object-cover"
-              />
-            </motion.div>
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-b from-black via-black/70 to-[#040404]" />
+          {heroSlides.map((slide, index) => {
+            const slideSrc = typeof slide === 'string' ? slide : (slide as any).source;
+            const isVideo = typeof slide !== 'string' && (slide as any).type === 'video';
+            const slideData = typeof slide !== 'string' ? (slide as any).data : null;
+            const slidePoster = typeof slide !== 'string' && isVideo ? (slide as any).poster : undefined;
+            
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: currentSlide === index ? 1 : 0,
+                  scale: currentSlide === index ? 1 : 1.1,
+                }}
+                transition={{ duration: 1.5, ease: 'easeInOut' }}
+                className="absolute inset-0"
+              >
+                {isVideo && slideSrc ? (
+                  <video
+                    key={slideSrc}
+                    src={slideSrc}
+                    poster={slidePoster}
+                    className="h-full w-full object-cover"
+                    autoPlay={currentSlide === index}
+                    loop
+                    muted
+                    playsInline
+                  />
+                ) : slideSrc ? (
+                  <img
+                    src={slideSrc}
+                    alt={slideData?.title || `Hero slide ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </motion.div>
+            );
+          })}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-[#0a0a0a]" />
           
           {/* Slider Indicators */}
           {heroSlides.length > 1 && (
@@ -436,32 +474,46 @@ const HomeV2: React.FC<HomeV2Props> = ({
           )}
         </div>
 
-        <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-start gap-12 px-4 pb-24 pt-20 sm:px-8 sm:pt-24">
+        <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-start gap-8 px-4 pb-16 pt-16 sm:px-8 sm:pt-20">
           <motion.div variants={stagger} initial="hidden" animate="visible">
-            <motion.span
-              className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.6em] text-yellow-400"
-              variants={fadeUp}
-            >
-              <span>نسخه ۲</span>
-              <span className="h-1 w-1 rounded-full bg-yellow-400" />
-              <span>Engine Transformation</span>
-            </motion.span>
-            <motion.h1
-              variants={fadeUp}
-              className="mt-6 text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl text-right"
-            >
-              Engine Transformation 2.0
-              <br />
-              <span className="text-white/70">برای جهش سینمایی و برتری طلایی طراحی شده است</span>
-            </motion.h1>
-            <motion.p
-              variants={fadeUp}
-              className="mt-6 max-w-3xl text-lg text-white/70 sm:text-xl text-right"
-            >
-              ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار:
-              تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این Engine مخصوص توست برای تجربه یک برتری واقعی،
-              برای ساختن نسخه بهتر از خودت، ایجاد تغییر، ایجاد تحول و ساخت آینده‌ای که مدت‌ها منتظرش بودی.
-            </motion.p>
+            {/* Get hero content from current slider */}
+            {(() => {
+              const currentSlider = heroSlides.length > 0 && typeof heroSlides[currentSlide] !== 'string' 
+                ? (heroSlides[currentSlide] as any).data 
+                : sliders[currentSlide] || sliders[0];
+              const heroTitle = currentSlider?.title || 'Engine Transformation 2.0';
+              const heroSubtitle = currentSlider?.description || 'برای جهش سینمایی و برتری طلایی طراحی شده است';
+              const heroDescription = currentSlider?.description || 'ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار: تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این Engine مخصوص توست برای تجربه یک برتری واقعی، برای ساختن نسخه بهتر از خودت، ایجاد تغییر، ایجاد تحول و ساخت آینده‌ای که مدت‌ها منتظرش بودی.';
+              
+              return (
+                <>
+                  <motion.span
+                    className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.6em] text-yellow-400"
+                    variants={fadeUp}
+                  >
+                    <span>نسخه ۲</span>
+                    <span className="h-1 w-1 rounded-full bg-yellow-400" />
+                    <span>Engine Transformation</span>
+                  </motion.span>
+                  <motion.h1
+                    key={currentSlide}
+                    variants={fadeUp}
+                    className="mt-6 text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl text-right"
+                  >
+                    {heroTitle}
+                    <br />
+                    <span className="text-white/70">{heroSubtitle}</span>
+                  </motion.h1>
+                  <motion.p
+                    key={`desc-${currentSlide}`}
+                    variants={fadeUp}
+                    className="mt-6 max-w-3xl text-lg text-white/70 sm:text-xl text-right"
+                  >
+                    {heroDescription}
+                  </motion.p>
+                </>
+              );
+            })()}
             <motion.div className="mt-8 flex flex-wrap gap-4" variants={fadeUp}>
               <button
                 onClick={handlePrimaryCta}
@@ -500,9 +552,9 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </div>
       </section>
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-24 sm:px-8">
+      <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8">
         {/* Events that liberate - Animated Slider */}
-        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images */}
           <div className="absolute inset-0">
             {curatedAssets.gallery.slice(0, 3).map((img, idx) => (
@@ -558,7 +610,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   >
                     {featuredWorkshops.map((workshop, index) => {
                       if (index !== currentEventIndex) return null;
-                      const bgImage = curatedAssets.gallery[index % curatedAssets.gallery.length];
+                      const defaultImage = curatedAssets.gallery[index % curatedAssets.gallery.length];
+                      const bgImage = workshop.thumbnail 
+                        ? getImageUrlWithFallback(workshop.thumbnail, defaultImage)
+                        : defaultImage;
                       
                       return (
                         <div
@@ -677,7 +732,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </section>
 
         {/* Master every area of your life - Video Section */}
-        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images with Parallax */}
           <div className="absolute inset-0">
             {curatedAssets.mentorImages.slice(0, 2).map((img, idx) => (
@@ -704,7 +759,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.3 }}
-              className="grid lg:grid-cols-2 gap-12 items-center"
+              className="grid lg:grid-cols-2 gap-8 items-center"
             >
               <motion.div variants={fadeUp} className="space-y-6">
                 <motion.p
@@ -776,7 +831,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <motion.div
             variants={stagger}
             initial="hidden"
@@ -818,7 +873,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </section>
 
         {/* Robbins equals results */}
-        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images */}
           <div className="absolute inset-0">
             {curatedAssets.gallery.slice(0, 2).map((img, idx) => (
@@ -950,7 +1005,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </section>
 
         {/* About · Mission - Enhanced with Background */}
-        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images */}
           <div className="absolute inset-0">
             <motion.div
@@ -969,7 +1024,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <motion.div
                 variants={stagger}
                 initial="hidden"
@@ -1042,7 +1097,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <motion.div
               variants={stagger}
@@ -1115,7 +1170,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="mb-10 flex flex-col gap-4">
             <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
               گالری
@@ -1207,7 +1262,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               </div>
 
               {featuredPodcasts.length > 0 ? (
-                <ul className="grid grid-cols-1 items-center gap-12 rounded-2xl bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 p-5 md:p-10 lg:grid-cols-2">
+                <ul className="grid grid-cols-1 items-center gap-8 rounded-2xl bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 p-5 md:p-8 lg:grid-cols-2">
                   {/* Featured Player - First Podcast */}
                   <li className="mx-auto flex max-w-md flex-col items-center space-y-8 p-4">
                     {featuredPodcasts[0] && (() => {
@@ -1552,8 +1607,127 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </section>
 
 
+        {/* Courses Section */}
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <div className="mb-10 flex flex-col gap-4">
+              <motion.p
+                variants={fadeUp}
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+              >
+                دوره‌های آموزشی
+              </motion.p>
+              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
+                برنامه‌های تحول
+              </motion.h2>
+              <motion.p variants={fadeUp} className="max-w-3xl text-base text-white/70 text-right">
+                مجموعه دوره‌های عمیق و کاربردی ما که برای جهش شخصی و حرفه‌ای طراحی شده‌اند.
+                هر دوره یک سفر کامل برای ساخت نسخه بهتر از خودت.
+              </motion.p>
+            </div>
+            {courses.length > 0 ? (
+              <div className="grid gap-6 md:grid-cols-3">
+                {courses.slice(0, 6).map((course, index) => {
+                  const courseImage = course.thumbnail 
+                    ? getImageUrlWithFallback(course.thumbnail, curatedAssets.gallery[index % curatedAssets.gallery.length])
+                    : curatedAssets.gallery[index % curatedAssets.gallery.length];
+                  
+                  return (
+                    <motion.div
+                      key={course.id}
+                      variants={fadeUp}
+                      whileHover={{ y: -8, scale: 1.02 }}
+                      onClick={() => navigate(`/courses/${course.id}`)}
+                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                    >
+                      <div className="relative h-56 overflow-hidden">
+                        <img
+                          src={courseImage}
+                          alt={course.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                        <div className="absolute top-4 right-4">
+                          <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                            دوره
+                          </span>
+                        </div>
+                        {course.price > 0 && (
+                          <div className="absolute bottom-4 left-4">
+                            <span className="px-3 py-1 bg-black/60 backdrop-blur rounded-full text-xs font-semibold text-white">
+                              {course.price.toLocaleString()} تومان
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                          {course.title}
+                        </h3>
+                        {course.description && (
+                          <p className="text-sm text-white/70 mb-4 line-clamp-3 leading-relaxed">
+                            {course.description}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                          <div className="flex items-center gap-4 text-xs text-white/60">
+                            {course.videos && course.videos.length > 0 && (
+                              <span>{course.videos.length} ویدیو</span>
+                            )}
+                            {course.audios && course.audios.length > 0 && (
+                              <span>{course.audios.length} فایل صوتی</span>
+                            )}
+                          </div>
+                          <svg
+                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17 8l4 4m0 0l-4 4m4-4H3"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+                <p className="text-white/60">دوره‌ای برای نمایش وجود ندارد</p>
+                <button
+                  onClick={() => navigate('/courses')}
+                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                >
+                  مشاهده همه دوره‌ها
+                </button>
+              </div>
+            )}
+            {courses.length > 6 && (
+              <motion.div variants={fadeUp} className="mt-8 text-center">
+                <button
+                  onClick={() => navigate('/courses')}
+                  className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                >
+                  مشاهده همه دوره‌ها
+                </button>
+              </motion.div>
+            )}
+          </motion.div>
+        </section>
+
         {/* Articles Section */}
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <motion.div
             variants={stagger}
             initial="hidden"
@@ -1649,7 +1823,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </motion.div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="mb-10 flex flex-col gap-4">
             <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
               نظرات
@@ -1678,7 +1852,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        <section className="border-t border-white/10 py-16 sm:py-24">
+        <section className="border-t border-white/10 py-12 sm:py-16">
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -1710,12 +1884,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:border-white hover:bg-white/10"
                 >
                   کاوش برنامه‌ها
-                </button>
-                <button
-                  onClick={onBackToClassic}
-                  className="rounded-full border border-white/20 px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-white/70 transition hover:border-white/60 hover:text-white"
-                >
-                  بازگشت به نسخه کلاسیک
                 </button>
               </div>
             </div>

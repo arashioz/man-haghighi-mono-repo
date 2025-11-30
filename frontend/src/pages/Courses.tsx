@@ -1,8 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, Variants } from 'framer-motion';
 import { coursesService } from '../services/api';
 import { Course } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { getImageUrl, getImageUrlWithFallback } from '../utils/imageUtils';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8 },
+  },
+} satisfies Variants;
+
+const stagger = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
+  },
+} satisfies Variants;
+
+const curatedAssets = {
+  gallery: [
+    '/assets/homeV2/Qodrat Namahdood5.jpg',
+    '/assets/homeV2/Pedar Nakhodagah6.jpg',
+    '/assets/homeV2/Cast box Cover6.jpg',
+    '/assets/homeV2/Emotional Podcast2.jpg',
+  ],
+};
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -26,12 +52,16 @@ const Courses: React.FC = () => {
   }, []);
 
   if (loading) {
-    return <LoadingSpinner size="lg" />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400"></div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded max-w-md">
           {error}
         </div>
@@ -40,62 +70,128 @@ const Courses: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">همه دوره‌ها</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            مجموعه جامع دوره‌های آموزشی ما را کشف کنید که برای یادگیری و رشد شما طراحی شده‌اند.
-          </p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
+      {/* Hero Section */}
+      <section className="relative min-h-[60vh] overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-[#0a0a0a]" />
+        <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-8 sm:py-32">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
+            className="text-center"
+          >
+            <motion.p
+              variants={fadeUp}
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+            >
+              دوره‌های آموزشی
+            </motion.p>
+            <motion.h1
+              variants={fadeUp}
+              className="text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl mb-6"
+            >
+              برنامه‌های تحول
+            </motion.h1>
+            <motion.p
+              variants={fadeUp}
+              className="max-w-3xl mx-auto text-lg text-white/70 sm:text-xl"
+            >
+              مجموعه دوره‌های عمیق و کاربردی ما که برای جهش شخصی و حرفه‌ای طراحی شده‌اند.
+              هر دوره یک سفر کامل برای ساخت نسخه بهتر از خودت.
+            </motion.p>
+          </motion.div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {courses.map((course) => (
-            <div key={course.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              {course.thumbnail && (
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  {course.title}
-                </h3>
-                {course.description && (
-                  <p className="text-gray-600 mb-4 line-clamp-3">
-                    {course.description}
-                  </p>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-2xl font-bold text-indigo-600">
-                    {course.price.toLocaleString()} تومان
-                  </span>
-                  <button
+      {/* Courses Grid */}
+      <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8">
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          {courses.length > 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+            >
+              {courses.map((course, index) => {
+                const courseImage = course.thumbnail 
+                  ? getImageUrlWithFallback(course.thumbnail, curatedAssets.gallery[index % curatedAssets.gallery.length])
+                  : curatedAssets.gallery[index % curatedAssets.gallery.length];
+                
+                return (
+                  <motion.div
+                    key={course.id}
+                    variants={fadeUp}
+                    whileHover={{ y: -8, scale: 1.02 }}
                     onClick={() => navigate(`/courses/${course.id}`)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
+                    className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
                   >
-                    مشاهده جزئیات
-                  </button>
-                </div>
-              </div>
+                    <div className="relative h-56 overflow-hidden">
+                      <img
+                        src={courseImage}
+                        alt={course.title}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                      <div className="absolute top-4 right-4">
+                        <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                          دوره
+                        </span>
+                      </div>
+                      {course.price > 0 && (
+                        <div className="absolute bottom-4 left-4">
+                          <span className="px-3 py-1 bg-black/60 backdrop-blur rounded-full text-xs font-semibold text-white">
+                            {typeof course.price === 'number' ? course.price.toLocaleString() : course.price} تومان
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                        {course.title}
+                      </h3>
+                      {course.description && (
+                        <p className="text-sm text-white/70 mb-4 line-clamp-3 leading-relaxed">
+                          {course.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <div className="flex items-center gap-4 text-xs text-white/60">
+                          {course.videos && course.videos.length > 0 && (
+                            <span>{course.videos.length} ویدیو</span>
+                          )}
+                          {course.audios && course.audios.length > 0 && (
+                            <span>{course.audios.length} فایل صوتی</span>
+                          )}
+                        </div>
+                        <svg
+                          className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 8l4 4m0 0l-4 4m4-4H3"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          ) : (
+            <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+              <p className="text-white/60 mb-4">دوره‌ای برای نمایش وجود ندارد</p>
             </div>
-          ))}
-        </div>
-
-        {courses.length === 0 && (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">دوره‌ای موجود نیست</h3>
-              <p className="text-gray-600">لطفاً بعداً برای دوره‌های جدید بررسی کنید.</p>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 };

@@ -73,6 +73,13 @@ export class CoursesController {
     return this.coursesService.findPublished();
   }
 
+  @Get('homepage')
+  @ApiOperation({ summary: 'Get courses for homepage (published and showOnHomepage)' })
+  @ApiResponse({ status: 200, description: 'Homepage courses retrieved successfully' })
+  async findForHomepage() {
+    return this.coursesService.findForHomepage();
+  }
+
   @Get('my-courses')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

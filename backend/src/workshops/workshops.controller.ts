@@ -17,11 +17,36 @@ export class WorkshopsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SALES_MANAGER')
+  @UseInterceptors(FilesInterceptor('thumbnail', 1, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `workshop-thumbnail-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'), false);
+      }
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create a new workshop' })
   @ApiResponse({ status: 201, description: 'Workshop created successfully' })
-  async create(@Body() createWorkshopDto: CreateWorkshopDto) {
-    return this.workshopsService.create(createWorkshopDto);
+  async create(
+    @Body() createWorkshopDto: CreateWorkshopDto,
+    @UploadedFiles() files: { thumbnail?: Express.Multer.File[] }
+  ) {
+    return this.workshopsService.create(createWorkshopDto, files);
   }
 
   @Get()
@@ -58,11 +83,37 @@ export class WorkshopsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SALES_MANAGER')
+  @UseInterceptors(FilesInterceptor('thumbnail', 1, {
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+        cb(null, uploadPath);
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        cb(null, `workshop-thumbnail-${uniqueSuffix}${ext}`);
+      },
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'), false);
+      }
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
   @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update workshop' })
   @ApiResponse({ status: 200, description: 'Workshop updated successfully' })
-  async update(@Param('id') id: string, @Body() updateWorkshopDto: UpdateWorkshopDto) {
-    return this.workshopsService.update(id, updateWorkshopDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateWorkshopDto: UpdateWorkshopDto,
+    @UploadedFiles() files: { thumbnail?: Express.Multer.File[] }
+  ) {
+    return this.workshopsService.update(id, updateWorkshopDto, files);
   }
 
   @Patch(':id/videos')

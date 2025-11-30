@@ -57,6 +57,17 @@ export class CreateCourseDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
+
+  @ApiProperty({ example: true, description: 'Show course on homepage' })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true';
+    }
+    return value;
+  })
+  @IsOptional()
+  @IsBoolean()
+  showOnHomepage?: boolean;
 }
 
 export class UpdateCourseDto {
@@ -111,6 +122,17 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsBoolean()
   published?: boolean;
+
+  @ApiProperty({ example: true, description: 'Show course on homepage' })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true';
+    }
+    return value;
+  })
+  @IsOptional()
+  @IsBoolean()
+  showOnHomepage?: boolean;
 }
 
 export class EnrollCourseDto {

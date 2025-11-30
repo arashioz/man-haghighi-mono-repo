@@ -339,20 +339,21 @@ async function main() {
   }
   console.log(`✅ ${audios.length} audios processed`);
 
-  // ✅ 10. Seed old users and courses using seed-old-data.ts
+  // ✅ 10. Seed old users using import-old-users.ts
   const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
+  const cleanedUsersPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data_cleaned.json');
   const usersJsonPath = path.join(process.cwd(), 'moc-old-data', 'users.json');
   
-  if (fs.existsSync(jsonPath) || fs.existsSync(usersJsonPath)) {
+  if (fs.existsSync(cleanedUsersPath) || fs.existsSync(jsonPath) || fs.existsSync(usersJsonPath)) {
     console.log('');
-    console.log('🔄 Importing old users and creating legacy courses...');
+    console.log('🔄 Importing old users using import-old-users.ts...');
     try {
-      // Import old users using seed-old-data.ts
+      // Import old users using import-old-users.ts
       // This will:
-      // 1. Import old users with their products
+      // 1. Import users with their products
       // 2. Create legacy courses from old products
       // 3. Enroll users in their legacy courses
-      execSync('npx ts-node prisma/seed-old-data.ts', { stdio: 'inherit' });
+      execSync('npx ts-node scripts/import-old-users.ts', { stdio: 'inherit', cwd: process.cwd() });
       console.log('✅ Old users and legacy courses imported successfully');
     } catch (error: any) {
       console.log('⚠️  Could not import old users:', error.message || error);
@@ -361,7 +362,7 @@ async function main() {
   } else {
     console.log('');
     console.log('⚠️  Old users data file not found, skipping old users import');
-    console.log('   Looking for: final_merged_data.json or users.json in moc-old-data folder');
+    console.log('   Looking for: final_merged_data_cleaned.json, final_merged_data.json or users.json in moc-old-data folder');
   }
 
   console.log('');

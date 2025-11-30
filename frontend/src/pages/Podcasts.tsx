@@ -1,11 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import { motion, Variants } from 'framer-motion';
 import { podcastsService } from '../services/api';
 import { Podcast } from '../types';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.8 },
+  },
+} satisfies Variants;
+
+const stagger = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
+  },
+} satisfies Variants;
 
 const Podcasts: React.FC = () => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -22,17 +41,49 @@ const Podcasts: React.FC = () => {
     fetchPodcasts();
   }, []);
 
+  const handlePlayPause = (podcast: Podcast) => {
+    const audioUrl = podcast.streamUrl || (podcast.audioFile ? `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${podcast.audioFile}` : null);
+    
+    if (!audioUrl) {
+      alert('فایل صوتی در دسترس نیست');
+      return;
+    }
+
+    if (currentPlayingId === podcast.id) {
+      if (audioRef) {
+        if (audioRef.paused) {
+          audioRef.play();
+        } else {
+          audioRef.pause();
+        }
+      }
+    } else {
+      if (audioRef) {
+        audioRef.pause();
+      }
+      const newAudio = new Audio(audioUrl);
+      newAudio.play();
+      setAudioRef(newAudio);
+      setCurrentPlayingId(podcast.id);
+      
+      newAudio.onended = () => {
+        setCurrentPlayingId(null);
+        setAudioRef(null);
+      };
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded max-w-md">
           {error}
         </div>
@@ -41,68 +92,84 @@ const Podcasts: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">پادکست‌ها</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            گوش دهید به آخرین قسمت‌های پادکست ما و دانش خود را گسترش دهید.
-          </p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
+      {/* Hero Section */}
+      <section className="relative min-h-[60vh] overflow-hidden border-b border-white/10">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-[#0a0a0a]" />
+        <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-8 sm:py-32">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
+            className="text-center"
+          >
+            <motion.p
+              variants={fadeUp}
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+            >
+              پادکست‌ها
+            </motion.p>
+            <motion.h1
+              variants={fadeUp}
+              className="text-4xl font-black uppercase leading-tight sm:text-5xl lg:text-6xl mb-6"
+            >
+              پادکست‌های پرانرژی
+            </motion.h1>
+            <motion.p
+              variants={fadeUp}
+              className="max-w-3xl mx-auto text-lg text-white/70 sm:text-xl"
+            >
+              گوش دهید به آخرین قسمت‌های پادکست ما و دانش خود را گسترش دهید.
+              هر اپیزود یک سفر صوتی برای تحول و رشد.
+            </motion.p>
+          </motion.div>
         </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {podcasts.map((podcast) => (
-            <div key={podcast.id} className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mr-4">
-                  <svg className="w-6 h-6 text-indigo-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {podcast.title}
-                  </h3>
-                  {podcast.duration && (
-                    <p className="text-sm text-gray-500">
-                      {Math.floor(podcast.duration / 60)} دقیقه
-                    </p>
-                  )}
-                </div>
-              </div>
-              {podcast.description && (
-                <p className="text-gray-600 mb-4 line-clamp-2">
-                  {podcast.description}
-                </p>
-              )}
-              <audio controls className="w-full mb-4">
-                <source
-                  src={podcast.streamUrl ?? (podcast.audioFile ?? undefined)}
-                  type="audio/mpeg"
-                />
-                مرورگر شما از پخش صدا پشتیبانی نمی‌کند.
-              </audio>
-              {podcast.publishedAt && (
-                <p className="text-sm text-gray-500">
-                  منتشر شده در {new Date(podcast.publishedAt).toLocaleDateString('fa-IR')}
-                </p>
-              )}
+      {/* Podcasts Grid */}
+      <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8">
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          {podcasts.length > 0 ? (
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+            >
+              {podcasts.map((podcast) => (
+                <motion.div
+                  key={podcast.id}
+                  variants={fadeUp}
+                  whileHover={{ y: -8, scale: 1.02 }}
+                  className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                >
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                      {podcast.title}
+                    </h3>
+                    {podcast.description && (
+                      <p className="text-sm text-white/70 mb-4 line-clamp-3 leading-relaxed">
+                        {podcast.description}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => handlePlayPause(podcast)}
+                      className="w-full mt-4 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                    >
+                      {currentPlayingId === podcast.id ? '⏸ توقف' : '▶ پخش'}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+              <p className="text-white/60 mb-4">پادکستی برای نمایش وجود ندارد</p>
             </div>
-          ))}
-        </div>
-
-        {podcasts.length === 0 && (
-          <div className="text-center py-12">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">پادکستی موجود نیست</h3>
-              <p className="text-gray-600">لطفاً بعداً برای قسمت‌های جدید بررسی کنید.</p>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 };

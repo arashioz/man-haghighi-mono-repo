@@ -10,9 +10,18 @@ export class WorkshopsService {
     private urlService: UrlService,
   ) {}
 
-  async create(createWorkshopDto: CreateWorkshopDto) {
-    return this.prisma.workshop.create({
-      data: createWorkshopDto,
+  async create(createWorkshopDto: CreateWorkshopDto, files?: { thumbnail?: Express.Multer.File[] }) {
+    const thumbnailUrl = files?.thumbnail?.[0] 
+      ? this.urlService.getFileUrl(files.thumbnail[0].filename)
+      : createWorkshopDto.thumbnail;
+
+    const data = {
+      ...createWorkshopDto,
+      thumbnail: thumbnailUrl,
+    };
+
+    const workshop = await this.prisma.workshop.create({
+      data,
       include: {
         creator: {
           select: {
@@ -36,10 +45,15 @@ export class WorkshopsService {
         },
       },
     });
+
+    return {
+      ...workshop,
+      thumbnail: workshop.thumbnail ? this.urlService.getFileUrl(workshop.thumbnail) : null,
+    };
   }
 
   async findAll() {
-    return this.prisma.workshop.findMany({
+    const workshops = await this.prisma.workshop.findMany({
       include: {
         creator: {
           select: {
@@ -66,10 +80,15 @@ export class WorkshopsService {
         createdAt: 'desc',
       },
     });
+    
+    return workshops.map(workshop => ({
+      ...workshop,
+      thumbnail: workshop.thumbnail ? this.urlService.getFileUrl(workshop.thumbnail) : null,
+    }));
   }
 
   async findActive() {
-    return this.prisma.workshop.findMany({
+    const workshops = await this.prisma.workshop.findMany({
       where: {
         isActive: true,
       },
@@ -99,6 +118,11 @@ export class WorkshopsService {
         createdAt: 'desc',
       },
     });
+    
+    return workshops.map(workshop => ({
+      ...workshop,
+      thumbnail: workshop.thumbnail ? this.urlService.getFileUrl(workshop.thumbnail) : null,
+    }));
   }
 
   async findOne(id: string) {
@@ -132,15 +156,27 @@ export class WorkshopsService {
       throw new NotFoundException('Workshop not found');
     }
 
-    return workshop;
+    return {
+      ...workshop,
+      thumbnail: workshop.thumbnail ? this.urlService.getFileUrl(workshop.thumbnail) : null,
+    };
   }
 
-  async update(id: string, updateWorkshopDto: UpdateWorkshopDto) {
-    const workshop = await this.findOne(id);
+  async update(id: string, updateWorkshopDto: UpdateWorkshopDto, files?: { thumbnail?: Express.Multer.File[] }) {
+    await this.findOne(id);
     
-    return this.prisma.workshop.update({
+    const thumbnailUrl = files?.thumbnail?.[0] 
+      ? this.urlService.getFileUrl(files.thumbnail[0].filename)
+      : updateWorkshopDto.thumbnail;
+
+    const data = {
+      ...updateWorkshopDto,
+      ...(thumbnailUrl !== undefined && { thumbnail: thumbnailUrl }),
+    };
+
+    const updatedWorkshop = await this.prisma.workshop.update({
       where: { id },
-      data: updateWorkshopDto,
+      data,
       include: {
         creator: {
           select: {
@@ -164,6 +200,11 @@ export class WorkshopsService {
         },
       },
     });
+
+    return {
+      ...updatedWorkshop,
+      thumbnail: updatedWorkshop.thumbnail ? this.urlService.getFileUrl(updatedWorkshop.thumbnail) : null,
+    };
   }
 
   async remove(id: string) {

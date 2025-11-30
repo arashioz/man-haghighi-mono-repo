@@ -233,6 +233,33 @@ export class CoursesService {
     return this.urlService.processCoursesData(courses);
   }
 
+  async findForHomepage() {
+    const courses = await this.prisma.course.findMany({
+      where: { 
+        published: true,
+        showOnHomepage: true 
+      },
+      include: {
+        videos: {
+          where: { published: true },
+          orderBy: { order: 'asc' },
+        },
+        audios: {
+          where: { published: true },
+          orderBy: { order: 'asc' },
+        },
+        _count: {
+          select: {
+            enrollments: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return this.urlService.processCoursesData(courses);
+  }
+
   async findOne(id: string) {
     const course = await this.prisma.course.findUnique({
       where: { id },

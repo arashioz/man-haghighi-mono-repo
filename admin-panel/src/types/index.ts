@@ -29,6 +29,7 @@ export interface Workshop {
   location?: string;
   maxParticipants?: number;
   price: number;
+  thumbnail?: string;
   isActive: boolean;
   createdBy: string;
   createdAt: string;
@@ -127,6 +128,7 @@ export interface Course {
   attachmentFiles?: string[];
   courseVideoFiles?: string[];
   published: boolean;
+  showOnHomepage?: boolean;
   createdAt: string;
   updatedAt: string;
   videos?: Video[];

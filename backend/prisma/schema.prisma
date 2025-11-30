@@ -187,6 +187,7 @@ model Course {
   attachments String[] // فایل‌های ضمیمه (PDF, DOC, etc.)
   courseVideos String[] // لیست ویدیوهای دوره (تا 20 ویدیو)
   published   Boolean  @default(false)
+  showOnHomepage Boolean @default(true) // نمایش در صفحه اصلی سایت
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
