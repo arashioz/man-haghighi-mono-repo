@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Alternative port configuration to bypass firewalls
 # Try using different ports that might not be blocked
 
