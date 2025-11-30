@@ -1,5 +1,5 @@
 # Admin Panel Dockerfile
-FROM node:18-alpine AS builder
+FROM node:18-alpine3.19 AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,8 @@ ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 
 # Production stage with nginx
-FROM nginx:alpine
+# Using specific tag to avoid rate limiting issues
+FROM nginx:1.25-alpine
 
 # Copy built files
 COPY --from=builder /app/build /usr/share/nginx/html
