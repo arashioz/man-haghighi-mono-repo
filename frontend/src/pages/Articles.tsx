@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import { articlesService } from '../services/api';
 import { Article } from '../types';
 import { getImageUrl, getImageUrlWithFallback } from '../utils/imageUtils';
@@ -10,9 +10,9 @@ const fadeUp = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, ease: 'easeOut' },
+    transition: { duration: 0.8 },
   },
-};
+} satisfies Variants;
 
 const stagger = {
   hidden: {},
