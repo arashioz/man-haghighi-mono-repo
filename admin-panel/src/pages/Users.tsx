@@ -37,7 +37,8 @@ const Users: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(50);
-  const [roleFilter, setRoleFilter] = useState<string>('');
+  // این صفحه فقط برای «کاربران عادی سایت» است، پس نقش را روی USER قفل می‌کنیم
+  const [roleFilter, setRoleFilter] = useState<string>('USER');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
@@ -94,7 +95,8 @@ const Users: React.FC = () => {
           page: currentPage, 
           limit: itemsPerPage, 
           search: debouncedSearchTerm,
-          role: roleFilter || undefined 
+          // همیشه فقط کاربران عادی (USER) را دریافت می‌کنیم
+          role: 'USER',
         });
         
         setUsers(usersResponse.data);
@@ -370,9 +372,10 @@ const Users: React.FC = () => {
     setCurrentPage(1); // Reset to first page when searching
   };
 
-  const handleRoleFilterChange = (value: string) => {
-    setRoleFilter(value);
-    setCurrentPage(1); // Reset to first page when filtering
+  // در این نسخه فقط کاربران عادی نمایش داده می‌شوند، پس تغییر نقش از طریق UI غیرفعال است
+  const handleRoleFilterChange = (_value: string) => {
+    setRoleFilter('USER');
+    setCurrentPage(1);
   };
 
   const getRoleBadge = (role: string) => {
@@ -525,16 +528,14 @@ const Users: React.FC = () => {
             </svg>
           </div>
         </div>
+        {/* این دراپ‌داون فقط جهت نمایش است و روی نقش USER قفل شده */}
         <select
           value={roleFilter}
           onChange={(e) => handleRoleFilterChange(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+          disabled
         >
-          <option value="">همه نقش‌ها</option>
-          <option value="USER">کاربر</option>
-          <option value="SALES_PERSON">فروشنده</option>
-          <option value="SALES_MANAGER">مدیر فروش</option>
-          <option value="ADMIN">مدیر</option>
+          <option value="USER">فقط کاربران عادی سایت</option>
         </select>
         {!loading && totalUsers > 0 && (
           <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
