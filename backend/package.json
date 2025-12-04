@@ -22,6 +22,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:seed:safe": "sh scripts/seed-with-migration.sh",
     "prisma:seed-old-data": "node prisma/seed-old-data.js",
     "import:old-users": "ts-node scripts/import-old-users.ts",
     "import:old-users-csv": "ts-node scripts/import-old-users-csv.ts",
