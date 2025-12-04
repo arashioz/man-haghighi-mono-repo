@@ -1,29 +1,97 @@
-import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-const prisma = new PrismaClient();
+// We'll import PrismaClient after migrations are applied
+let PrismaClient: any;
+let prisma: any;
 
 async function main() {
   console.log('🌱 Starting database seed...');
   
   // Ensure migrations are applied before seeding
   console.log('🔄 Ensuring migrations are applied...');
+  let migrationApplied = false;
+  
   try {
     execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-    execSync('npx prisma generate', { stdio: 'inherit' });
-    console.log('✅ Migrations applied successfully');
+    migrationApplied = true;
   } catch (error: any) {
     console.log('⚠️  Migration deploy failed, trying db push as fallback...');
     try {
       execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
-      execSync('npx prisma generate', { stdio: 'inherit' });
-      console.log('✅ Database schema synced successfully');
+      migrationApplied = true;
     } catch (pushError: any) {
-      console.log('⚠️  Could not sync database schema, continuing with seed...');
+      console.log('⚠️  Could not sync database schema, trying to add column manually...');
+      // Try to add the column manually if it doesn't exist
+      try {
+        const tempPrisma = new (require('@prisma/client').PrismaClient)();
+        await tempPrisma.$executeRaw`ALTER TABLE courses ADD COLUMN IF NOT EXISTS "showOnHomepage" BOOLEAN DEFAULT true`;
+        await tempPrisma.$disconnect();
+        migrationApplied = true;
+        console.log('✅ Column added manually');
+      } catch (manualError: any) {
+        console.log('⚠️  Could not add column manually, continuing with seed...');
+      }
     }
+  }
+  
+  // Always regenerate Prisma Client after migration attempts
+  try {
+    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('✅ Prisma Client regenerated');
+  } catch (generateError: any) {
+    console.log('⚠️  Could not regenerate Prisma Client, using existing...');
+  }
+  
+  // Now import PrismaClient after migrations and generate
+  // Clear the require cache to get the newly generated client
+  try {
+    delete require.cache[require.resolve('@prisma/client')];
+    const { PrismaClient: PrismaClientModule } = require('@prisma/client');
+    PrismaClient = PrismaClientModule;
+    prisma = new PrismaClient();
+  } catch (importError: any) {
+    // Fallback to regular import if require fails
+    const { PrismaClient: PrismaClientModule } = require('@prisma/client');
+    PrismaClient = PrismaClientModule;
+    prisma = new PrismaClient();
+  }
+  
+  if (migrationApplied) {
+    console.log('✅ Migrations applied successfully');
+  }
+  
+  // Verify that showOnHomepage column exists
+  try {
+    const columnCheck = await prisma.$queryRaw<Array<{ column_name: string }>>`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'courses' AND column_name = 'showOnHomepage'
+    `.catch(() => []);
+    
+    if (!columnCheck || columnCheck.length === 0) {
+      console.log('⚠️  showOnHomepage column not found, adding it manually...');
+      try {
+        await prisma.$executeRaw`ALTER TABLE courses ADD COLUMN "showOnHomepage" BOOLEAN DEFAULT true`;
+        console.log('✅ Column showOnHomepage added successfully');
+        // Regenerate Prisma Client again
+        execSync('npx prisma generate', { stdio: 'pipe' });
+        // Re-import Prisma Client
+        delete require.cache[require.resolve('@prisma/client')];
+        const { PrismaClient: PrismaClientModule } = require('@prisma/client');
+        PrismaClient = PrismaClientModule;
+        await prisma.$disconnect();
+        prisma = new PrismaClient();
+      } catch (addError: any) {
+        console.log('⚠️  Could not add column, continuing with seed using raw queries...');
+      }
+    } else {
+      console.log('✅ Column showOnHomepage exists');
+    }
+  } catch (checkError: any) {
+    console.log('⚠️  Could not verify column existence, continuing...');
   }
 
   // ✅ 1. Create Admin User
@@ -228,32 +296,97 @@ async function main() {
   const courses = [];
   for (const course of coursesData) {
     try {
-      // Use raw query to avoid schema mismatch issues
+      // Use raw query to check if course exists (to avoid schema mismatch)
       const existingRaw = await prisma.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM courses WHERE title = ${course.title} LIMIT 1
       `.catch(() => []);
       
       if (existingRaw && existingRaw.length > 0) {
-        // Try to fetch full course
+        // Course exists, fetch it using raw query to get all fields
         try {
-          const fullCourse = await prisma.course.findUnique({
-            where: { id: existingRaw[0].id },
-          });
-          if (fullCourse) {
-            courses.push(fullCourse);
+          const fullCourseRaw = await prisma.$queryRaw<Array<any>>`
+            SELECT * FROM courses WHERE id = ${existingRaw[0].id} LIMIT 1
+          `.catch(() => []);
+          
+          if (fullCourseRaw && fullCourseRaw.length > 0) {
+            // Convert raw result to course object
+            const courseObj = {
+              id: fullCourseRaw[0].id,
+              title: fullCourseRaw[0].title,
+              description: fullCourseRaw[0].description,
+              price: fullCourseRaw[0].price,
+              thumbnail: fullCourseRaw[0].thumbnail,
+              videoFile: fullCourseRaw[0].videoFile,
+              attachments: fullCourseRaw[0].attachments || [],
+              courseVideos: fullCourseRaw[0].courseVideos || [],
+              published: fullCourseRaw[0].published,
+              showOnHomepage: fullCourseRaw[0].showOnHomepage !== undefined ? fullCourseRaw[0].showOnHomepage : true,
+              createdAt: fullCourseRaw[0].createdAt,
+              updatedAt: fullCourseRaw[0].updatedAt,
+            };
+            courses.push(courseObj);
           }
         } catch (fetchError: any) {
-          // If schema mismatch, skip this course for now
-          console.log(`⚠️ Schema mismatch for course "${course.title}", skipping...`);
+          console.log(`⚠️ Could not fetch course "${course.title}", skipping...`);
         }
         continue;
       }
       
-      // Create new course - add showOnHomepage if it exists in schema
-      const courseData: any = { ...course };
-      // showOnHomepage will be added by default if migration is applied
-      const created = await prisma.course.create({ data: courseData });
-      courses.push(created);
+      // Create new course - use raw query to insert (to avoid schema mismatch)
+      try {
+        const courseData: any = { ...course };
+        // Add showOnHomepage with default value
+        courseData.showOnHomepage = true;
+        
+        // Use Prisma create if possible, otherwise use raw query
+        const created = await prisma.course.create({ data: courseData });
+        courses.push(created);
+      } catch (createError: any) {
+        // If create fails due to schema mismatch, use raw query
+        if (createError.code === 'P2022' || createError.message?.includes('showOnHomepage')) {
+          console.log(`⚠️ Schema mismatch detected, using raw query for "${course.title}"...`);
+          // First check if column exists, if not, add it
+          try {
+            await prisma.$executeRaw`ALTER TABLE courses ADD COLUMN IF NOT EXISTS "showOnHomepage" BOOLEAN DEFAULT true`;
+          } catch (alterError: any) {
+            // Column might already exist or we don't have permission
+          }
+          
+          // Now insert using raw query
+          const insertResult = await prisma.$queryRaw<Array<{ id: string }>>`
+            INSERT INTO courses (id, title, description, price, thumbnail, "videoFile", attachments, "courseVideos", published, "showOnHomepage", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, ${course.title}, ${course.description || null}, ${course.price}, ${course.thumbnail || null}, ${null}, ${JSON.stringify(course.attachments || [])}::jsonb, ${JSON.stringify(course.courseVideos || [])}::jsonb, ${course.published}, true, NOW(), NOW())
+            RETURNING id
+          `.catch(() => []);
+          
+          if (insertResult && insertResult.length > 0) {
+            // Fetch the created course
+            const createdRaw = await prisma.$queryRaw<Array<any>>`
+              SELECT * FROM courses WHERE id = ${insertResult[0].id} LIMIT 1
+            `.catch(() => []);
+            
+            if (createdRaw && createdRaw.length > 0) {
+              const courseObj = {
+                id: createdRaw[0].id,
+                title: createdRaw[0].title,
+                description: createdRaw[0].description,
+                price: createdRaw[0].price,
+                thumbnail: createdRaw[0].thumbnail,
+                videoFile: createdRaw[0].videoFile,
+                attachments: createdRaw[0].attachments || [],
+                courseVideos: createdRaw[0].courseVideos || [],
+                published: createdRaw[0].published,
+                showOnHomepage: createdRaw[0].showOnHomepage !== undefined ? createdRaw[0].showOnHomepage : true,
+                createdAt: createdRaw[0].createdAt,
+                updatedAt: createdRaw[0].updatedAt,
+              };
+              courses.push(courseObj);
+            }
+          }
+        } else {
+          throw createError;
+        }
+      }
     } catch (error: any) {
       console.log(`⚠️ Course "${course.title}" might already exist, skipping...`);
       // Try to find existing course using raw query
@@ -263,15 +396,26 @@ async function main() {
         `.catch(() => []);
         
         if (existingRaw && existingRaw.length > 0) {
-          try {
-            const fullCourse = await prisma.course.findUnique({
-              where: { id: existingRaw[0].id },
-            });
-            if (fullCourse) {
-              courses.push(fullCourse);
-            }
-          } catch (fetchError: any) {
-            console.log(`⚠️ Could not fetch course "${course.title}", skipping...`);
+          const fullCourseRaw = await prisma.$queryRaw<Array<any>>`
+            SELECT * FROM courses WHERE id = ${existingRaw[0].id} LIMIT 1
+          `.catch(() => []);
+          
+          if (fullCourseRaw && fullCourseRaw.length > 0) {
+            const courseObj = {
+              id: fullCourseRaw[0].id,
+              title: fullCourseRaw[0].title,
+              description: fullCourseRaw[0].description,
+              price: fullCourseRaw[0].price,
+              thumbnail: fullCourseRaw[0].thumbnail,
+              videoFile: fullCourseRaw[0].videoFile,
+              attachments: fullCourseRaw[0].attachments || [],
+              courseVideos: fullCourseRaw[0].courseVideos || [],
+              published: fullCourseRaw[0].published,
+              showOnHomepage: fullCourseRaw[0].showOnHomepage !== undefined ? fullCourseRaw[0].showOnHomepage : true,
+              createdAt: fullCourseRaw[0].createdAt,
+              updatedAt: fullCourseRaw[0].updatedAt,
+            };
+            courses.push(courseObj);
           }
         }
       } catch (findError: any) {
