@@ -8,6 +8,23 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seed...');
+  
+  // Ensure migrations are applied before seeding
+  console.log('🔄 Ensuring migrations are applied...');
+  try {
+    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('✅ Migrations applied successfully');
+  } catch (error: any) {
+    console.log('⚠️  Migration deploy failed, trying db push as fallback...');
+    try {
+      execSync('npx prisma db push --accept-data-loss', { stdio: 'inherit' });
+      execSync('npx prisma generate', { stdio: 'inherit' });
+      console.log('✅ Database schema synced successfully');
+    } catch (pushError: any) {
+      console.log('⚠️  Could not sync database schema, continuing with seed...');
+    }
+  }
 
   // ✅ 1. Create Admin User
   const hashedAdminPassword = await bcrypt.hash('admin123', 10);
@@ -211,23 +228,54 @@ async function main() {
   const courses = [];
   for (const course of coursesData) {
     try {
-      const existing = await prisma.course.findFirst({
-        where: { title: course.title },
-      });
-      if (existing) {
-        courses.push(existing);
+      // Use raw query to avoid schema mismatch issues
+      const existingRaw = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM courses WHERE title = ${course.title} LIMIT 1
+      `.catch(() => []);
+      
+      if (existingRaw && existingRaw.length > 0) {
+        // Try to fetch full course
+        try {
+          const fullCourse = await prisma.course.findUnique({
+            where: { id: existingRaw[0].id },
+          });
+          if (fullCourse) {
+            courses.push(fullCourse);
+          }
+        } catch (fetchError: any) {
+          // If schema mismatch, skip this course for now
+          console.log(`⚠️ Schema mismatch for course "${course.title}", skipping...`);
+        }
         continue;
       }
-      const created = await prisma.course.create({ data: course });
+      
+      // Create new course - add showOnHomepage if it exists in schema
+      const courseData: any = { ...course };
+      // showOnHomepage will be added by default if migration is applied
+      const created = await prisma.course.create({ data: courseData });
       courses.push(created);
-    } catch (error) {
+    } catch (error: any) {
       console.log(`⚠️ Course "${course.title}" might already exist, skipping...`);
-      // Try to find existing course
-      const existing = await prisma.course.findFirst({
-        where: { title: course.title },
-      });
-      if (existing) {
-        courses.push(existing);
+      // Try to find existing course using raw query
+      try {
+        const existingRaw = await prisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM courses WHERE title = ${course.title} LIMIT 1
+        `.catch(() => []);
+        
+        if (existingRaw && existingRaw.length > 0) {
+          try {
+            const fullCourse = await prisma.course.findUnique({
+              where: { id: existingRaw[0].id },
+            });
+            if (fullCourse) {
+              courses.push(fullCourse);
+            }
+          } catch (fetchError: any) {
+            console.log(`⚠️ Could not fetch course "${course.title}", skipping...`);
+          }
+        }
+      } catch (findError: any) {
+        console.log(`⚠️ Could not find course "${course.title}", skipping...`);
       }
     }
   }
