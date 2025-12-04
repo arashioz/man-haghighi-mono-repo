@@ -332,60 +332,49 @@ async function main() {
         continue;
       }
       
-      // Create new course - use raw query to insert (to avoid schema mismatch)
+      // Create new course - always use raw query to avoid schema mismatch
       try {
-        const courseData: any = { ...course };
-        // Add showOnHomepage with default value
-        courseData.showOnHomepage = true;
+        // First ensure showOnHomepage column exists
+        try {
+          await prisma.$executeRaw`ALTER TABLE courses ADD COLUMN IF NOT EXISTS "showOnHomepage" BOOLEAN DEFAULT true`;
+        } catch (alterError: any) {
+          // Column might already exist, that's fine
+        }
         
-        // Use Prisma create if possible, otherwise use raw query
-        const created = await prisma.course.create({ data: courseData });
-        courses.push(created);
-      } catch (createError: any) {
-        // If create fails due to schema mismatch, use raw query
-        if (createError.code === 'P2022' || createError.message?.includes('showOnHomepage')) {
-          console.log(`⚠️ Schema mismatch detected, using raw query for "${course.title}"...`);
-          // First check if column exists, if not, add it
-          try {
-            await prisma.$executeRaw`ALTER TABLE courses ADD COLUMN IF NOT EXISTS "showOnHomepage" BOOLEAN DEFAULT true`;
-          } catch (alterError: any) {
-            // Column might already exist or we don't have permission
-          }
-          
-          // Now insert using raw query
-          const insertResult = await prisma.$queryRaw<Array<{ id: string }>>`
-            INSERT INTO courses (id, title, description, price, thumbnail, "videoFile", attachments, "courseVideos", published, "showOnHomepage", "createdAt", "updatedAt")
-            VALUES (gen_random_uuid()::text, ${course.title}, ${course.description || null}, ${course.price}, ${course.thumbnail || null}, ${null}, ${JSON.stringify(course.attachments || [])}::jsonb, ${JSON.stringify(course.courseVideos || [])}::jsonb, ${course.published}, true, NOW(), NOW())
-            RETURNING id
+        // Insert using raw query to avoid Prisma Client schema issues
+        const insertResult = await prisma.$queryRaw<Array<{ id: string }>>`
+          INSERT INTO courses (id, title, description, price, thumbnail, "videoFile", attachments, "courseVideos", published, "showOnHomepage", "createdAt", "updatedAt")
+          VALUES (gen_random_uuid()::text, ${course.title}, ${course.description || null}, ${course.price}, ${course.thumbnail || null}, ${null}, ${JSON.stringify(course.attachments || [])}::jsonb, ${JSON.stringify(course.courseVideos || [])}::jsonb, ${course.published}, true, NOW(), NOW())
+          RETURNING id
+        `.catch(() => []);
+        
+        if (insertResult && insertResult.length > 0) {
+          // Fetch the created course using raw query
+          const createdRaw = await prisma.$queryRaw<Array<any>>`
+            SELECT * FROM courses WHERE id = ${insertResult[0].id} LIMIT 1
           `.catch(() => []);
           
-          if (insertResult && insertResult.length > 0) {
-            // Fetch the created course
-            const createdRaw = await prisma.$queryRaw<Array<any>>`
-              SELECT * FROM courses WHERE id = ${insertResult[0].id} LIMIT 1
-            `.catch(() => []);
-            
-            if (createdRaw && createdRaw.length > 0) {
-              const courseObj = {
-                id: createdRaw[0].id,
-                title: createdRaw[0].title,
-                description: createdRaw[0].description,
-                price: createdRaw[0].price,
-                thumbnail: createdRaw[0].thumbnail,
-                videoFile: createdRaw[0].videoFile,
-                attachments: createdRaw[0].attachments || [],
-                courseVideos: createdRaw[0].courseVideos || [],
-                published: createdRaw[0].published,
-                showOnHomepage: createdRaw[0].showOnHomepage !== undefined ? createdRaw[0].showOnHomepage : true,
-                createdAt: createdRaw[0].createdAt,
-                updatedAt: createdRaw[0].updatedAt,
-              };
-              courses.push(courseObj);
-            }
+          if (createdRaw && createdRaw.length > 0) {
+            const courseObj = {
+              id: createdRaw[0].id,
+              title: createdRaw[0].title,
+              description: createdRaw[0].description,
+              price: createdRaw[0].price,
+              thumbnail: createdRaw[0].thumbnail,
+              videoFile: createdRaw[0].videoFile,
+              attachments: createdRaw[0].attachments || [],
+              courseVideos: createdRaw[0].courseVideos || [],
+              published: createdRaw[0].published,
+              showOnHomepage: createdRaw[0].showOnHomepage !== undefined ? createdRaw[0].showOnHomepage : true,
+              createdAt: createdRaw[0].createdAt,
+              updatedAt: createdRaw[0].updatedAt,
+            };
+            courses.push(courseObj);
           }
-        } else {
-          throw createError;
         }
+      } catch (createError: any) {
+        console.log(`⚠️ Could not create course "${course.title}": ${createError.message}`);
+        // Continue to next course
       }
     } catch (error: any) {
       console.log(`⚠️ Course "${course.title}" might already exist, skipping...`);
