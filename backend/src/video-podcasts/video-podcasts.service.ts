@@ -173,6 +173,7 @@ export class VideoPodcastsService {
       this.logger.log(`File URL: ${fileUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
       this.logger.log(`=== End Video Podcast Log ===\n`);
+    }
     // External URLs are no longer allowed
 
     return this.processVideoPodcast(created);
