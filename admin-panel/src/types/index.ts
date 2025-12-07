@@ -216,3 +216,21 @@ export interface SalesTeamMember {
     phone?: string;
   };
 }
+
+export interface Log {
+  id: string;
+  level: 'LOG' | 'ERROR' | 'WARN' | 'DEBUG' | 'VERBOSE';
+  message: string;
+  context?: string;
+  method?: string;
+  url?: string;
+  statusCode?: number;
+  duration?: number;
+  userId?: string;
+  ip?: string;
+  userAgent?: string;
+  errorStack?: string;
+  requestBody?: any;
+  response?: any;
+  createdAt: string;
+}
