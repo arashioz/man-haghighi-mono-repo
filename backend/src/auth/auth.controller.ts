@@ -23,8 +23,11 @@ export class AuthController {
   @Post('login')
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
-  @ApiOperation({ summary: 'Login user (ADMIN only - uses password)' })
-  @ApiResponse({ status: 200, description: 'User logged in successfully' })
+  @ApiOperation({ 
+    summary: 'Login user with dual authentication',
+    description: 'Supports two authentication methods: 1) Username/password login (provide password), 2) OTP login (omit password, will send OTP to phone number)'
+  })
+  @ApiResponse({ status: 200, description: 'User logged in successfully (password) or OTP sent successfully (OTP flow)' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);

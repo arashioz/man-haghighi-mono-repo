@@ -17,7 +17,7 @@ export class RegisterDto {
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({ example: 'password123', required: false, description: 'Required only for ADMIN users' })
+  @ApiProperty({ example: 'password123', required: false, description: 'Optional password for all users. Required for ADMIN users.' })
   @IsOptional()
   @IsString()
   @MinLength(6)
@@ -65,15 +65,19 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'john@example.com or 09123456789' })
+  @ApiProperty({ example: 'john@example.com or 09123456789 or username' })
   @IsString()
   @IsNotEmpty()
   login: string;
 
-  @ApiProperty({ example: 'password123', description: 'Required for ADMIN users only' })
+  @ApiProperty({ 
+    example: 'password123', 
+    required: false,
+    description: 'Optional. If provided, login with username/password. If not provided, use OTP flow (phone required).' 
+  })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  password: string;
+  password?: string;
 }
 
 export class SendOtpDto {
