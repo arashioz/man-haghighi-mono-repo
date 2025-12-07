@@ -108,3 +108,40 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #6366f1 #f1f5f9;
 }
+
+/* Video controls RTL alignment */
+video {
+  direction: rtl;
+}
+
+video::-webkit-media-controls-panel {
+  direction: rtl;
+}
+
+video::-webkit-media-controls-play-button {
+  order: 1;
+}
+
+video::-webkit-media-controls-timeline {
+  order: 2;
+}
+
+video::-webkit-media-controls-current-time-display {
+  order: 3;
+}
+
+video::-webkit-media-controls-time-remaining-display {
+  order: 4;
+}
+
+video::-webkit-media-controls-mute-button {
+  order: 5;
+}
+
+video::-webkit-media-controls-volume-slider {
+  order: 6;
+}
+
+video::-webkit-media-controls-fullscreen-button {
+  order: 7;
+}

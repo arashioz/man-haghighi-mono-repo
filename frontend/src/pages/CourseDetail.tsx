@@ -108,7 +108,8 @@ const CourseDetail: React.FC = () => {
               {course.videoFile && (
                 <div className="w-full">
                   <video
-                    className="w-full h-auto max-h-[600px] bg-black"
+                    className="w-full h-auto max-h-[600px] bg-black [&::-webkit-media-controls-panel]:direction-rtl"
+                    style={{ direction: 'rtl' }}
                     controls
                     controlsList="nodownload"
                     preload="metadata"
@@ -209,8 +210,12 @@ const CourseDetail: React.FC = () => {
                           : 'border-white/10 opacity-75 bg-[#0a0a0a]'
                       }`}
                       onClick={isEnrolled ? () => {
-                        const audioUrl = `${API_ORIGIN}/uploads/${audio.audioFile}`;
-                        window.open(audioUrl, '_blank');
+                        const audioUrl = `${API_ORIGIN}/api/audios/${audio.id}/stream`;
+                        const token = localStorage.getItem('token');
+                        const streamUrl = token 
+                          ? `${audioUrl}?token=${encodeURIComponent(token)}`
+                          : audioUrl;
+                        window.open(streamUrl, '_blank');
                       } : undefined}
                     >
                       {audio.thumbnail && (

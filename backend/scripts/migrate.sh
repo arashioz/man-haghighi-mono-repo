@@ -27,7 +27,8 @@ baseline_migrations() {
 20251112123000_rename_phone_to_user_phone
 20251113000000_add_video_podcasts_table
 20251113000001_add_old_products_table
-20251204173712_add_show_on_homepage_to_courses"
+20251204173712_add_show_on_homepage_to_courses
+20251208000000_add_logs_table"
     
     for migration in $MIGRATIONS; do
         echo "  Marking $migration as applied..."

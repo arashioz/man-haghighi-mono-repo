@@ -32,8 +32,9 @@ export class VideoPodcastsService {
       return '';
     }
 
+    // Reject external URLs - only internal uploads allowed
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
-      return filename;
+      throw new BadRequestException('External URLs are not allowed. Only internal uploads are supported.');
     }
 
     if (filename.startsWith('/')) {
@@ -44,6 +45,11 @@ export class VideoPodcastsService {
   }
 
   private getFileSize(filename: string, fallbackSize?: number): number {
+    // Skip external URLs
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
+      return fallbackSize || 0;
+    }
+
     const possiblePaths = [
       this.resolveFilePath(filename),
       join(process.cwd(), filename),
@@ -78,7 +84,12 @@ export class VideoPodcastsService {
   }
 
   private removeFileIfLocal(filename?: string) {
-    if (!filename || filename.startsWith('http://') || filename.startsWith('https://')) {
+    if (!filename) {
+      return;
+    }
+    
+    // External URLs should not exist, but if they do, skip deletion
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
       return;
     }
 
@@ -162,9 +173,7 @@ export class VideoPodcastsService {
       this.logger.log(`File URL: ${fileUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
       this.logger.log(`=== End Video Podcast Log ===\n`);
-    } else if (data.videoFile?.startsWith('http')) {
-      this.logger.log(`Video podcast uses external video URL: ${data.videoFile}`);
-    }
+    // External URLs are no longer allowed
 
     return this.processVideoPodcast(created);
   }

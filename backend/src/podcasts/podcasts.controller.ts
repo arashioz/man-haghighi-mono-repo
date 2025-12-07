@@ -59,8 +59,13 @@ export class PodcastsController {
     const audio = files?.audio?.[0];
     const thumbnail = files?.thumbnail?.[0];
     
-    if (!audio && !createPodcastDto.audioFile) {
-      throw new BadRequestException('Audio file upload or audio link is required');
+    if (!audio) {
+      throw new BadRequestException('Audio file upload is required. External URLs are not allowed.');
+    }
+
+    // Reject external URLs if provided
+    if (createPodcastDto.audioFile && (createPodcastDto.audioFile.startsWith('http://') || createPodcastDto.audioFile.startsWith('https://'))) {
+      throw new BadRequestException('External URLs are not allowed. Please upload the audio file directly.');
     }
 
     return this.podcastsService.create(createPodcastDto, audio, thumbnail);
@@ -101,8 +106,9 @@ export class PodcastsController {
       return res.status(404).json({ error: 'Podcast audio file not specified' });
     }
 
+    // Reject external URLs - only internal uploads allowed
     if (podcast.audioFile.startsWith('http://') || podcast.audioFile.startsWith('https://')) {
-      return res.redirect(302, podcast.audioFile);
+      return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
     }
 
     const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -153,6 +159,8 @@ export class PodcastsController {
         'Content-Type': contentType,
         'Accept-Ranges': 'bytes',
         'Cache-Control': 'public, max-age=31536000, immutable',
+        'Content-Disposition': 'inline',
+        'X-Content-Type-Options': 'nosniff',
       };
 
       res.writeHead(200, head);
@@ -185,6 +193,8 @@ export class PodcastsController {
       'Content-Length': chunksize,
       'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable',
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff',
     };
 
     res.writeHead(206, head);

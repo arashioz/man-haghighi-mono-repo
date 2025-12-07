@@ -19,6 +19,7 @@ import { VideosModule } from './videos/videos.module';
 import { AudiosModule } from './audios/audios.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { LogsModule } from './logs/logs.module';
 import { HealthController } from './health/health.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
@@ -47,6 +48,7 @@ import { validateEnv } from './config/env.validation';
       serveRoot: '/uploads',
     }),
     PrismaModule,
+    LogsModule,
     AuthModule,
     UsersModule,
     SalesModule,

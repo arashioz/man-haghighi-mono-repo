@@ -39,10 +39,25 @@ const Courses: React.FC = () => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const data = await coursesService.getPublished();
-        setCourses(data);
+        setLoading(true);
+        setError('');
+        const response: any = await coursesService.getPublished();
+        let coursesArray: Course[] = [];
+        if (Array.isArray(response)) {
+          coursesArray = response;
+        } else if (response && typeof response === 'object') {
+          if (Array.isArray(response.data)) {
+            coursesArray = response.data;
+          } else if (Array.isArray(response.courses)) {
+            coursesArray = response.courses;
+          } else {
+            coursesArray = [];
+          }
+        }
+        setCourses(coursesArray);
       } catch (err: any) {
         setError(err.response?.data?.message || 'خطا در دریافت دوره‌ها');
+        setCourses([]);
       } finally {
         setLoading(false);
       }
@@ -157,6 +172,61 @@ const Courses: React.FC = () => {
                           {course.description}
                         </p>
                       )}
+                      {/* Videos and Audios List */}
+                      {(course.videos && course.videos.length > 0) || (course.audios && course.audios.length > 0) ? (
+                        <div className="mb-4 space-y-2">
+                          {course.videos && course.videos.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-yellow-400 mb-2 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                                </svg>
+                                ویدیوها ({course.videos.length})
+                              </h4>
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {course.videos.slice(0, 3).map((video) => (
+                                  <div key={video.id} className="flex items-center gap-2 text-xs text-white/70 bg-white/5 rounded px-2 py-1">
+                                    <svg className="w-3 h-3 text-yellow-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                                    </svg>
+                                    <span className="truncate">{video.title}</span>
+                                  </div>
+                                ))}
+                                {course.videos.length > 3 && (
+                                  <div className="text-xs text-white/50 text-center py-1">
+                                    +{course.videos.length - 3} ویدیوی دیگر
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          {course.audios && course.audios.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.617l3.766-3.793a1 1 0 011.617.793zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-1.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd"/>
+                                </svg>
+                                فایل‌های صوتی ({course.audios.length})
+                              </h4>
+                              <div className="space-y-1 max-h-32 overflow-y-auto">
+                                {course.audios.slice(0, 3).map((audio) => (
+                                  <div key={audio.id} className="flex items-center gap-2 text-xs text-white/70 bg-white/5 rounded px-2 py-1">
+                                    <svg className="w-3 h-3 text-purple-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.617l3.766-3.793a1 1 0 011.617.793z" clipRule="evenodd"/>
+                                    </svg>
+                                    <span className="truncate">{audio.title}</span>
+                                  </div>
+                                ))}
+                                {course.audios.length > 3 && (
+                                  <div className="text-xs text-white/50 text-center py-1">
+                                    +{course.audios.length - 3} فایل صوتی دیگر
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
                       <div className="flex items-center justify-between pt-4 border-t border-white/10">
                         <div className="flex items-center gap-4 text-xs text-white/60">
                           {course.videos && course.videos.length > 0 && (

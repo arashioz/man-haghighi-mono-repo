@@ -669,6 +669,10 @@ export class CoursesService {
     return enrollments;
   }
 
+  async getEnrollments(courseId: string) {
+    return this.getCourseEnrollments(courseId);
+  }
+
   async transferEnrollments(courseId: string, targetCourseId: string) {
     // Check if both courses exist
     const sourceCourse = await this.prisma.course.findUnique({
@@ -829,5 +833,48 @@ export class CoursesService {
       );
       await Promise.all(audioAccessPromises);
     }
+  }
+
+  async getEnrollments(courseId: string) {
+    // Check if course exists
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Get enrollments with user information
+    const enrollments = await this.prisma.courseEnrollment.findMany({
+      where: { courseId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            phone: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            role: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: {
+        enrolledAt: 'desc',
+      },
+    });
+
+    return {
+      course: {
+        id: course.id,
+        title: course.title,
+      },
+      enrollments,
+      total: enrollments.length,
+    };
   }
 }
