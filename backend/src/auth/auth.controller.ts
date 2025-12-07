@@ -35,7 +35,7 @@ export class AuthController {
 
   @Post('send-otp')
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 requests per minute to prevent abuse
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute (increased from 3 to prevent rate limit issues during testing)
   @ApiOperation({ summary: 'Send OTP to phone number (for regular users)' })
   @ApiResponse({ status: 200, description: 'OTP sent successfully' })
   @ApiResponse({ status: 401, description: 'Invalid phone number or account not active' })
