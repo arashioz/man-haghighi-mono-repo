@@ -86,6 +86,16 @@ export const authService = {
     return response.data;
   },
 
+  sendOtp: async (phone: string): Promise<{ message: string }> => {
+    const response = await api.post('/auth/send-otp', { phone });
+    return response.data;
+  },
+
+  verifyOtp: async (phone: string, otp: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/verify-otp', { phone, otp });
+    return response.data;
+  },
+
   getProfile: async (): Promise<User> => {
     const response = await api.get('/auth/profile');
     return response.data;
