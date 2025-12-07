@@ -519,6 +519,12 @@ export class CoursesService {
     return this.urlService.processCourseData(updatedCourse);
   }
 
+  /**
+   * Upload audio files for a course.
+   * NOTE: These audios are stored in the 'audios' table with courseId.
+   * They are SEPARATE from standalone podcasts in the 'podcasts' table.
+   * Course audios should only be accessed through courses, not through /podcasts endpoints.
+   */
   async uploadCourseAudios(id: string, files: Express.Multer.File[]) {
     const course = await this.findOne(id);
     
@@ -577,38 +583,34 @@ export class CoursesService {
   async enrollUser(enrollCourseDto: EnrollCourseDto) {
     const { userId, courseId } = enrollCourseDto;
 
-    const existingEnrollment = await this.prisma.courseEnrollment.findUnique({
+    // Use upsert to handle race conditions - if enrollment exists, return it; otherwise create it
+    const enrollment = await this.prisma.courseEnrollment.upsert({
       where: {
         userId_courseId: {
           userId,
           courseId,
         },
       },
-    });
-
-    if (existingEnrollment) {
-      throw new BadRequestException('User is already enrolled in this course');
-    }
-
-    const enrollment = await this.prisma.courseEnrollment.create({
-      data: {
+      update: {}, // If exists, just return it without updating
+      create: {
         userId,
         courseId,
       },
     });
 
+    // Create video access records (using createMany with skipDuplicates to handle duplicates gracefully)
     const course = await this.findOne(courseId);
-    const videoAccessPromises = course.videos.map(video =>
-      this.prisma.videoAccess.create({
-        data: {
-          userId,
-          videoId: video.id,
-        },
-      }).catch(() => {
-      })
-    );
+    if (course.videos && course.videos.length > 0) {
+      const videoAccessData = course.videos.map(video => ({
+        userId,
+        videoId: video.id,
+      }));
 
-    await Promise.all(videoAccessPromises);
+      await this.prisma.videoAccess.createMany({
+        data: videoAccessData,
+        skipDuplicates: true, // Skip if duplicate key constraint is violated
+      });
+    }
 
     return enrollment;
   }
@@ -633,5 +635,199 @@ export class CoursesService {
     });
 
     return enrollments.map(enrollment => this.urlService.processCourseData(enrollment.course));
+  }
+
+  async getCourseEnrollments(courseId: string) {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    const enrollments = await this.prisma.courseEnrollment.findMany({
+      where: { courseId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            phone: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: {
+        enrolledAt: 'desc',
+      },
+    });
+
+    return enrollments;
+  }
+
+  async transferEnrollments(courseId: string, targetCourseId: string) {
+    // Check if both courses exist
+    const sourceCourse = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        videos: true,
+        audios: true,
+      },
+    });
+
+    if (!sourceCourse) {
+      throw new NotFoundException('Source course not found');
+    }
+
+    const targetCourse = await this.prisma.course.findUnique({
+      where: { id: targetCourseId },
+      include: {
+        videos: true,
+        audios: true,
+      },
+    });
+
+    if (!targetCourse) {
+      throw new NotFoundException('Target course not found');
+    }
+
+    if (courseId === targetCourseId) {
+      throw new BadRequestException('Source and target courses cannot be the same');
+    }
+
+    // Get all enrollments for the source course
+    const enrollments = await this.prisma.courseEnrollment.findMany({
+      where: { courseId },
+    });
+
+    if (enrollments.length === 0) {
+      return {
+        message: 'No enrollments found to transfer',
+        transferredCount: 0,
+        skippedCount: 0,
+      };
+    }
+
+    let transferredCount = 0;
+    let skippedCount = 0;
+
+    // Transfer each enrollment
+    for (const enrollment of enrollments) {
+      // Check if user is already enrolled in target course
+      const existingEnrollment = await this.prisma.courseEnrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId: enrollment.userId,
+            courseId: targetCourseId,
+          },
+        },
+      });
+
+      if (existingEnrollment) {
+        // User already enrolled in target course, skip
+        skippedCount++;
+        // Delete the source enrollment since user is already in target course
+        await this.prisma.courseEnrollment.delete({
+          where: { id: enrollment.id },
+        });
+        // Remove old course video/audio accesses
+        await this.removeOldCourseAccesses(enrollment.userId, sourceCourse);
+        continue;
+      }
+
+      // Update the enrollment to point to target course
+      await this.prisma.courseEnrollment.update({
+        where: { id: enrollment.id },
+        data: { courseId: targetCourseId },
+      });
+
+      // Remove old course video/audio accesses
+      await this.removeOldCourseAccesses(enrollment.userId, sourceCourse);
+
+      // Grant access to new course videos and audios
+      await this.grantCourseAccesses(enrollment.userId, targetCourse);
+
+      transferredCount++;
+    }
+
+    return {
+      message: `Successfully transferred ${transferredCount} enrollment(s). ${skippedCount} enrollment(s) skipped (users already enrolled in target course).`,
+      transferredCount,
+      skippedCount,
+    };
+  }
+
+  private async removeOldCourseAccesses(userId: string, course: any) {
+    // Remove video accesses for old course
+    if (course.videos && course.videos.length > 0) {
+      const videoIds = course.videos.map((v: any) => v.id);
+      await this.prisma.videoAccess.deleteMany({
+        where: {
+          userId,
+          videoId: { in: videoIds },
+        },
+      });
+    }
+
+    // Remove audio accesses for old course
+    if (course.audios && course.audios.length > 0) {
+      const audioIds = course.audios.map((a: any) => a.id);
+      await this.prisma.audioAccess.deleteMany({
+        where: {
+          userId,
+          audioId: { in: audioIds },
+        },
+      });
+    }
+  }
+
+  private async grantCourseAccesses(userId: string, course: any) {
+    // Grant access to all videos in target course
+    if (course.videos && course.videos.length > 0) {
+      const videoAccessPromises = course.videos.map((video: any) =>
+        this.prisma.videoAccess.upsert({
+          where: {
+            userId_videoId: {
+              userId,
+              videoId: video.id,
+            },
+          },
+          create: {
+            userId,
+            videoId: video.id,
+          },
+          update: {},
+        }).catch(() => {
+          // Ignore errors if access already exists
+        })
+      );
+      await Promise.all(videoAccessPromises);
+    }
+
+    // Grant access to all audios in target course
+    if (course.audios && course.audios.length > 0) {
+      const audioAccessPromises = course.audios.map((audio: any) =>
+        this.prisma.audioAccess.upsert({
+          where: {
+            userId_audioId: {
+              userId,
+              audioId: audio.id,
+            },
+          },
+          create: {
+            userId,
+            audioId: audio.id,
+          },
+          update: {},
+        }).catch(() => {
+          // Ignore errors if access already exists
+        })
+      );
+      await Promise.all(audioAccessPromises);
+    }
   }
 }

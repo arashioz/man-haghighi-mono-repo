@@ -58,6 +58,7 @@ export interface Podcast {
   title: string;
   description?: string;
   audioFile: string | null;
+  thumbnail?: string | null;
   streamUrl?: string | null;
   duration?: number;
   published: boolean;

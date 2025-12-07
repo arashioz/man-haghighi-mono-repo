@@ -17,13 +17,23 @@ import { withAccelerate } from '@prisma/extension-accelerate';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
-  public readonly cached: ReturnType<typeof withAccelerate>;
+  public readonly cached: any;
 
   constructor() {
-    super();
+    super({
+      log: process.env.NODE_ENV === 'production' 
+        ? ['error', 'warn'] 
+        : ['query', 'error', 'warn', 'info'],
+    });
     // Initialize Accelerate extension for query caching
     // If PRISMA_ACCELERATE_URL is not set, it will fall back to direct connection
-    this.cached = this.$extends(withAccelerate());
+    try {
+      this.cached = this.$extends(withAccelerate());
+    } catch (error) {
+      // Fallback if Accelerate extension fails
+      this.logger.warn('⚠️  Accelerate extension initialization failed, using direct connection');
+      this.cached = this;
+    }
   }
 
   async onModuleInit() {

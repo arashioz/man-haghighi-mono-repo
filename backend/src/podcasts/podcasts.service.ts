@@ -93,11 +93,15 @@ export class PodcastsService {
     }
   }
 
-  async create(createPodcastDto: CreatePodcastDto, audioFile?: Express.Multer.File) {
+  async create(createPodcastDto: CreatePodcastDto, audioFile?: Express.Multer.File, thumbnailFile?: Express.Multer.File) {
     const data: any = { ...createPodcastDto };
 
     if (audioFile) {
       data.audioFile = audioFile.filename;
+    }
+
+    if (thumbnailFile) {
+      data.thumbnail = thumbnailFile.filename;
     }
 
     if (!data.audioFile) {
@@ -131,6 +135,15 @@ export class PodcastsService {
       this.logger.log(`Stream URL: ${streamUrl}`);
     } else if (data.audioFile?.startsWith('http')) {
       this.logger.log(`Podcast uses external audio URL: ${data.audioFile}`);
+    }
+
+    if (thumbnailFile) {
+      const thumbnailUrl = this.urlService.getFileUrl(thumbnailFile.filename);
+      this.logger.log(`--- Podcast Thumbnail ---`);
+      this.logger.log(`Filename: ${thumbnailFile.filename}`);
+      this.logger.log(`File Size: ${(thumbnailFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`File Type: ${thumbnailFile.mimetype}`);
+      this.logger.log(`Thumbnail URL: ${thumbnailUrl}`);
     }
 
     this.logger.log(`=== End Podcast Log ===\n`);
@@ -190,13 +203,17 @@ export class PodcastsService {
     return podcast;
   }
 
-  async update(id: string, updatePodcastDto: UpdatePodcastDto, audioFile?: Express.Multer.File) {
+  async update(id: string, updatePodcastDto: UpdatePodcastDto, audioFile?: Express.Multer.File, thumbnailFile?: Express.Multer.File) {
     const existing = await this.findOneRaw(id);
 
     const data: any = { ...updatePodcastDto };
 
     if (audioFile) {
       data.audioFile = audioFile.filename;
+    }
+
+    if (thumbnailFile) {
+      data.thumbnail = thumbnailFile.filename;
     }
 
     if (typeof data.published === 'boolean') {
@@ -217,6 +234,10 @@ export class PodcastsService {
       this.removeFileIfLocal(existing.audioFile);
     }
 
+    if (thumbnailFile && existing.thumbnail !== updatedPodcast.thumbnail) {
+      this.removeFileIfLocal(existing.thumbnail);
+    }
+
     if (audioFile) {
       const fileSize = this.getFileSize(audioFile.filename, audioFile.size);
       const fileSizeMB = fileSize > 0 ? (fileSize / (1024 * 1024)).toFixed(2) : '0.00';
@@ -230,6 +251,19 @@ export class PodcastsService {
       this.logger.log(`File Type: ${audioFile.mimetype}`);
       this.logger.log(`File URL: ${audioUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
+    }
+
+    if (thumbnailFile) {
+      const thumbnailUrl = this.urlService.getFileUrl(thumbnailFile.filename);
+      this.logger.log(`=== Podcast Thumbnail Updated ===`);
+      this.logger.log(`Podcast ID: ${updatedPodcast.id}`);
+      this.logger.log(`Filename: ${thumbnailFile.filename}`);
+      this.logger.log(`File Size: ${(thumbnailFile.size / (1024 * 1024)).toFixed(2)} MB`);
+      this.logger.log(`File Type: ${thumbnailFile.mimetype}`);
+      this.logger.log(`Thumbnail URL: ${thumbnailUrl}`);
+    }
+
+    if (audioFile || thumbnailFile) {
       this.logger.log(`=== End Podcast Log ===\n`);
     }
 

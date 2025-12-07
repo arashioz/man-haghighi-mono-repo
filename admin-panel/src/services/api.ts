@@ -711,6 +711,18 @@ export const coursesService = {
     await api.delete(`/courses/${courseId}/enroll/${userId}`);
   },
 
+  getEnrollments: async (courseId: string) => {
+    const response = await api.get(`/courses/${courseId}/enrollments`);
+    return response.data;
+  },
+
+  transferEnrollments: async (courseId: string, targetCourseId: string) => {
+    const response = await api.patch(`/courses/${courseId}/transfer-enrollments`, {
+      targetCourseId,
+    });
+    return response.data;
+  },
+
   getEnrolledUsers: async (courseId: string) => {
     const response = await api.get(`/courses/${courseId}/enrolled-users`);
     return response.data;

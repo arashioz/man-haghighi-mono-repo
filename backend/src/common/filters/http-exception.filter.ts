@@ -45,17 +45,37 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    this.logger.error(
-      `${request.method} ${request.url} - ${status} - ${message}`,
-      exception instanceof Error ? exception.stack : undefined,
-    );
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Log error with stack trace only in development
+    if (isProduction) {
+      this.logger.error(
+        `${request.method} ${request.url} - ${status} - ${message}`,
+      );
+    } else {
+      this.logger.error(
+        `${request.method} ${request.url} - ${status} - ${message}`,
+        exception instanceof Error ? exception.stack : undefined,
+      );
+    }
 
-    response.status(status).json({
+    // Don't expose stack traces in production
+    const responseBody: any = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
       message,
-    });
+    };
+
+    // Only include error details in development
+    if (!isProduction && exception instanceof Error) {
+      responseBody.error = exception.name;
+      if (exception.stack) {
+        responseBody.stack = exception.stack;
+      }
+    }
+
+    response.status(status).json(responseBody);
   }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
@@ -19,25 +20,27 @@ import VideoPodcastDetail from './pages/VideoPodcastDetail';
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/articles" element={<Articles />} />
-            <Route path="/articles/:slug" element={<ArticleDetail />} />
-            <Route path="/podcasts" element={<Podcasts />} />
-            <Route path="/video-podcasts" element={<VideoPodcasts />} />
-            <Route path="/video-podcasts/:id" element={<VideoPodcastDetail />} />
-            <Route path="/courses" element={<Courses />} />
-            <Route path="/courses/:id" element={<CourseDetail />} />
-            <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<UserDashboard />} />
-          </Routes>
-        </Layout>
-      </Router>
+      <AudioPlayerProvider>
+        <Router>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/articles" element={<Articles />} />
+              <Route path="/articles/:slug" element={<ArticleDetail />} />
+              <Route path="/podcasts" element={<Podcasts />} />
+              <Route path="/video-podcasts" element={<VideoPodcasts />} />
+              <Route path="/video-podcasts/:id" element={<VideoPodcastDetail />} />
+              <Route path="/courses" element={<Courses />} />
+              <Route path="/courses/:id" element={<CourseDetail />} />
+              <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/dashboard" element={<UserDashboard />} />
+            </Routes>
+          </Layout>
+        </Router>
+      </AudioPlayerProvider>
     </AuthProvider>
   );
 }

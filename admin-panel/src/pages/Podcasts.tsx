@@ -24,6 +24,7 @@ const Podcasts: React.FC = () => {
     published: false,
   });
   const [newPodcastFile, setNewPodcastFile] = useState<File | null>(null);
+  const [newPodcastThumbnail, setNewPodcastThumbnail] = useState<File | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPodcast, setEditingPodcast] = useState<Podcast | null>(null);
   const [editPodcast, setEditPodcast] = useState({
@@ -34,6 +35,7 @@ const Podcasts: React.FC = () => {
     published: false,
   });
   const [editPodcastFile, setEditPodcastFile] = useState<File | null>(null);
+  const [editPodcastThumbnail, setEditPodcastThumbnail] = useState<File | null>(null);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editUploadProgress, setEditUploadProgress] = useState(0);
   const [editCurrentFile, setEditCurrentFile] = useState('');
@@ -68,6 +70,7 @@ const Podcasts: React.FC = () => {
       published: false,
     });
     setNewPodcastFile(null);
+    setNewPodcastThumbnail(null);
   };
 
   const openEditModal = (podcast: Podcast) => {
@@ -80,6 +83,7 @@ const Podcasts: React.FC = () => {
       published: podcast.published,
     });
     setEditPodcastFile(null);
+    setEditPodcastThumbnail(null);
     setEditUploadProgress(0);
     setEditCurrentFile('');
     setEditError('');
@@ -97,6 +101,7 @@ const Podcasts: React.FC = () => {
       published: false,
     });
     setEditPodcastFile(null);
+    setEditPodcastThumbnail(null);
     setIsEditSaving(false);
     setEditUploadProgress(0);
     setEditCurrentFile('');
@@ -135,6 +140,10 @@ const Podcasts: React.FC = () => {
       if (newPodcastFile) {
         formData.append('audio', newPodcastFile);
         setCurrentUploadFile(newPodcastFile.name);
+      }
+
+      if (newPodcastThumbnail) {
+        formData.append('thumbnail', newPodcastThumbnail);
       }
 
       const createdPodcast = await podcastsService.createWithFile(formData, (progressEvent: any) => {
@@ -226,6 +235,10 @@ const Podcasts: React.FC = () => {
         setEditCurrentFile(editPodcastFile.name);
       } else {
         setEditCurrentFile('');
+      }
+
+      if (editPodcastThumbnail) {
+        formData.append('thumbnail', editPodcastThumbnail);
       }
 
       const updatedPodcast = await podcastsService.updateWithFile(
@@ -486,6 +499,32 @@ const Podcasts: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              تصویر کاور پادکست (اختیاری)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setNewPodcastThumbnail(file);
+              }}
+              className="w-full text-sm"
+            />
+            {newPodcastThumbnail && (
+              <div className="mt-2">
+                <img
+                  src={URL.createObjectURL(newPodcastThumbnail)}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                />
+                <p className="mt-1 text-xs text-green-600">
+                  ✓ {newPodcastThumbnail.name} ({(newPodcastThumbnail.size / (1024 * 1024)).toFixed(2)} MB)
+                </p>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               مدت زمان (ثانیه) - اختیاری
             </label>
             <input
@@ -634,6 +673,45 @@ const Podcasts: React.FC = () => {
               placeholder="https://example.com/audio.mp3"
               disabled={isEditSaving}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              تصویر کاور پادکست (اختیاری)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setEditPodcastThumbnail(file);
+              }}
+              className="w-full text-sm"
+              disabled={isEditSaving}
+            />
+            {editPodcastThumbnail && (
+              <div className="mt-2">
+                <img
+                  src={URL.createObjectURL(editPodcastThumbnail)}
+                  alt="Preview"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                />
+                <p className="mt-1 text-xs text-green-600">
+                  ✓ {editPodcastThumbnail.name} ({(editPodcastThumbnail.size / (1024 * 1024)).toFixed(2)} MB)
+                </p>
+              </div>
+            )}
+            {!editPodcastThumbnail && editingPodcast?.thumbnail && (
+              <div className="mt-2">
+                <img
+                  src={editingPodcast.thumbnail}
+                  alt="Current thumbnail"
+                  className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                />
+                <p className="mt-1 text-xs text-blue-600">
+                  تصویر فعلی
+                </p>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -233,23 +233,16 @@ export class UsersService {
       throw new NotFoundException('Course not found');
     }
 
-    // Check if already enrolled
-    const existing = await this.prisma.courseEnrollment.findUnique({
+    // Use upsert to handle race conditions - if enrollment exists, return it; otherwise create it
+    return this.prisma.courseEnrollment.upsert({
       where: {
         userId_courseId: {
           userId,
           courseId,
         },
       },
-    });
-
-    if (existing) {
-      throw new ConflictException('User already enrolled in this course');
-    }
-
-    // Create enrollment
-    return this.prisma.courseEnrollment.create({
-      data: {
+      update: {}, // If exists, just return it without updating
+      create: {
         userId,
         courseId,
       },
@@ -549,11 +542,16 @@ export class UsersService {
   }
 
   async assignCourses(userId: string, courseIds: string[]) {
+    // Remove duplicates from courseIds array
+    const uniqueCourseIds = [...new Set(courseIds)];
+
+    // Delete existing enrollments for this user
     await this.prisma.courseEnrollment.deleteMany({
       where: { userId },
     });
 
-    const enrollments = courseIds.map(courseId => ({
+    // Create enrollments with skipDuplicates to handle any race conditions
+    const enrollments = uniqueCourseIds.map(courseId => ({
       userId,
       courseId,
       enrolledAt: new Date(),
@@ -561,6 +559,7 @@ export class UsersService {
 
     return this.prisma.courseEnrollment.createMany({
       data: enrollments,
+      skipDuplicates: true, // Skip if duplicate key constraint is violated
     });
   }
 

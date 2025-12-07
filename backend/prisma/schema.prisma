@@ -153,6 +153,7 @@ model Podcast {
   title       String
   description String?
   audioFile   String
+  thumbnail   String?  // کاور پادکست
   duration    Int?     // in seconds
   published   Boolean  @default(false)
   publishedAt DateTime?
