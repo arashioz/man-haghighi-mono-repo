@@ -138,6 +138,11 @@ export class PodcastsService {
     return this.processPodcast(podcast);
   }
 
+  /**
+   * Get all standalone podcasts (including unpublished).
+   * NOTE: This only returns podcasts from the 'podcasts' table.
+   * Course audios (from 'audios' table) are separate and should NOT be included here.
+   */
   async findAll() {
     const podcasts = await this.prisma.podcast.findMany({
       orderBy: { createdAt: 'desc' },
@@ -146,6 +151,12 @@ export class PodcastsService {
     return this.processPodcasts(podcasts);
   }
 
+  /**
+   * Get all published standalone podcasts.
+   * NOTE: This only returns podcasts from the 'podcasts' table.
+   * Course audios (from 'audios' table) are separate and should NOT be included here.
+   * Course audios are accessed through courses, not through this endpoint.
+   */
   async findPublished() {
     const podcasts = await this.prisma.podcast.findMany({
       where: { published: true },
