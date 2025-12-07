@@ -6,11 +6,22 @@
 html {
   direction: rtl;
   font-family: 'Dirooz', 'IranianSans', 'Tahoma', 'Arial', sans-serif;
+  background-color: #040404;
+  min-height: 100%;
 }
 
 body {
   direction: rtl;
   text-align: right;
+  background-color: #040404;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  background-color: #040404;
+  min-height: 100vh;
 }
 
 /* Custom font loading */

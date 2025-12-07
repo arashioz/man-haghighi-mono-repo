@@ -33,9 +33,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
+# Install production dependencies + dev dependencies needed for seeding
 # Use --legacy-peer-deps to handle peer dependency warnings
 RUN npm ci --only=production --legacy-peer-deps && \
+    npm install --save-dev @types/bcryptjs ts-node typescript tsconfig-paths --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder with ownership
