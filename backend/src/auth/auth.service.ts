@@ -249,10 +249,24 @@ export class AuthService {
     });
 
     // Send OTP via SMS
-    const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
-    
-    if (!smsSent) {
-      throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+    try {
+      const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
+      
+      if (!smsSent) {
+        throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+      }
+    } catch (error) {
+      // If SMS service is not configured, still allow OTP to be generated (for testing)
+      // In production, you should configure SMS service properly
+      if (error.message === 'SMS service is not configured') {
+        this.logger.warn(`SMS service not configured. OTP generated: ${otpCode} for phone: ${normalizedPhone} (for testing only)`);
+        // In development/testing, we can allow this, but in production this should fail
+        if (process.env.NODE_ENV === 'production') {
+          throw new UnauthorizedException('SMS service is not configured. Please contact administrator.');
+        }
+      } else {
+        throw error;
+      }
     }
 
     return { 
@@ -315,10 +329,24 @@ export class AuthService {
     });
 
     // Send OTP via SMS
-    const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
-    
-    if (!smsSent) {
-      throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+    try {
+      const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
+      
+      if (!smsSent) {
+        throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+      }
+    } catch (error) {
+      // If SMS service is not configured, still allow OTP to be generated (for testing)
+      // In production, you should configure SMS service properly
+      if (error.message === 'SMS service is not configured') {
+        this.logger.warn(`SMS service not configured. OTP generated: ${otpCode} for phone: ${normalizedPhone} (for testing only)`);
+        // In development/testing, we can allow this, but in production this should fail
+        if (process.env.NODE_ENV === 'production') {
+          throw new UnauthorizedException('SMS service is not configured. Please contact administrator.');
+        }
+      } else {
+        throw error;
+      }
     }
 
     return { message: 'OTP sent successfully' };
