@@ -9,7 +9,8 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci
+# Use --legacy-peer-deps to handle peer dependency warnings
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -33,7 +34,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production && \
+# Use --legacy-peer-deps to handle peer dependency warnings
+RUN npm ci --only=production --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder with ownership

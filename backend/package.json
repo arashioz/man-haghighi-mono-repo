@@ -46,7 +46,7 @@
     "@nestjs/swagger": "^7.1.17",
     "@nestjs/throttler": "^5.1.1",
     "@prisma/client": "^6.17.1",
-    "@prisma/extension-accelerate": "^3.0.1",
+    "@prisma/extension-accelerate": "^2.0.0",
     "@types/xlsx": "^0.0.35",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
@@ -91,6 +91,9 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "npx ts-node prisma/seed.ts"
   },
   "jest": {
     "moduleFileExtensions": [
