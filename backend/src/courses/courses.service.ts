@@ -669,10 +669,6 @@ export class CoursesService {
     return enrollments;
   }
 
-  async getEnrollments(courseId: string) {
-    return this.getCourseEnrollments(courseId);
-  }
-
   async transferEnrollments(courseId: string, targetCourseId: string) {
     // Check if both courses exist
     const sourceCourse = await this.prisma.course.findUnique({
