@@ -365,9 +365,14 @@ export class AuthService {
       throw new UnauthorizedException('Invalid phone number format');
     }
 
-    // Find user by phone
+    // Find user by phone (include OTP fields for verification)
     const user = await this.prisma.user.findUnique({
       where: { phone: normalizedPhone },
+      select: {
+        ...authUserPublicSelect,
+        otp: true,
+        otpExpiresAt: true,
+      },
     });
 
     if (!user) {
