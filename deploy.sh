@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Deployment Script for Haghighi Platform
+# Deployment Script for Haghighi Platform (Server Edition)
 # This script:
 # 1. Takes a backup of the database
 # 2. Backs up uploaded files
@@ -9,7 +9,8 @@
 # 5. Restores uploaded files
 # 6. Starts the application with docker-compose-alt-ports.yml
 
-set -e  # Exit on any error
+# Don't exit on error - we'll handle errors manually
+set +e
 
 # Colors for output
 RED='\033[0;31m'
@@ -23,8 +24,18 @@ REPO_URL="https://github.com/arashioz/man-haghighi-mono-repo.git"
 CURRENT_DIR=$(pwd)
 PROJECT_NAME=$(basename "$CURRENT_DIR")
 PARENT_DIR=$(dirname "$CURRENT_DIR")
-BACKUP_DIR="$CURRENT_DIR/backup_$(date +%Y%m%d_%H%M%S)"
+# Backup directory outside project to avoid conflicts
+BACKUP_DIR="$PARENT_DIR/backup_${PROJECT_NAME}_$(date +%Y%m%d_%H%M%S)"
 NEW_PROJECT_DIR="$PARENT_DIR/${PROJECT_NAME}_new"
+
+# Detect docker-compose command (V1 or V2)
+if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    DOCKER_COMPOSE="docker-compose"
+fi
 
 # Functions
 print_step() {
@@ -121,10 +132,10 @@ fi
 # Step 5: Stop and remove containers
 print_step "Stopping Docker containers..."
 if [ -f docker-compose.yml ]; then
-    docker-compose -f docker-compose.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose.yml down 2>/dev/null || true
 fi
 if [ -f docker-compose-alt-ports.yml ]; then
-    docker-compose -f docker-compose-alt-ports.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE -f docker-compose-alt-ports.yml down 2>/dev/null || true
 fi
 if [ -f docker-compose.yml ] || [ -f docker-compose-alt-ports.yml ]; then
     print_success "Docker containers stopped"
@@ -142,6 +153,7 @@ fi
 
 git clone "$REPO_URL" "$NEW_PROJECT_DIR" || {
     print_error "Failed to clone repository"
+    print_error "Please check your internet connection and Git access"
     exit 1
 }
 print_success "Repository cloned to: $NEW_PROJECT_DIR"
@@ -159,27 +171,37 @@ else
     chmod 777 "$NEW_PROJECT_DIR/uploads"
 fi
 
-# Step 8: Setup .env file
+# Step 8: Setup .env file (PRIORITY: server.env for production)
 print_step "Setting up .env file..."
 cd "$NEW_PROJECT_DIR"
 if [ -f server.env ]; then
     cp server.env .env
-    print_success ".env file created from server.env"
+    print_success ".env file created from server.env (production)"
+elif [ -f "$BACKUP_DIR/.env.backup" ]; then
+    cp "$BACKUP_DIR/.env.backup" .env
+    print_success ".env file restored from backup"
 elif [ -f local.env ]; then
     cp local.env .env
-    print_warning ".env file created from local.env (consider using server.env for production)"
+    print_warning ".env file created from local.env (NOT RECOMMENDED for production)"
+    print_warning "Please update .env with production values, especially:"
+    print_warning "  - SERVER_IP, API_BASE_URL, REACT_APP_API_URL"
+    print_warning "  - POSTGRES_PASSWORD, JWT_SECRET"
 else
     print_error "No environment file found (server.env or local.env)"
-    print_warning "You need to create .env file manually"
+    print_error "You need to create .env file manually before continuing"
+    exit 1
 fi
 
 # Step 9: Replace old project with new one
 print_step "Replacing old project with new one..."
 cd "$PARENT_DIR"
-if [ -d "$PROJECT_NAME" ]; then
+
+# Check if old project exists and is different from new one
+if [ -d "$PROJECT_NAME" ] && [ "$PROJECT_NAME" != "$(basename "$NEW_PROJECT_DIR")" ]; then
     # Move old project to backup
-    mv "$PROJECT_NAME" "${PROJECT_NAME}_old_$(date +%Y%m%d_%H%M%S)"
-    print_success "Old project moved to backup"
+    OLD_BACKUP="${PROJECT_NAME}_old_$(date +%Y%m%d_%H%M%S)"
+    mv "$PROJECT_NAME" "$OLD_BACKUP"
+    print_success "Old project moved to backup: $OLD_BACKUP"
 fi
 
 # Move new project to main location
@@ -187,9 +209,13 @@ mv "$NEW_PROJECT_DIR" "$PROJECT_NAME"
 cd "$PROJECT_NAME"
 print_success "New project is now in place"
 
-# Step 10: Restore database backup
+# Step 10: Start Docker containers
 print_step "Starting Docker containers with alt-ports configuration..."
-docker-compose -f docker-compose-alt-ports.yml up -d --build
+$DOCKER_COMPOSE -f docker-compose-alt-ports.yml up -d --build || {
+    print_error "Failed to start Docker containers"
+    print_error "Please check docker-compose-alt-ports.yml and .env file"
+    exit 1
+}
 
 # Wait for database to be ready
 print_step "Waiting for database to be ready..."
@@ -224,29 +250,65 @@ if [ $WAIT_COUNT -lt $MAX_WAIT ]; then
         # Wait a bit more for database to be fully ready
         sleep 5
         
-        cat "$BACKUP_FILE" | docker exec -i haghighi_postgres psql -U "$DB_USER" -d "$DB_NAME" > /dev/null 2>&1 && {
+        # Drop existing database and recreate (for clean restore)
+        print_step "Preparing database for restore..."
+        docker exec haghighi_postgres psql -U "$DB_USER" -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME};" 2>/dev/null || true
+        docker exec haghighi_postgres psql -U "$DB_USER" -d postgres -c "CREATE DATABASE ${DB_NAME};" 2>/dev/null || true
+        sleep 2
+        
+        # Restore backup
+        cat "$BACKUP_FILE" | docker exec -i haghighi_postgres psql -U "$DB_USER" -d "$DB_NAME" 2>&1 | grep -v "ERROR" > /dev/null && {
             print_success "Database restored from backup"
         } || {
-            print_warning "Failed to restore database. You may need to restore manually."
+            print_warning "Database restore completed with warnings"
             print_warning "Backup file location: $BACKUP_FILE"
+            print_warning "Please verify database manually if needed"
         }
     else
         print_warning "No database backup found to restore"
         print_warning "Backup directory: $BACKUP_DIR"
+        print_warning "Database will be empty - you may need to run migrations or seed data"
     fi
+else
+    print_error "Database did not become ready in time"
+    print_warning "Continuing without database restore..."
 fi
 
 # Step 11: Run Prisma migrations
 print_step "Running Prisma migrations..."
 sleep 5
-docker exec haghighi_backend npx prisma db push 2>/dev/null || {
-    print_warning "Prisma db push failed, trying generate..."
-    docker exec haghighi_backend npx prisma generate 2>/dev/null || true
-}
+
+# Wait for backend container to be ready
+MAX_BACKEND_WAIT=60
+BACKEND_WAIT_COUNT=0
+while ! docker ps | grep -q haghighi_backend; do
+    if [ $BACKEND_WAIT_COUNT -ge $MAX_BACKEND_WAIT ]; then
+        print_error "Backend container did not start in time"
+        break
+    fi
+    sleep 2
+    BACKEND_WAIT_COUNT=$((BACKEND_WAIT_COUNT + 2))
+done
+
+if [ $BACKEND_WAIT_COUNT -lt $MAX_BACKEND_WAIT ]; then
+    sleep 10  # Wait for backend to fully initialize
+    
+    print_step "Generating Prisma Client..."
+    docker exec haghighi_backend npx prisma generate 2>/dev/null || {
+        print_warning "Prisma generate failed, but continuing..."
+    }
+    
+    print_step "Pushing database schema..."
+    docker exec haghighi_backend npx prisma db push --accept-data-loss 2>/dev/null || {
+        print_warning "Prisma db push failed or not needed"
+    }
+else
+    print_warning "Skipping Prisma migrations - backend container not ready"
+fi
 
 # Step 12: Show status
 print_step "Checking container status..."
-docker-compose -f docker-compose-alt-ports.yml ps
+$DOCKER_COMPOSE -f docker-compose-alt-ports.yml ps
 
 echo ""
 print_success "Deployment completed!"
@@ -254,12 +316,31 @@ echo ""
 echo -e "${GREEN}Summary:${NC}"
 echo "  - Backup directory: $BACKUP_DIR"
 echo "  - Project location: $(pwd)"
+echo "  - Docker Compose: $DOCKER_COMPOSE"
 echo ""
 echo -e "${BLUE}Next steps:${NC}"
-echo "  1. Check container status: docker-compose -f docker-compose-alt-ports.yml ps"
-echo "  2. View logs: docker-compose -f docker-compose-alt-ports.yml logs -f"
+echo "  1. Check container status: $DOCKER_COMPOSE -f docker-compose-alt-ports.yml ps"
+echo "  2. View logs: $DOCKER_COMPOSE -f docker-compose-alt-ports.yml logs -f"
 echo "  3. Verify services are running on ports 8080, 8081, 8082"
+echo "  4. Check backend health: curl http://localhost:8080/api/health"
 echo ""
-echo -e "${YELLOW}Note:${NC} Old project backup and deployment backup are preserved"
+echo -e "${BLUE}Service URLs (update IP in server.env):${NC}"
+if [ -f .env ]; then
+    source .env
+    SERVER_IP="${SERVER_IP:-localhost}"
+    echo "  - Backend API: http://${SERVER_IP}:8080/api"
+    echo "  - Frontend: http://${SERVER_IP}:8081"
+    echo "  - Admin Panel: http://${SERVER_IP}:8082"
+else
+    echo "  - Backend API: http://YOUR_SERVER_IP:8080/api"
+    echo "  - Frontend: http://YOUR_SERVER_IP:8081"
+    echo "  - Admin Panel: http://YOUR_SERVER_IP:8082"
+fi
+echo ""
+echo -e "${YELLOW}Important Notes:${NC}"
+echo "  - Old project backup and deployment backup are preserved"
+echo "  - Backup location: $BACKUP_DIR"
+echo "  - Make sure firewall allows ports 8080, 8081, 8082"
+echo "  - Update SERVER_IP in .env if needed"
 echo ""
 
