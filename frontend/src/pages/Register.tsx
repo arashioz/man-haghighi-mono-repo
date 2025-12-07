@@ -7,7 +7,7 @@ const Register: React.FC = () => {
   const [credentials, setCredentials] = useState<RegisterCredentials>({
     phone: '',
     username: '',
-    password: '',
+    password: undefined, // No password for regular users
     firstName: '',
     lastName: '',
     role: 'USER', 
@@ -130,23 +130,25 @@ const Register: React.FC = () => {
                 />
               </div>
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                رمز عبور
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="رمز عبور"
-                value={credentials.password}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
+            {credentials.role === 'ADMIN' && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  رمز عبور (فقط برای ادمین)
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required={credentials.role === 'ADMIN'}
+                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="رمز عبور"
+                  value={credentials.password || ''}
+                  onChange={handleChange}
+                  disabled={loading}
+                />
+              </div>
+            )}
           </div>
 
           <div>

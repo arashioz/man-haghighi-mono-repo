@@ -52,8 +52,8 @@ RUN echo 'server { \
     add_header Referrer-Policy "strict-origin-when-cross-origin" always; \
     add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always; \
     \
-    # Content Security Policy \
-    add_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\''; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https:; font-src '\''self'\'' data:; connect-src '\''self'\'' https:; frame-ancestors '\''none'\'';" always; \
+    # Content Security Policy - temporarily disabled \
+    # add_header Content-Security-Policy "default-src '\''self'\''; script-src '\''self'\'' '\''unsafe-inline'\'' '\''unsafe-eval'\''; style-src '\''self'\'' '\''unsafe-inline'\''; img-src '\''self'\'' data: https: http:; font-src '\''self'\'' data:; connect-src '\''self'\'' https: http: ws: wss:; frame-ancestors '\''none'\'';" always; \
     \
     # Hide nginx version \
     server_tokens off; \

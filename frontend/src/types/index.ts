@@ -179,7 +179,7 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   phone: string;
   username: string;
-  password: string;
+  password?: string; // Optional: only required for ADMIN users
   firstName: string;
   lastName: string;
   role: 'ADMIN' | 'USER';

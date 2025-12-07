@@ -92,21 +92,9 @@ async function bootstrap() {
   app.use(require('express').urlencoded({ limit: '10gb', extended: true }));
 
   // Apply helmet with proper security configuration
+  // CSP temporarily disabled to allow app access
   app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for compatibility
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-        upgradeInsecureRequests: isProduction ? [] : null,
-      },
-    },
+    contentSecurityPolicy: false, // Disabled temporarily
     crossOriginEmbedderPolicy: false, // Disabled for video streaming compatibility
     crossOriginResourcePolicy: { policy: "cross-origin" }, // Required for video streaming
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -17,10 +17,11 @@ export class RegisterDto {
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ example: 'password123', required: false, description: 'Required only for ADMIN users' })
+  @IsOptional()
   @IsString()
   @MinLength(6)
-  password: string;
+  password?: string;
 
   @ApiProperty({ example: 'John' })
   @IsString()
@@ -69,10 +70,32 @@ export class LoginDto {
   @IsNotEmpty()
   login: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ example: 'password123', description: 'Required for ADMIN users only' })
   @IsString()
   @IsNotEmpty()
   password: string;
+}
+
+export class SendOtpDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
+  phone: string;
+}
+
+export class VerifyOtpDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
+  phone: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d{6}$/, { message: 'OTP must be 6 digits' })
+  otp: string;
 }
 
 export class UpdateProfileDto {

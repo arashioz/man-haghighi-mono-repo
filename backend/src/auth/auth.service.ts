@@ -2,9 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
-import { RegisterDto, LoginDto, UpdateProfileDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
+import { SmsService } from '../sms/sms.service';
 
 const authUserPublicSelect = {
   id: true,
@@ -30,6 +31,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private smsService: SmsService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -62,6 +64,11 @@ export class AuthService {
       throw new UnauthorizedException('Non-admin users must have a phone number');
     }
 
+    // Password is required only for ADMIN users
+    if (role === 'ADMIN' && !password) {
+      throw new UnauthorizedException('Password is required for ADMIN users');
+    }
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -88,15 +95,10 @@ export class AuthService {
       throw new UnauthorizedException('User already exists');
     }
 
-    // Use salt rounds >= 12 for production security
-    const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
     const userData: Prisma.UserCreateInput = {
       email: normalizedEmail,
       phone: normalizedPhone,
       username,
-      password: hashedPassword,
       firstName,
       lastName,
       role: role as UserRole,
@@ -106,6 +108,13 @@ export class AuthService {
       state: state ?? null,
       gender: gender ?? null,
     } as any;
+
+    // Only hash and set password for ADMIN users
+    if (role === 'ADMIN' && password) {
+      const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      userData.password = hashedPassword;
+    }
 
     const user = await this.prisma.user.create({
       data: userData,
@@ -167,6 +176,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Only ADMIN users can login with password
+    if (user.role !== 'ADMIN') {
+      throw new UnauthorizedException('Regular users must use OTP authentication. Please use the OTP flow.');
+    }
+
+    // Check if user has a password (required for ADMIN)
+    if (!user.password) {
+      throw new UnauthorizedException('Password not set for this user');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -215,6 +234,136 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  /**
+   * Send OTP to user's phone number
+   */
+  async sendOtp(sendOtpDto: SendOtpDto) {
+    const { phone } = sendOtpDto;
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      throw new UnauthorizedException('Invalid phone number format');
+    }
+
+    // Find user by phone
+    const user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists or not for security
+      // Still send success response to prevent phone enumeration
+      return { message: 'If the phone number is registered, an OTP will be sent.' };
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    // Generate 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Save OTP to database
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: otpCode,
+        otpExpiresAt,
+      },
+    });
+
+    // Send OTP via SMS
+    const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
+    
+    if (!smsSent) {
+      throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+    }
+
+    return { message: 'OTP sent successfully' };
+  }
+
+  /**
+   * Verify OTP and login user
+   */
+  async verifyOtp(verifyOtpDto: VerifyOtpDto) {
+    const { phone, otp } = verifyOtpDto;
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      throw new UnauthorizedException('Invalid phone number format');
+    }
+
+    // Find user by phone
+    const user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    // Check if OTP exists and is valid
+    if (!user.otp || !user.otpExpiresAt) {
+      throw new UnauthorizedException('No OTP found. Please request a new OTP.');
+    }
+
+    // Check if OTP is expired
+    if (new Date() > user.otpExpiresAt) {
+      throw new UnauthorizedException('OTP has expired. Please request a new OTP.');
+    }
+
+    // Verify OTP
+    if (user.otp !== otp) {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+
+    // Clear OTP after successful verification
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    // Generate JWT token
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        phone: user.phone,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+        isOld: user.isOld,
+        education: user.education,
+        university: user.university,
+        job: user.job,
+        state: user.state,
+        gender: user.gender,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+      token,
+    };
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {

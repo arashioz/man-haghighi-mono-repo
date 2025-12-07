@@ -86,6 +86,11 @@ class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   REQUEST_TIMEOUT?: number = 30000; // 30 seconds
+
+  // SMS Service (FarazSMS)
+  @IsString()
+  @IsOptional()
+  FARAZSMS_API_KEY?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

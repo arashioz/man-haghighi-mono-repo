@@ -114,7 +114,18 @@ docker-compose up -d
 | `EXTERNAL_PORT` | `3000` | `8080` (یا پورت دلخواه) |
 | `CORS_ORIGINS` | اختیاری | **الزامی** |
 | `JWT_SECRET` | ساده | قوی و امن |
+| `FARAZSMS_API_KEY` | اختیاری | **الزامی برای OTP** |
 | Logging | کامل | فقط warnings/errors |
+
+### 4. تنظیمات SMS (FarazSMS)
+
+برای فعال‌سازی سیستم OTP، باید `FARAZSMS_API_KEY` را در فایل `.env` تنظیم کنید:
+
+```bash
+FARAZSMS_API_KEY=KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=
+```
+
+**نکته**: این API key برای ارسال کدهای OTP به کاربران عادی استفاده می‌شود. بدون این key، سیستم OTP کار نمی‌کند.
 
 ## 📝 مثال‌های استفاده
 
