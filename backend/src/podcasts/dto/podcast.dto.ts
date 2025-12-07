@@ -17,6 +17,11 @@ export class CreatePodcastDto {
   @IsString()
   audioFile?: string;
 
+  @ApiProperty({ example: 'podcast-cover.jpg', required: false })
+  @IsOptional()
+  @IsString()
+  thumbnail?: string;
+
   @ApiProperty({ example: 1800 })
   @IsOptional()
   @Transform(({ value }) => {

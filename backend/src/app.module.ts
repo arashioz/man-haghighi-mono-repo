@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -21,17 +21,27 @@ import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { HealthController } from './health/health.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { validateEnv } from './config/env.validation';
 
 @Module({
   controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnv,
+      envFilePath: ['.env.production', '.env'],
     }),
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 10,
-    }]),
+    ThrottlerModule.forRootAsync({
+      useFactory: (configService) => ({
+        throttlers: [{
+          ttl: configService.get('RATE_LIMIT_TTL', 60000),
+          limit: configService.get('RATE_LIMIT_MAX', 100),
+        }],
+      }),
+      inject: [ConfigService],
+    }),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
@@ -55,6 +65,18 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

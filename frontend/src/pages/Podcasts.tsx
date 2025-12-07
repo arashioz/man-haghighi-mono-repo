@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { podcastsService } from '../services/api';
 import { Podcast } from '../types';
+import { useAudioPlayer } from '../contexts/AudioPlayerContext';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -23,8 +24,7 @@ const Podcasts: React.FC = () => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
-  const [audioRef, setAudioRef] = useState<HTMLAudioElement | null>(null);
+  const { currentPodcast, isPlaying, playPodcast } = useAudioPlayer();
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -42,35 +42,7 @@ const Podcasts: React.FC = () => {
   }, []);
 
   const handlePlayPause = (podcast: Podcast) => {
-    const audioUrl = podcast.streamUrl || (podcast.audioFile ? `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${podcast.audioFile}` : null);
-    
-    if (!audioUrl) {
-      alert('فایل صوتی در دسترس نیست');
-      return;
-    }
-
-    if (currentPlayingId === podcast.id) {
-      if (audioRef) {
-        if (audioRef.paused) {
-          audioRef.play();
-        } else {
-          audioRef.pause();
-        }
-      }
-    } else {
-      if (audioRef) {
-        audioRef.pause();
-      }
-      const newAudio = new Audio(audioUrl);
-      newAudio.play();
-      setAudioRef(newAudio);
-      setCurrentPlayingId(podcast.id);
-      
-      newAudio.onended = () => {
-        setCurrentPlayingId(null);
-        setAudioRef(null);
-      };
-    }
+    playPodcast(podcast);
   };
 
   if (loading) {
@@ -144,6 +116,20 @@ const Podcasts: React.FC = () => {
                   whileHover={{ y: -8, scale: 1.02 }}
                   className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
                 >
+                  {podcast.thumbnail && (
+                    <div className="relative h-48 w-full overflow-hidden">
+                      <img
+                        src={podcast.thumbnail}
+                        alt={podcast.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent" />
+                    </div>
+                  )}
                   <div className="p-6">
                     <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
                       {podcast.title}
@@ -157,7 +143,7 @@ const Podcasts: React.FC = () => {
                       onClick={() => handlePlayPause(podcast)}
                       className="w-full mt-4 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
                     >
-                      {currentPlayingId === podcast.id ? '⏸ توقف' : '▶ پخش'}
+                      {currentPodcast?.id === podcast.id && isPlaying ? '⏸ توقف' : '▶ پخش'}
                     </button>
                   </div>
                 </motion.div>

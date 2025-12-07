@@ -1,11 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, UseInterceptors, Res, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, UploadedFile, UploadedFiles, UseInterceptors, Res, Headers, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { PodcastsService } from './podcasts.service';
 import { CreatePodcastDto, UpdatePodcastDto } from './dto/podcast.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { Response } from 'express';
@@ -21,7 +21,10 @@ export class PodcastsController {
   @Roles('ADMIN')
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('audio', {
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'audio', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+  ], {
     storage: diskStorage({
       destination: (req, file, cb) => {
         const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -30,14 +33,17 @@ export class PodcastsController {
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = extname(file.originalname);
-        cb(null, `podcast-${uniqueSuffix}${ext}`);
+        const prefix = file.fieldname === 'thumbnail' ? 'podcast-thumbnail' : 'podcast-audio';
+        cb(null, `${prefix}-${uniqueSuffix}${ext}`);
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('audio/')) {
+      if (file.fieldname === 'audio' && file.mimetype.startsWith('audio/')) {
+        cb(null, true);
+      } else if (file.fieldname === 'thumbnail' && file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
         cb(null, true);
       } else {
-        cb(new Error('Only audio files are allowed (mp3, wav, ogg, m4a, aac)'), false);
+        cb(new Error(`Invalid file type for ${file.fieldname}`), false);
       }
     },
     limits: {
@@ -48,13 +54,16 @@ export class PodcastsController {
   @ApiResponse({ status: 201, description: 'Podcast created successfully' })
   async create(
     @Body() createPodcastDto: CreatePodcastDto,
-    @UploadedFile() audio?: Express.Multer.File,
+    @UploadedFiles() files: { audio?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
   ) {
+    const audio = files?.audio?.[0];
+    const thumbnail = files?.thumbnail?.[0];
+    
     if (!audio && !createPodcastDto.audioFile) {
       throw new BadRequestException('Audio file upload or audio link is required');
     }
 
-    return this.podcastsService.create(createPodcastDto, audio);
+    return this.podcastsService.create(createPodcastDto, audio, thumbnail);
   }
 
   @Get()
@@ -193,7 +202,10 @@ export class PodcastsController {
   @Roles('ADMIN')
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('audio', {
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'audio', maxCount: 1 },
+    { name: 'thumbnail', maxCount: 1 },
+  ], {
     storage: diskStorage({
       destination: (req, file, cb) => {
         const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -202,14 +214,17 @@ export class PodcastsController {
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const ext = extname(file.originalname);
-        cb(null, `podcast-${uniqueSuffix}${ext}`);
+        const prefix = file.fieldname === 'thumbnail' ? 'podcast-thumbnail' : 'podcast-audio';
+        cb(null, `${prefix}-${uniqueSuffix}${ext}`);
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('audio/')) {
+      if (file.fieldname === 'audio' && file.mimetype.startsWith('audio/')) {
+        cb(null, true);
+      } else if (file.fieldname === 'thumbnail' && file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
         cb(null, true);
       } else {
-        cb(new Error('Only audio files are allowed (mp3, wav, ogg, m4a, aac)'), false);
+        cb(new Error(`Invalid file type for ${file.fieldname}`), false);
       }
     },
     limits: {
@@ -221,9 +236,12 @@ export class PodcastsController {
   async update(
     @Param('id') id: string,
     @Body() updatePodcastDto: UpdatePodcastDto,
-    @UploadedFile() audio?: Express.Multer.File,
+    @UploadedFiles() files: { audio?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
   ) {
-    return this.podcastsService.update(id, updatePodcastDto, audio);
+    const audio = files?.audio?.[0];
+    const thumbnail = files?.thumbnail?.[0];
+    
+    return this.podcastsService.update(id, updatePodcastDto, audio, thumbnail);
   }
 
   @Delete(':id')

@@ -88,7 +88,9 @@ export class AuthService {
       throw new UnauthorizedException('User already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Use salt rounds >= 12 for production security
+    const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const userData: Prisma.UserCreateInput = {
       email: normalizedEmail,

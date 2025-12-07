@@ -42,6 +42,27 @@ const Courses: React.FC = () => {
     courseVideos: [] as Array<{id: string, file: File | null, title: string}>,
     courseAudios: [] as Array<{id: string, file: File | null, title: string}>,
   });
+  const [isUsersModalOpen, setIsUsersModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [enrollments, setEnrollments] = useState<Array<{
+    id: string;
+    userId: string;
+    courseId: string;
+    enrolledAt: string;
+    user: {
+      id: string;
+      username: string;
+      email: string | null;
+      phone: string | null;
+      firstName: string | null;
+      lastName: string | null;
+      avatar: string | null;
+    };
+  }>>([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [targetCourseId, setTargetCourseId] = useState('');
+  const [transferring, setTransferring] = useState(false);
 
   // Helper functions for dynamic video/audio management
   const addVideoField = () => {
@@ -718,6 +739,78 @@ const Courses: React.FC = () => {
     }
   };
 
+  const handleOpenUsersModal = async (course: Course) => {
+    setSelectedCourse(course);
+    setIsUsersModalOpen(true);
+    setLoadingEnrollments(true);
+    setSelectedUserIds(new Set());
+    setTargetCourseId('');
+    
+    try {
+      const data = await coursesService.getEnrollments(course.id);
+      setEnrollments(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت کاربران دوره');
+    } finally {
+      setLoadingEnrollments(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedUserIds.size === enrollments.length) {
+      setSelectedUserIds(new Set());
+    } else {
+      setSelectedUserIds(new Set(enrollments.map(e => e.userId)));
+    }
+  };
+
+  const handleToggleUser = (userId: string) => {
+    const newSelected = new Set(selectedUserIds);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUserIds(newSelected);
+  };
+
+  const handleTransferUsers = async () => {
+    if (!selectedCourse || !targetCourseId) {
+      setError('لطفا دوره مقصد را انتخاب کنید');
+      return;
+    }
+
+    if (enrollments.length === 0) {
+      setError('هیچ کاربری برای انتقال وجود ندارد');
+      return;
+    }
+
+    if (!window.confirm(`آیا مطمئن هستید که می‌خواهید همه ${enrollments.length} کاربر را از دوره "${selectedCourse.title}" به دوره انتخابی منتقل کنید؟`)) {
+      return;
+    }
+
+    setTransferring(true);
+    setError('');
+
+    try {
+      // Transfer all enrollments from source course to target course
+      // The backend will handle the transfer of all users
+      const result = await coursesService.transferEnrollments(selectedCourse.id, targetCourseId);
+      
+      // Refresh enrollments list
+      const data = await coursesService.getEnrollments(selectedCourse.id);
+      setEnrollments(data);
+      setSelectedUserIds(new Set());
+      setTargetCourseId('');
+      
+      alert(result.message || `با موفقیت ${result.transferredCount} کاربر منتقل شد`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در انتقال کاربران');
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const AddButton = () => (
     <button 
       onClick={() => setIsModalOpen(true)}
@@ -774,6 +867,9 @@ const Courses: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     تاریخ ایجاد
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    کاربران
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     عملیات
@@ -847,6 +943,18 @@ const Courses: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(course.createdAt).toLocaleDateString('fa-IR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => handleOpenUsersModal(course)}
+                        className="text-purple-600 hover:text-purple-900 px-3 py-1 rounded hover:bg-purple-50 flex items-center gap-1 border border-purple-200"
+                        title="مدیریت کاربران"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span>کاربران</span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 space-x-reverse">
@@ -1779,6 +1887,158 @@ const Courses: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Users Management Modal */}
+      <Modal
+        isOpen={isUsersModalOpen}
+        onClose={() => {
+          setIsUsersModalOpen(false);
+          setSelectedCourse(null);
+          setEnrollments([]);
+          setSelectedUserIds(new Set());
+          setTargetCourseId('');
+        }}
+        title={`مدیریت کاربران دوره: ${selectedCourse?.title || ''}`}
+        size="xl"
+      >
+        {loadingEnrollments ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIds.size === enrollments.length && enrollments.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">انتخاب همه ({enrollments.length} کاربر)</span>
+                </label>
+              </div>
+              <div className="text-sm text-gray-600">
+                {selectedUserIds.size > 0 && `${selectedUserIds.size} کاربر انتخاب شده`}
+              </div>
+            </div>
+
+            {enrollments.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                هیچ کاربری در این دوره ثبت‌نام نکرده است
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          انتخاب
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          نام کاربری
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          نام
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          ایمیل
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          تلفن
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          تاریخ ثبت‌نام
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {enrollments.map((enrollment) => (
+                        <tr key={enrollment.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedUserIds.has(enrollment.userId)}
+                              onChange={() => handleToggleUser(enrollment.userId)}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {enrollment.user.username}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {enrollment.user.firstName || ''} {enrollment.user.lastName || ''}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {enrollment.user.email || '-'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {enrollment.user.phone || '-'}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {enrollments.length > 0 && (
+                  <div className="border-t pt-4 mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        انتقال همه کاربران به دوره:
+                      </label>
+                      <select
+                        value={targetCourseId}
+                        onChange={(e) => setTargetCourseId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">انتخاب دوره مقصد</option>
+                        {courses
+                          .filter(course => course.id !== selectedCourse?.id)
+                          .map(course => (
+                            <option key={course.id} value={course.id}>
+                              {course.title}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleTransferUsers}
+                      disabled={!targetCourseId || transferring}
+                      className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {transferring ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>در حال انتقال...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          <span>انتقال همه {enrollments.length} کاربر به دوره انتخاب شده</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

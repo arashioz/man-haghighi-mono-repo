@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 
 async function bootstrap() {
@@ -15,12 +16,28 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
     rawBody: true,
-    logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+    logger: process.env.NODE_ENV === 'production' 
+      ? ['log', 'error', 'warn'] 
+      : ['log', 'error', 'warn', 'debug', 'verbose'],
   });
 
-  // Enable CORS first (before helmet)
-  app.enableCors({
-    origin: [
+  const configService = app.get(ConfigService);
+  const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+  const isProduction = nodeEnv === 'production';
+
+  // Disable x-powered-by header
+  app.disable('x-powered-by');
+
+  // Get CORS origins from environment variable
+  const corsOriginsEnv = configService.get<string>('CORS_ORIGINS', '');
+  let allowedOrigins: string[] = [];
+  
+  if (corsOriginsEnv) {
+    // Parse comma-separated origins from env
+    allowedOrigins = corsOriginsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
+  } else if (!isProduction) {
+    // Development fallback
+    allowedOrigins = [
       'http://localhost',
       'http://localhost:3000',
       'http://localhost:3001',
@@ -32,15 +49,21 @@ async function bootstrap() {
       'http://127.0.0.1:3001',
       'http://127.0.0.1:3002',
       'http://127.0.0.1:5173',
-      'http://185.231.112.84',
-      'http://185.231.112.84:3000',
-      'http://185.231.112.84:3001',
-      'http://185.231.112.84:3002',
-      'http://185.231.112.84:8080',
-      'http://185.231.112.84:8081',
-      'http://185.231.112.84:8082',
-      'https://185.231.112.84'
-    ],
+    ];
+  }
+
+  if (allowedOrigins.length === 0) {
+    logger.warn('⚠️  No CORS origins configured. CORS will be disabled.');
+  } else {
+    // Validate no wildcards
+    if (allowedOrigins.some(origin => origin.includes('*'))) {
+      throw new Error('CORS origins cannot contain wildcards. Use specific origins only.');
+    }
+  }
+
+  // Enable CORS first (before helmet)
+  app.enableCors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
@@ -68,13 +91,30 @@ async function bootstrap() {
   app.use(require('express').json({ limit: '10gb' }));
   app.use(require('express').urlencoded({ limit: '10gb', extended: true }));
 
-  // Apply helmet after CORS
+  // Apply helmet with proper security configuration
   app.use(helmet({
-    contentSecurityPolicy: false, // Disable CSP for simplicity
-    crossOriginEmbedderPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginOpenerPolicy: false,
-    originAgentCluster: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for compatibility
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        upgradeInsecureRequests: isProduction ? [] : null,
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Disabled for video streaming compatibility
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Required for video streaming
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    hsts: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
   }));
   app.use(compression());
 
@@ -82,6 +122,10 @@ async function bootstrap() {
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
+    forbidUnknownValues: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
   }));
 
   // Set global prefix for all routes (after CORS setup)
@@ -103,15 +147,17 @@ async function bootstrap() {
     fallthrough: true,
   });
 
-  const port = process.env.PORT || 3000;
+  const port = configService.get<number>('PORT', 3000);
   
   logger.log('🔧 Configuring middleware and routes...');
   logger.log('📊 Setting up Swagger documentation...');
   logger.log('🔒 Security middleware configured');
+  logger.log(`🌍 Environment: ${nodeEnv}`);
+  logger.log(`🔐 CORS origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'none'}`);
   
   await app.listen(port);
   
-  const serverIp = process.env.SERVER_IP || '185.231.112.84';
+  const serverIp = configService.get<string>('SERVER_IP', 'localhost');
   logger.log(`✅ Application is running on: http://${serverIp}:${port}`)
   logger.log(`📚 Swagger docs available at: http://${serverIp}:${port}/api/docs`)
   logger.log(`📁 Static files served from: /uploads/`);

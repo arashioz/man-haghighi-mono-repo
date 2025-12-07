@@ -105,6 +105,7 @@ export class UrlService {
     return {
       ...podcast,
       audioFile: this.getFileUrl(podcast.audioFile),
+      thumbnail: podcast.thumbnail ? this.getFileUrl(podcast.thumbnail) : null,
       streamUrl,
     };
   }

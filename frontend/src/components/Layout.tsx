@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useAudioPlayer } from '../contexts/AudioPlayerContext';
+import AudioPlayerBar from './AudioPlayerBar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -13,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { currentPodcast } = useAudioPlayer();
 
   const navigationItems = [
     { label: 'خانه', path: '/' },
@@ -44,7 +47,10 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
     return () => clearInterval(interval);
   }, [location.pathname]);
   
-  const shouldUseDarkTheme = darkTheme || isVersion2;
+  // Check if we're on a courses page
+  const isCoursesPage = location.pathname.startsWith('/courses');
+  
+  const shouldUseDarkTheme = darkTheme || isVersion2 || isCoursesPage;
 
   return (
     <div className={`min-h-screen ${shouldUseDarkTheme ? 'bg-[#040404]' : 'bg-gray-50'}`}>
@@ -225,7 +231,10 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
       </nav>
 
       {/* Main Content */}
-      <main>{children}</main>
+      <main className={currentPodcast ? "pb-20" : ""}>{children}</main>
+
+      {/* Audio Player Bar */}
+      <AudioPlayerBar />
 
     </div>
   );
