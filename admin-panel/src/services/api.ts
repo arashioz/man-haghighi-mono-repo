@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, VideoPodcast, Course, Video, Audio, Workshop, WorkshopParticipant } from '../types';
+import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, VideoPodcast, Course, Video, Audio, Workshop, WorkshopParticipant, Log } from '../types';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
 const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
@@ -1477,3 +1477,36 @@ export const salesTeamsService = {
     return response.data;
   },
 };
+
+export const logsService = {
+  getLogs: async (filters?: {
+    level?: 'LOG' | 'ERROR' | 'WARN' | 'DEBUG' | 'VERBOSE';
+    context?: string;
+    url?: string;
+    statusCode?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    const response = await api.get('/logs', { params: filters });
+    return response.data;
+  },
+
+  getLogStats: async () => {
+    const response = await api.get('/logs/stats');
+    return response.data;
+  },
+
+  deleteOldLogs: async (days: number) => {
+    const response = await api.delete(`/logs/old/${days}`);
+    return response.data;
+  },
+
+  deleteAllLogs: async () => {
+    const response = await api.delete('/logs/all');
+    return response.data;
+  },
+};
+
