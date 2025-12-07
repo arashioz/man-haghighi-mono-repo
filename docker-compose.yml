@@ -35,6 +35,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: haghighi_backend
+    # Environment variables are loaded from .env file
+    # Required SMS variables: IRANPAYAMAK_API_KEY, IRANPAYAMAK_LINE_NUMBER, IRANPAYAMAK_PATTERN_CODE
     env_file: .env
     ports:
       - "3000:3000"
