@@ -230,12 +230,16 @@ export class PodcastsService {
       data,
     });
 
-    if (audioFile && existing.audioFile !== updatedPodcast.audioFile) {
+    // Remove old audio file if a new one was uploaded
+    if (audioFile && existing.audioFile && existing.audioFile !== updatedPodcast.audioFile) {
       this.removeFileIfLocal(existing.audioFile);
     }
 
-    if (thumbnailFile && existing.thumbnail !== updatedPodcast.thumbnail) {
-      this.removeFileIfLocal(existing.thumbnail);
+    // Remove old thumbnail file if a new one was uploaded
+    const existingThumbnail = (existing as any).thumbnail;
+    const updatedThumbnail = (updatedPodcast as any).thumbnail;
+    if (thumbnailFile && existingThumbnail && existingThumbnail !== updatedThumbnail) {
+      this.removeFileIfLocal(existingThumbnail);
     }
 
     if (audioFile) {
