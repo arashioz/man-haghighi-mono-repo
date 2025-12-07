@@ -24,7 +24,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { Response } from 'express';
-import { createReadStream, existsSync, statSync } from 'fs';
+import { createReadStream, existsSync, statSync, mkdirSync } from 'fs';
 import { VideoPodcastsService } from './video-podcasts.service';
 import { CreateVideoPodcastDto, UpdateVideoPodcastDto } from './dto/video-podcast.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -46,6 +46,10 @@ export class VideoPodcastsController {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+          // Ensure directory exists with proper permissions
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true, mode: 0o755 });
+          }
           cb(null, uploadPath);
         },
         filename: (req, file, cb) => {
@@ -72,8 +76,13 @@ export class VideoPodcastsController {
     @Body() createVideoPodcastDto: CreateVideoPodcastDto,
     @UploadedFile() video?: Express.Multer.File,
   ) {
-    if (!video && !createVideoPodcastDto.videoFile) {
-      throw new BadRequestException('Video file upload or video link is required');
+    if (!video) {
+      throw new BadRequestException('Video file upload is required. External URLs are not allowed.');
+    }
+
+    // Reject external URLs if provided
+    if (createVideoPodcastDto.videoFile && (createVideoPodcastDto.videoFile.startsWith('http://') || createVideoPodcastDto.videoFile.startsWith('https://'))) {
+      throw new BadRequestException('External URLs are not allowed. Please upload the video file directly.');
     }
 
     return this.videoPodcastsService.create(createVideoPodcastDto, video);
@@ -116,10 +125,13 @@ export class VideoPodcastsController {
       return res.status(404).json({ error: 'Video file not specified' });
     }
 
-    let videoPath: string;
+    // Reject external URLs - only internal uploads allowed
     if (videoPodcast.videoFile.startsWith('http://') || videoPodcast.videoFile.startsWith('https://')) {
-      return res.redirect(302, videoPodcast.videoFile);
-    } else if (videoPodcast.videoFile.startsWith('/')) {
+      return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+    }
+
+    let videoPath: string;
+    if (videoPodcast.videoFile.startsWith('/')) {
       videoPath = videoPodcast.videoFile;
     } else if (videoPodcast.videoFile.startsWith('uploads/') || videoPodcast.videoFile.startsWith('./uploads/')) {
       videoPath = join(process.cwd(), videoPodcast.videoFile.replace(/^\.\//, ''));
@@ -200,6 +212,8 @@ export class VideoPodcastsController {
         'Content-Length': chunkSize,
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000',
+        'Content-Disposition': 'inline',
+        'X-Content-Type-Options': 'nosniff',
       };
 
       res.writeHead(206, head);
@@ -210,6 +224,8 @@ export class VideoPodcastsController {
         'Accept-Ranges': 'bytes',
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000',
+        'Content-Disposition': 'inline',
+        'X-Content-Type-Options': 'nosniff',
       };
 
       res.writeHead(200, head);
@@ -227,6 +243,10 @@ export class VideoPodcastsController {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
+          // Ensure directory exists with proper permissions
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true, mode: 0o755 });
+          }
           cb(null, uploadPath);
         },
         filename: (req, file, cb) => {

@@ -390,6 +390,31 @@ model OldProduct {
   @@map("old_products")
 }
 
+model Log {
+  id          String   @id @default(cuid())
+  level       String   // LOG, ERROR, WARN, DEBUG, VERBOSE
+  message     String   @db.Text
+  context     String?  // e.g., 'HTTP', 'HttpExceptionFilter', 'Bootstrap'
+  method      String?  // HTTP method (GET, POST, etc.)
+  url         String?  // Request URL
+  statusCode  Int?     // HTTP status code
+  duration    Int?     // Request duration in milliseconds
+  userId      String?  // User ID if authenticated
+  ip          String?  // Client IP address
+  userAgent   String?  // User agent string
+  errorStack  String?  @db.Text // Error stack trace if available
+  requestBody Json?    // Request body (sensitive data masked)
+  response    Json?    // Response data (sensitive data masked)
+  createdAt   DateTime @default(now())
+  
+  @@index([level])
+  @@index([context])
+  @@index([createdAt])
+  @@index([url])
+  @@index([statusCode])
+  @@map("logs")
+}
+
 enum UserRole {
   ADMIN
   SALES_MANAGER

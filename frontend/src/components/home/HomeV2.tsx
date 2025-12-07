@@ -800,10 +800,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
               >
                 {highlightedVideo?.streamUrl || highlightedVideo?.videoFile ? (
                   <video
-                    className="w-full h-auto"
+                    className="w-full h-auto [&::-webkit-media-controls-panel]:direction-rtl"
+                    style={{ direction: 'rtl' }}
                     src={highlightedVideo.streamUrl || highlightedVideo.videoFile || undefined}
                     poster={videoPoster}
                     controls
+                    controlsList="nodownload"
                     autoPlay={false}
                     playsInline
                   />

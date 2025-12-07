@@ -41,8 +41,9 @@ export class UrlService {
       return null;
     }
     
+    // External URLs are not allowed - return null instead
     if (filePath.startsWith('http://') || filePath.startsWith('https://')){
-      return filePath;
+      return null;
     }
     
     if (filePath.startsWith('/uploads/')) {

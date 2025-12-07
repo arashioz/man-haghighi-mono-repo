@@ -108,13 +108,15 @@ export class CoursesController {
 
       console.log(`Streaming course intro video ID: ${id}, videoFile: ${course.videoFile}`);
       
-      // Check if videoFile is a URL or a local file path
-      let videoPath: string;
+      // Reject external URLs - only internal uploads allowed
       if (course.videoFile.startsWith('http://') || course.videoFile.startsWith('https://')) {
-        // External URL - redirect to it
-        console.log(`Redirecting to external URL: ${course.videoFile}`);
-        return res.redirect(302, course.videoFile);
-      } else if (course.videoFile.startsWith('/')) {
+        console.error(`External URLs are not supported. Course ID: ${id}, videoFile: ${course.videoFile}`);
+        return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+      }
+
+      // Check if videoFile is a local file path
+      let videoPath: string;
+      if (course.videoFile.startsWith('/')) {
         // Absolute path
         videoPath = course.videoFile;
       } else if (course.videoFile.startsWith('uploads/') || course.videoFile.startsWith('./uploads/')) {
@@ -202,6 +204,8 @@ export class CoursesController {
           'Content-Length': chunksize,
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(206, head);
@@ -212,6 +216,8 @@ export class CoursesController {
           'Content-Type': contentType,
           'Accept-Ranges': 'bytes',
           'Cache-Control': 'public, max-age=31536000, immutable',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(200, head);
@@ -225,6 +231,17 @@ export class CoursesController {
         message: error.message 
       });
     }
+  }
+
+  @Get(':id/enrollments')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get course enrollments (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Enrollments retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  async getEnrollments(@Param('id') id: string) {
+    return this.coursesService.getEnrollments(id);
   }
 
   @Get(':id')

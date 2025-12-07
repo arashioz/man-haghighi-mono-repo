@@ -32,8 +32,9 @@ export class PodcastsService {
       return '';
     }
 
+    // Reject external URLs - only internal uploads allowed
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
-      return filename;
+      throw new BadRequestException('External URLs are not allowed. Only internal uploads are supported.');
     }
 
     if (filename.startsWith('/')) {
@@ -44,6 +45,11 @@ export class PodcastsService {
   }
 
   private getFileSize(filename: string, fallbackSize?: number): number {
+    // Skip external URLs
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
+      return fallbackSize || 0;
+    }
+
     const possiblePaths = [
       this.resolveFilePath(filename),
       join(process.cwd(), filename),
@@ -105,7 +111,12 @@ export class PodcastsService {
     }
 
     if (!data.audioFile) {
-      throw new BadRequestException('Audio file or audio link is required');
+      throw new BadRequestException('Audio file upload is required. External URLs are not allowed.');
+    }
+
+    // Reject external URLs
+    if (data.audioFile.startsWith('http://') || data.audioFile.startsWith('https://')) {
+      throw new BadRequestException('External URLs are not allowed. Please upload the audio file directly.');
     }
 
     if (data.published && !data.publishedAt) {
@@ -133,9 +144,8 @@ export class PodcastsService {
       this.logger.log(`File Type: ${audioFile.mimetype}`);
       this.logger.log(`File URL: ${audioUrl}`);
       this.logger.log(`Stream URL: ${streamUrl}`);
-    } else if (data.audioFile?.startsWith('http')) {
-      this.logger.log(`Podcast uses external audio URL: ${data.audioFile}`);
     }
+    // External URLs are no longer allowed
 
     if (thumbnailFile) {
       const thumbnailUrl = this.urlService.getFileUrl(thumbnailFile.filename);

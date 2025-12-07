@@ -7,10 +7,22 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { ModuleRef } from '@nestjs/core';
+import { LogsService } from '../../logs/logs.service';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
+  private logsService: LogsService | null = null;
+
+  constructor(private moduleRef: ModuleRef) {
+    // Try to get LogsService, but don't fail if it's not available
+    try {
+      this.logsService = this.moduleRef.get(LogsService, { strict: false });
+    } catch {
+      this.logsService = null;
+    }
+  }
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
@@ -48,15 +60,37 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const isProduction = process.env.NODE_ENV === 'production';
     
     // Log error with stack trace only in development
+    const logMessage = `${request.method} ${request.url} - ${status} - ${message}`;
     if (isProduction) {
-      this.logger.error(
-        `${request.method} ${request.url} - ${status} - ${message}`,
-      );
+      this.logger.error(logMessage);
     } else {
       this.logger.error(
-        `${request.method} ${request.url} - ${status} - ${message}`,
+        logMessage,
         exception instanceof Error ? exception.stack : undefined,
       );
+    }
+
+    // Save to database
+    if (this.logsService) {
+      const userId = (request as any).user?.id;
+      const ip = request.ip || request.headers['x-forwarded-for'] || request.connection.remoteAddress;
+      const userAgent = request.headers['user-agent'];
+
+      this.logsService.createLog({
+        level: 'ERROR',
+        message: logMessage,
+        context: 'HttpExceptionFilter',
+        method: request.method,
+        url: request.url,
+        statusCode: status,
+        userId,
+        ip: Array.isArray(ip) ? ip[0] : ip,
+        userAgent,
+        errorStack: exception instanceof Error ? exception.stack : undefined,
+        requestBody: request.body,
+      }).catch(() => {
+        // Silently fail if logging fails
+      });
     }
 
     // Don't expose stack traces in production

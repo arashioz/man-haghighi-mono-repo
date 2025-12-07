@@ -96,6 +96,8 @@ export class AudiosController {
           'Accept-Ranges': 'bytes',
           'Content-Length': chunksize,
           'Content-Type': 'audio/mpeg',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
 
         res.writeHead(206, headers);
@@ -105,6 +107,8 @@ export class AudiosController {
           'Content-Length': fileSize,
           'Content-Type': 'audio/mpeg',
           'Accept-Ranges': 'bytes',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
 
         res.writeHead(200, headers);

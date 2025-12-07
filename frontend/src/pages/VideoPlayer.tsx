@@ -194,7 +194,9 @@ const VideoPlayer: React.FC = () => {
                   <video
                     key={videoId} // Force re-render when video changes
                     controls
-                    className="w-full h-full"
+                    controlsList="nodownload"
+                    className="w-full h-full [&::-webkit-media-controls-panel]:direction-rtl"
+                    style={{ direction: 'rtl' }}
                     poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
                     onEnded={hasNext ? goToNextVideo : undefined}
                     onError={(e) => {

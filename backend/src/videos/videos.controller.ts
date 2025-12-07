@@ -113,13 +113,15 @@ export class VideosController {
 
       console.log(`[TEST] Video file: ${video.videoFile}`);
       
-      // Check if videoFile is a URL or a local file path
-      let videoPath: string;
+      // Reject external URLs - only internal uploads allowed
       if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-        // External URL - redirect to it
-        console.log(`[TEST] Redirecting to external URL: ${video.videoFile}`);
-        return res.redirect(302, video.videoFile);
-      } else if (video.videoFile.startsWith('/')) {
+        console.error(`[TEST] External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+        return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+      }
+
+      // Check if videoFile is a local file path
+      let videoPath: string;
+      if (video.videoFile.startsWith('/')) {
         // Absolute path
         videoPath = video.videoFile;
       } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
@@ -207,6 +209,8 @@ export class VideosController {
           'Content-Length': chunksize,
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(206, head);
@@ -217,6 +221,8 @@ export class VideosController {
           'Accept-Ranges': 'bytes',
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000',
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(200, head);
@@ -265,13 +271,15 @@ export class VideosController {
 
       console.log(`Streaming video ID: ${id}, videoFile: ${video.videoFile}`);
       
-      // Check if videoFile is a URL or a local file path
-      let videoPath: string;
+      // Reject external URLs - only internal uploads allowed
       if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-        // External URL - redirect to it
-        console.log(`Redirecting to external URL: ${video.videoFile}`);
-        return res.redirect(302, video.videoFile);
-      } else if (video.videoFile.startsWith('/')) {
+        console.error(`External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+        return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+      }
+
+      // Check if videoFile is a local file path
+      let videoPath: string;
+      if (video.videoFile.startsWith('/')) {
         // Absolute path
         videoPath = video.videoFile;
       } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
@@ -360,6 +368,8 @@ export class VideosController {
           'Content-Length': chunksize,
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(206, head);
@@ -370,6 +380,8 @@ export class VideosController {
           'Accept-Ranges': 'bytes',
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+          'Content-Disposition': 'inline',
+          'X-Content-Type-Options': 'nosniff',
         };
         
         res.writeHead(200, head);

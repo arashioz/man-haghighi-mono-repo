@@ -36,18 +36,18 @@ COPY package*.json ./
 RUN npm ci --only=production && \
     npm cache clean --force
 
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/prisma ./prisma
+# Copy built application from builder with ownership
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 
-# Copy migration script
-COPY scripts/migrate.sh ./scripts/migrate.sh
+# Copy migration script with ownership
+COPY --chown=nestjs:nodejs scripts/migrate.sh ./scripts/migrate.sh
 RUN chmod +x ./scripts/migrate.sh
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/uploads && \
-    chown -R nestjs:nodejs /app
+    chown nestjs:nodejs /app/uploads
 
 # Switch to non-root user
 USER nestjs
