@@ -15,6 +15,7 @@ import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
 import Courses from './pages/Courses';
 import VideoPodcasts from './pages/VideoPodcasts';
+import Logs from './pages/Logs';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -46,6 +47,7 @@ function App() {
                     <Route path="/podcasts" element={<Podcasts />} />
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/video-podcasts" element={<VideoPodcasts />} />
+                    <Route path="/logs" element={<Logs />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>
