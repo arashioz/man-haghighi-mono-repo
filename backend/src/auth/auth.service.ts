@@ -109,8 +109,8 @@ export class AuthService {
       gender: gender ?? null,
     } as any;
 
-    // Only hash and set password for ADMIN users
-    if (role === 'ADMIN' && password) {
+    // Hash and set password if provided (for all users, not just ADMIN)
+    if (password) {
       const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       userData.password = hashedPassword;
@@ -176,50 +176,88 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Only ADMIN users can login with password
-    if (user.role !== 'ADMIN') {
-      throw new UnauthorizedException('Regular users must use OTP authentication. Please use the OTP flow.');
+    // Check if user is active
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
     }
 
-    // Check if user has a password (required for ADMIN)
-    if (!user.password) {
-      throw new UnauthorizedException('Password not set for this user');
+    // If password is provided, authenticate with password
+    if (password) {
+      if (!user.password) {
+        throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      const token = this.jwtService.sign({
+        sub: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      });
+
+      const legacyUser = user as any;
+
+      return {
+        user: {
+          id: legacyUser.id,
+          email: legacyUser.email,
+          phone: legacyUser.phone,
+          username: legacyUser.username,
+          firstName: legacyUser.firstName,
+          lastName: legacyUser.lastName,
+          role: legacyUser.role,
+          isActive: legacyUser.isActive,
+          isOld: legacyUser.isOld,
+          education: legacyUser.education,
+          university: legacyUser.university,
+          job: legacyUser.job,
+          state: legacyUser.state,
+          gender: legacyUser.gender,
+          createdAt: legacyUser.createdAt,
+          updatedAt: legacyUser.updatedAt,
+        },
+        token,
+      };
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+    // If password is not provided, initiate OTP flow
+    // Only phone numbers can use OTP
+    if (!normalizedPhone) {
+      throw new UnauthorizedException('Phone number required for OTP authentication. Please provide a phone number or use password authentication.');
     }
 
-    const token = this.jwtService.sign({
-      sub: user.id,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
+    // Verify the login input matches the user's phone
+    if (user.phone !== normalizedPhone) {
+      throw new UnauthorizedException('Phone number does not match user account');
+    }
+
+    // Generate and send OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    // Save OTP to database
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: otpCode,
+        otpExpiresAt,
+      },
     });
 
-    const legacyUser = user as any;
+    // Send OTP via SMS
+    const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
+    
+    if (!smsSent) {
+      throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+    }
 
-    return {
-      user: {
-        id: legacyUser.id,
-        email: legacyUser.email,
-        phone: legacyUser.phone,
-        username: legacyUser.username,
-        firstName: legacyUser.firstName,
-        lastName: legacyUser.lastName,
-        role: legacyUser.role,
-        isActive: legacyUser.isActive,
-        isOld: legacyUser.isOld,
-        education: legacyUser.education,
-        university: legacyUser.university,
-        job: legacyUser.job,
-        state: legacyUser.state,
-        gender: legacyUser.gender,
-        createdAt: legacyUser.createdAt,
-        updatedAt: legacyUser.updatedAt,
-      },
-      token,
+    return { 
+      message: 'OTP sent successfully. Please verify OTP to complete login.',
+      requiresOtpVerification: true 
     };
   }
 
