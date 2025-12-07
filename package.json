@@ -5,7 +5,11 @@
   "private": true,
   "scripts": {
     "start": "npm run docker:up",
-    "dev": "npm run docker:up",
+    "dev": "npm run env:dev && npm run docker:up",
+    "prod": "npm run env:prod && npm run docker:up",
+    "env:dev": "./switch-env.sh dev",
+    "env:prod": "./switch-env.sh prod",
+    "env:check": "./check-env.sh",
     "docker:up": "docker-compose up -d && npm run docker:logs",
     "docker:build": "docker-compose build",
     "docker:rebuild": "docker-compose build --no-cache",
@@ -15,6 +19,8 @@
     "docker:ps": "docker-compose ps",
     "docker:restart": "docker-compose restart",
     "setup": "cp local.env .env && mkdir -p uploads && chmod 777 uploads",
+    "setup:dev": "npm run env:dev && mkdir -p uploads && chmod 777 uploads",
+    "setup:prod": "npm run env:prod && mkdir -p uploads && chmod 777 uploads",
     "backend:logs": "docker-compose logs -f backend",
     "frontend:logs": "docker-compose logs -f frontend",
     "admin:logs": "docker-compose logs -f admin",
@@ -26,7 +32,9 @@
     "db:studio": "docker exec haghighi_backend npx prisma studio",
     "test:api": "curl http://localhost:3000/api/health && curl -I http://localhost:3001/ && curl -I http://localhost:3002/",
     "clean:all": "npm run docker:down && docker rmi new-haghighi-frontend new-haghighi-admin new-haghighi-backend 2>/dev/null || true",
-    "fresh:start": "npm run clean:all && npm run setup && npm run docker:build && npm run docker:up"
+    "fresh:start": "npm run clean:all && npm run setup && npm run docker:build && npm run docker:up",
+    "fresh:start:dev": "npm run clean:all && npm run setup:dev && npm run docker:build && npm run docker:up",
+    "fresh:start:prod": "npm run clean:all && npm run setup:prod && npm run docker:build && npm run docker:up"
   },
   "keywords": [
     "education",

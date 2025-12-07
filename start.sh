@@ -5,9 +5,12 @@ echo ""
 
 # Check if .env exists
 if [ ! -f .env ]; then
-    echo "📝 Creating .env file from local.env..."
+    echo "📝 Creating .env file from local.env (development)..."
     cp local.env .env
-    echo "✅ .env created"
+    echo "✅ .env created (development mode)"
+    echo ""
+    echo "💡 To switch to production: ./switch-env.sh prod"
+    echo "💡 To check current env: ./check-env.sh"
     echo ""
 fi
 

@@ -55,8 +55,8 @@ class EnvironmentVariables {
 
   // CORS
   @IsString()
-  @IsNotEmpty()
-  CORS_ORIGINS!: string; // Comma-separated list of allowed origins
+  @IsOptional()
+  CORS_ORIGINS?: string; // Comma-separated list of allowed origins (required in production)
 
   // Uploads
   @IsString()
@@ -96,6 +96,31 @@ export function validateEnv(config: Record<string, unknown>) {
   const errors = validateSync(validatedConfig, {
     skipMissingProperties: false,
   });
+
+  // Additional validation: CORS_ORIGINS required in production
+  const nodeEnv = (validatedConfig.NODE_ENV || 'development').toLowerCase();
+  const isProduction = nodeEnv === 'production';
+  
+  if (isProduction && (!validatedConfig.CORS_ORIGINS || validatedConfig.CORS_ORIGINS.trim() === '')) {
+    errors.push({
+      property: 'CORS_ORIGINS',
+      constraints: {
+        isNotEmpty: 'CORS_ORIGINS is required in production environment',
+      },
+      value: validatedConfig.CORS_ORIGINS,
+    } as any);
+  }
+
+  // Validate CORS_ORIGINS doesn't contain wildcards if set
+  if (validatedConfig.CORS_ORIGINS && validatedConfig.CORS_ORIGINS.includes('*')) {
+    errors.push({
+      property: 'CORS_ORIGINS',
+      constraints: {
+        noWildcard: 'CORS_ORIGINS cannot contain wildcards. Use specific origins only.',
+      },
+      value: validatedConfig.CORS_ORIGINS,
+    } as any);
+  }
 
   if (errors.length > 0) {
     const errorMessages = errors.map((error) => {

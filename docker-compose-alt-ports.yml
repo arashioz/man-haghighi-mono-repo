@@ -1,5 +1,7 @@
 # Alternative port configuration to bypass firewalls
 # Try using different ports that might not be blocked
+# NOTE: This configuration exposes PostgreSQL port for firewall bypass purposes
+# For production, use docker-compose.yml which has better security (no public DB port)
 
 services:
   # Database
@@ -8,14 +10,26 @@ services:
     container_name: haghighi_postgres
     env_file: .env
     ports:
-      - "5432:5432"
+      - "5432:5432"  # Exposed for firewall bypass (not recommended for production)
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   # Backend API
   backend:
@@ -29,10 +43,27 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./moc-old-data:/app/moc-old-data
+    networks:
+      - backend_network
+      - frontend_network
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Frontend
   frontend:
@@ -44,9 +75,25 @@ services:
     container_name: haghighi_frontend
     ports:
       - "8081:80"  # Changed to 8081
+    networks:
+      - frontend_network
     depends_on:
       - backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   # Admin Panel
   admin:
@@ -58,11 +105,27 @@ services:
     container_name: haghighi_admin
     ports:
       - "8082:80"  # Changed to 8082
+    networks:
+      - frontend_network
     depends_on:
       - backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
-  # Prisma Studio
+  # Prisma Studio (Development tool - not for production)
   prisma-studio:
     build:
       context: ./backend
@@ -73,12 +136,28 @@ services:
       - "5555:5555"
     volumes:
       - ./backend:/app
+    networks:
+      - backend_network
     depends_on:
       postgres:
         condition: service_healthy
     command: npx prisma studio
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   postgres_data:
+    driver: local
+
+networks:
+  backend_network:
+    driver: bridge
+    internal: false
+  frontend_network:
+    driver: bridge
+    internal: false
 
