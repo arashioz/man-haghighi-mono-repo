@@ -14,6 +14,8 @@ RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
+# Copy tsconfig.json for seed command
+COPY tsconfig.json ./tsconfig.json
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -51,6 +53,16 @@ RUN chmod +x ./scripts/migrate.sh
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/uploads && \
     chown nestjs:nodejs /app/uploads
+
+# Create .prisma directory with proper permissions for Prisma Client generation
+# This allows the nestjs user to regenerate Prisma Client after migrations
+RUN mkdir -p /app/node_modules/.prisma && \
+    chown -R nestjs:nodejs /app/node_modules/.prisma
+
+# Ensure prisma package directory is writable for generation
+# Prisma needs to write to node_modules/.prisma and node_modules/prisma
+RUN mkdir -p /app/node_modules/prisma && \
+    chown -R nestjs:nodejs /app/node_modules/prisma 2>/dev/null || true
 
 # Switch to non-root user
 USER nestjs

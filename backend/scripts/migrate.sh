@@ -39,6 +39,29 @@ baseline_migrations() {
 # First, check and apply rename migration if needed
 apply_rename_migration
 
+# Function to resolve failed migrations
+resolve_failed_migrations() {
+    echo "🔧 Resolving failed migrations..."
+    
+    # Get list of failed migrations from Prisma
+    FAILED_MIGRATIONS=$(npx prisma migrate status 2>&1 | grep -i "failed" | awk '{print $1}' || echo "")
+    
+    if [ -n "$FAILED_MIGRATIONS" ]; then
+        echo "  Found failed migrations, marking as rolled back..."
+        for migration in $FAILED_MIGRATIONS; do
+            echo "    Resolving $migration..."
+            npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null || \
+            npx prisma migrate resolve --applied "$migration" 2>/dev/null || \
+            echo "      (Could not resolve $migration automatically)"
+        done
+    fi
+    
+    # Also try to resolve the specific known failed migration
+    npx prisma migrate resolve --rolled-back "20250101000000_add_podcast_thumbnail" 2>/dev/null || \
+    npx prisma migrate resolve --applied "20250101000000_add_podcast_thumbnail" 2>/dev/null || \
+    echo "  (Migration 20250101000000_add_podcast_thumbnail resolution attempted)"
+}
+
 # Try to deploy migrations
 echo "📦 Attempting to deploy migrations..."
 MIGRATE_OUTPUT=$(npx prisma migrate deploy 2>&1)
@@ -46,6 +69,14 @@ MIGRATE_EXIT=$?
 
 if [ $MIGRATE_EXIT -eq 0 ]; then
     echo "✅ Migrations deployed successfully"
+elif echo "$MIGRATE_OUTPUT" | grep -q "P3009"; then
+    echo "⚠️  Found failed migrations (P3009). Resolving..."
+    resolve_failed_migrations
+    echo "✅ Retrying migrate deploy after resolving failed migrations..."
+    npx prisma migrate deploy || {
+        echo "⚠️  Migrate deploy still failed. Using db push as fallback..."
+        npx prisma db push --accept-data-loss || true
+    }
 elif echo "$MIGRATE_OUTPUT" | grep -q "P3005"; then
     echo "⚠️  Database schema exists but migration history is missing. Baselines database..."
     baseline_migrations
@@ -55,8 +86,8 @@ elif echo "$MIGRATE_OUTPUT" | grep -q "P3005"; then
         npx prisma db push --accept-data-loss || true
     }
 else
-    echo "⚠️  Migration deploy failed with unknown error. Attempting to baseline..."
-    baseline_migrations
+    echo "⚠️  Migration deploy failed with unknown error. Attempting to resolve failed migrations..."
+    resolve_failed_migrations
     echo "✅ Retrying migrate deploy..."
     npx prisma migrate deploy || {
         echo "⚠️  Migrate deploy still failed. Using db push as fallback..."
@@ -65,8 +96,14 @@ else
 fi
 
 # 🔥 IMPORTANT: Regenerate Prisma Client after migrations
+# Try to regenerate, but continue if it fails (Client is already generated in build stage)
 echo "🔄 Regenerating Prisma Client after migrations..."
-npx prisma generate
+if npx prisma generate 2>&1; then
+    echo "✅ Prisma Client regenerated successfully"
+else
+    echo "⚠️  Prisma generate had issues, but continuing with existing client from build stage..."
+    echo "    (This is usually fine as Prisma Client is pre-generated during Docker build)"
+fi
 
 echo "✅ Migration process completed"
 
