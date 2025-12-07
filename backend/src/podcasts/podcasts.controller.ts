@@ -65,8 +65,8 @@ export class PodcastsController {
   }
 
   @Get('published')
-  @ApiOperation({ summary: 'Get published podcasts' })
-  @ApiResponse({ status: 200, description: 'Published podcasts retrieved successfully' })
+  @ApiOperation({ summary: 'Get published standalone podcasts (does not include course audios)' })
+  @ApiResponse({ status: 200, description: 'Published standalone podcasts retrieved successfully. Note: Course audios are separate and accessed through /courses endpoints.' })
   async findPublished() {
     return this.podcastsService.findPublished();
   }
