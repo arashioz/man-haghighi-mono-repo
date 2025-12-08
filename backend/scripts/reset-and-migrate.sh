@@ -55,16 +55,29 @@ if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
         print_step "Running migrations only..."
         # Just run migrations without reset
         # Note: Prisma Client is already generated during Docker build, so we skip generation
+        
+        # First, try to resolve any failed migrations (in case of previous failures)
+        print_step "Checking for failed migrations..."
         if [ "$CONTAINER_NAME" = "current" ]; then
+            # Try to resolve the old failed migration if it exists (both old and new names)
+            npx prisma migrate resolve --rolled-back 20250101000000_add_podcast_thumbnail 2>/dev/null || true
+            npx prisma migrate resolve --rolled-back 20251014000000_add_podcast_thumbnail 2>/dev/null || true
             print_step "Applying migrations..."
             npx prisma migrate deploy || {
                 print_error "Failed to apply migrations"
+                print_warning "If migrations are still failing, you may need to manually resolve failed migrations"
+                print_warning "Run: npx prisma migrate resolve --rolled-back <migration_name>"
                 exit 1
             }
         else
+            # Try to resolve the old failed migration if it exists (both old and new names)
+            npx prisma migrate resolve --rolled-back 20250101000000_add_podcast_thumbnail 2>/dev/null || true
+            npx prisma migrate resolve --rolled-back 20251014000000_add_podcast_thumbnail 2>/dev/null || true
             print_step "Applying migrations..."
             npx prisma migrate deploy || {
                 print_error "Failed to apply migrations"
+                print_warning "If migrations are still failing, you may need to manually resolve failed migrations"
+                print_warning "Run: npx prisma migrate resolve --rolled-back <migration_name>"
                 exit 1
             }
         fi

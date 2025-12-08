@@ -20,6 +20,7 @@ baseline_migrations() {
     
     # List of all migrations in order
     MIGRATIONS="20251013230351_initial
+20251014000000_add_podcast_thumbnail
 20251014213449_add_sales_team_models
 20251029023655_add_workshop_media_links
 20251029030458_add_article_seo_fields
@@ -29,7 +30,6 @@ baseline_migrations() {
 20251113000001_add_old_products_table
 20251204173712_add_show_on_homepage_to_courses
 20251208000000_add_logs_table
-20250101000000_add_podcast_thumbnail
 20250115000000_add_otp_fields"
     
     for migration in $MIGRATIONS; do
@@ -47,7 +47,7 @@ PRE_CHECK_STATUS=$(npx prisma migrate status 2>&1)
 if echo "$PRE_CHECK_STATUS" | grep -qi "failed"; then
     echo "⚠️  Found existing failed migrations. Attempting to resolve before proceeding..."
     # Try to resolve all known problematic migrations proactively
-    for migration in "20250101000000_add_podcast_thumbnail" "20250115000000_add_otp_fields"; do
+    for migration in "20251014000000_add_podcast_thumbnail" "20250115000000_add_otp_fields"; do
         echo "  Attempting to resolve: $migration"
         if npx prisma migrate resolve --applied "$migration" 2>/dev/null; then
             echo "    ✅ Resolved $migration as applied"
@@ -69,15 +69,15 @@ resolve_failed_migrations() {
     
     # Extract failed migrations from status output
     # Look for lines containing "failed" or migration names that failed
-    FAILED_MIGRATIONS=$(echo "$MIGRATE_STATUS" | grep -iE "(failed|20250101000000_add_podcast_thumbnail|20250115000000_add_otp_fields)" | grep -oE "[0-9]{14}_[a-z_]+" | sort -u || echo "")
+    FAILED_MIGRATIONS=$(echo "$MIGRATE_STATUS" | grep -iE "(failed|20251014000000_add_podcast_thumbnail|20250115000000_add_otp_fields)" | grep -oE "[0-9]{14}_[a-z_]+" | sort -u || echo "")
     
     # Also check the known problematic migrations
-    KNOWN_MIGRATIONS="20250101000000_add_podcast_thumbnail 20250115000000_add_otp_fields"
+    KNOWN_MIGRATIONS="20251014000000_add_podcast_thumbnail 20250115000000_add_otp_fields"
     
     echo "  Checking for failed migrations..."
     
     # Try to resolve known migrations first
-    for migration in $KNOWN_MIGRATIONS; do
+    for migration in "20251014000000_add_podcast_thumbnail" "20250115000000_add_otp_fields"; do
         echo "    Checking migration: $migration..."
         # Check if this migration is in failed state
         if echo "$MIGRATE_STATUS" | grep -qi "$migration.*failed"; then
@@ -127,7 +127,7 @@ handle_migration_failure() {
     echo "🔧 Handling failed migration: $migration_name"
     
     # Check if this is the thumbnail migration and column already exists
-    if [ "$migration_name" = "20250101000000_add_podcast_thumbnail" ]; then
+    if [ "$migration_name" = "20251014000000_add_podcast_thumbnail" ] || [ "$migration_name" = "20250101000000_add_podcast_thumbnail" ]; then
         echo "  Detected thumbnail column migration."
         if echo "$error_output" | grep -qi "already exists"; then
             echo "  Column already exists in database. Marking migration as applied..."
@@ -188,7 +188,7 @@ elif echo "$MIGRATE_OUTPUT" | grep -q "P3009"; then
 elif echo "$MIGRATE_OUTPUT" | grep -q "P3018"; then
     echo "⚠️  Migration failed to apply (P3018). Extracting migration name..."
     # Extract migration name from error output
-    MIGRATION_NAME=$(echo "$MIGRATE_OUTPUT" | grep -oP "Migration name: \K[^\s]+" || echo "20250101000000_add_podcast_thumbnail")
+    MIGRATION_NAME=$(echo "$MIGRATE_OUTPUT" | grep -oP "Migration name: \K[^\s]+" || echo "20251014000000_add_podcast_thumbnail")
     echo "  Detected failed migration: $MIGRATION_NAME"
     if handle_migration_failure "$MIGRATION_NAME" "$MIGRATE_OUTPUT"; then
         echo "✅ Retrying migrate deploy after resolving failed migration..."
