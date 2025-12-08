@@ -185,45 +185,59 @@ export class AuthService {
 
     // If password is provided, authenticate with password (all roles can use password)
     if (password) {
+      // For old users logging in with phone number, if password is not set or invalid,
+      // automatically fall back to OTP flow instead of throwing error
+      const isOldUserWithPhone = (user as any).isOld && normalizedPhone && user.phone === normalizedPhone;
+      
       if (!user.password) {
-        throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
+        if (isOldUserWithPhone && user.role === 'USER') {
+          // Fall through to OTP flow for old users
+        } else {
+          throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
+        }
+      } else {
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+          // For old users with phone, fall back to OTP flow
+          if (isOldUserWithPhone && user.role === 'USER') {
+            // Fall through to OTP flow
+          } else {
+            throw new UnauthorizedException('Invalid credentials');
+          }
+        } else {
+          // Password is valid, proceed with normal login
+          const token = this.jwtService.sign({
+            sub: user.id,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+          });
+
+          const legacyUser = user as any;
+
+          return {
+            user: {
+              id: legacyUser.id,
+              email: legacyUser.email,
+              phone: legacyUser.phone,
+              username: legacyUser.username,
+              firstName: legacyUser.firstName,
+              lastName: legacyUser.lastName,
+              role: legacyUser.role,
+              isActive: legacyUser.isActive,
+              isOld: legacyUser.isOld,
+              education: legacyUser.education,
+              university: legacyUser.university,
+              job: legacyUser.job,
+              state: legacyUser.state,
+              gender: legacyUser.gender,
+              createdAt: legacyUser.createdAt,
+              updatedAt: legacyUser.updatedAt,
+            },
+            token,
+          };
+        }
       }
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
-      }
-
-      const token = this.jwtService.sign({
-        sub: user.id,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-      });
-
-      const legacyUser = user as any;
-
-      return {
-        user: {
-          id: legacyUser.id,
-          email: legacyUser.email,
-          phone: legacyUser.phone,
-          username: legacyUser.username,
-          firstName: legacyUser.firstName,
-          lastName: legacyUser.lastName,
-          role: legacyUser.role,
-          isActive: legacyUser.isActive,
-          isOld: legacyUser.isOld,
-          education: legacyUser.education,
-          university: legacyUser.university,
-          job: legacyUser.job,
-          state: legacyUser.state,
-          gender: legacyUser.gender,
-          createdAt: legacyUser.createdAt,
-          updatedAt: legacyUser.updatedAt,
-        },
-        token,
-      };
     }
 
     // If password is not provided, initiate OTP flow

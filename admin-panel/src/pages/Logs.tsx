@@ -204,8 +204,16 @@ const Logs: React.FC = () => {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="ios-card p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div 
+            className="ios-card p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => {
+              handleFilterChange('level', '');
+              handleFilterChange('context', '');
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            title="کلیک برای نمایش همه لاگ‌ها"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">کل لاگ‌ها</p>
@@ -219,7 +227,15 @@ const Logs: React.FC = () => {
             </div>
           </div>
 
-          <div className="ios-card p-6">
+          <div 
+            className="ios-card p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => {
+              handleFilterChange('level', 'ERROR');
+              handleFilterChange('context', '');
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            title="کلیک برای فیلتر خطاها"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">خطاها</p>
@@ -233,7 +249,15 @@ const Logs: React.FC = () => {
             </div>
           </div>
 
-          <div className="ios-card p-6">
+          <div 
+            className="ios-card p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => {
+              handleFilterChange('level', 'WARN');
+              handleFilterChange('context', '');
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            title="کلیک برای فیلتر هشدارها"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">هشدارها</p>
@@ -247,7 +271,15 @@ const Logs: React.FC = () => {
             </div>
           </div>
 
-          <div className="ios-card p-6">
+          <div 
+            className="ios-card p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => {
+              handleFilterChange('level', 'LOG');
+              handleFilterChange('context', '');
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            title="کلیک برای فیلتر لاگ‌های عادی"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">لاگ‌های عادی</p>
@@ -256,6 +288,47 @@ const Logs: React.FC = () => {
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            className="ios-card p-6 cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => {
+              handleFilterChange('level', '');
+              // Filter by common database-related contexts
+              const dbContexts = stats.byContext?.filter((c: any) => {
+                const ctx = (c.context || '').toLowerCase();
+                return ctx.includes('database') || ctx.includes('prisma') || ctx.includes('db') || ctx.includes('query');
+              });
+              if (dbContexts && dbContexts.length > 0) {
+                // Use the first database context found
+                handleFilterChange('context', dbContexts[0].context);
+              } else {
+                // Fallback: search for database-related logs
+                handleFilterChange('context', 'Prisma');
+              }
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            title="کلیک برای فیلتر لاگ‌های دیتابیس"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">لاگ‌های دیتابیس</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {(() => {
+                    const dbContexts = stats.byContext?.filter((c: any) => {
+                      const ctx = (c.context || '').toLowerCase();
+                      return ctx.includes('database') || ctx.includes('prisma') || ctx.includes('db') || ctx.includes('query');
+                    }) || [];
+                    return dbContexts.reduce((sum: number, c: any) => sum + (c.count || 0), 0);
+                  })()}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                 </svg>
               </div>
             </div>

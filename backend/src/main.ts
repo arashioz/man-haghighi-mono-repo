@@ -116,6 +116,20 @@ async function bootstrap() {
     },
   }));
 
+  // Handle root path before setting global prefix
+  app.getHttpAdapter().get('/', (req, res) => {
+    res.json({
+      message: 'Haghighi Platform API',
+      version: '1.0.0',
+      status: 'running',
+      endpoints: {
+        docs: '/api/docs',
+        health: '/api/health',
+        api: '/api',
+      },
+    });
+  });
+
   // Set global prefix for all routes (after CORS setup)
   app.setGlobalPrefix('api');
 

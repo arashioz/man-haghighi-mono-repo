@@ -42,9 +42,25 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // List of public endpoints that don't require authentication
+  const publicEndpoints = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/send-otp',
+    '/auth/verify-otp',
+  ];
+  
+  // Check if the current request is to a public endpoint
+  const isPublicEndpoint = publicEndpoints.some(endpoint => 
+    config.url?.includes(endpoint)
+  );
+  
+  // Only add token if it's not a public endpoint
+  if (!isPublicEndpoint) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
