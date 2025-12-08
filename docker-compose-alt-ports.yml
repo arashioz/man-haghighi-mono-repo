@@ -45,7 +45,7 @@ services:
         condition: service_healthy
     environment:
       RESET_DB: "false"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود (برای production باید false باشد)
-    restart: unless-stopped
+    restart: "no"  # Temporarily disabled to prevent restart loop - change back to "unless-stopped" after fixing
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30m
