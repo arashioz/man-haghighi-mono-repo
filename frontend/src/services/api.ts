@@ -105,6 +105,14 @@ export const authService = {
     const response = await api.patch('/auth/profile', payload);
     return response.data;
   },
+
+  changePassword: async (currentPassword: string | undefined, newPassword: string): Promise<{ message: string }> => {
+    const response = await api.patch('/auth/password', {
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
+  },
 };
 
 export const slidersService = {

@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Get, Request, Patch } from '@nestjs/
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -69,5 +69,15 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile updated successfully' })
   async updateProfile(@Request() req, @Body() updateProfileDto: UpdateProfileDto) {
     return this.authService.updateProfile(req.user.id, updateProfileDto);
+  }
+
+  @Patch('password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password (for USER role only)' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid current password or unauthorized' })
+  async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePassword(req.user.id, changePasswordDto);
   }
 }

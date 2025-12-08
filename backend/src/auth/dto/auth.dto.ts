@@ -148,3 +148,16 @@ export class UpdateProfileDto {
   @IsString()
   gender?: string | null;
 }
+
+export class ChangePasswordDto {
+  @ApiProperty({ example: 'oldPassword123', required: false, description: 'Required only if user already has a password' })
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
+
+  @ApiProperty({ example: 'newPassword123' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  newPassword: string;
+}
