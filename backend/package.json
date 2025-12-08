@@ -110,6 +110,6 @@
     "testEnvironment": "node"
   },
   "prisma": {
-    "seed": "node_modules/.bin/ts-node --project ./tsconfig.seed.json --transpile-only prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
   }
 }
