@@ -7,6 +7,7 @@ import compression from 'compression';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
+import { Request, Response } from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -117,7 +118,7 @@ async function bootstrap() {
   }));
 
   // Handle root path before setting global prefix
-  app.getHttpAdapter().get('/', (req, res) => {
+  app.getHttpAdapter().get('/', (req: Request, res: Response) => {
     res.json({
       message: 'Haghighi Platform API',
       version: '1.0.0',
