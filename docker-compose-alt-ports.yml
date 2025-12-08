@@ -1,16 +1,15 @@
-# Alternative port configuration to bypass firewalls
-# Try using different ports that might not be blocked
-# NOTE: This configuration exposes PostgreSQL port for firewall bypass purposes
-# For production, use docker-compose.yml which has better security (no public DB port)
+version: '3.9'
 
 services:
+  # -------------------------------
   # Database
+  # -------------------------------
   postgres:
     image: postgres:15-alpine
     container_name: haghighi_postgres
     env_file: .env
     ports:
-      - "5432:5432"  # Exposed for firewall bypass (not recommended for production)
+      - "5432:5432" # برای dev/debug، در production بهتر نباشد
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -22,75 +21,55 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
-  # Backend APIbackend:
-  build:
-    context: ./backend
-    dockerfile: Dockerfile
-  container_name: haghighi_backend
-  env_file: .env
-  ports:
-    - "8080:3000"
-  volumes:
-    - ./uploads:/app/uploads
-    - ./moc-old-data:/app/moc-old-data
-  networks:
-    - backend_network
-    - frontend_network
-  depends_on:
-    postgres:
-      condition: service_healthy
-  environment:
-    RESET_DB: "true"  # اگر میخوای دیتابیس پاک شود، در prod=false بزار
-  restart: unless-stopped
-  deploy:
-    resources:
-      limits:
-        cpus: '2.0'
-        memory: 2G
-      reservations:
-        cpus: '1.0'
-        memory: 1G
-  healthcheck:
-    test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-    start_period: 40s
-  command: sh -c "./scripts/migrate.sh && npm run start:prod"
+  # -------------------------------
+  # Backend
+  # -------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haghighi_backend
+    env_file: .env
+    ports:
+      - "8080:3000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./moc-old-data:/app/moc-old-data
+    networks:
+      - backend_network
+      - frontend_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      RESET_DB: "true"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: sh -c "./scripts/reset-and-migrate.sh && npm run start:prod"
 
-
+  # -------------------------------
   # Frontend
+  # -------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://185.231.112.84:8080/api  # Updated port
+        REACT_APP_API_URL: http://185.231.112.84:8080/api
     container_name: haghighi_frontend
     ports:
-      - "8081:80"  # Changed to 8081
+      - "8081:80"
     networks:
       - frontend_network
     depends_on:
       - backend
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
@@ -98,29 +77,23 @@ services:
       retries: 3
       start_period: 10s
 
+  # -------------------------------
   # Admin Panel
+  # -------------------------------
   admin:
     build:
       context: ./admin-panel
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://185.231.112.84:8080/api  # Updated port
+        REACT_APP_API_URL: http://185.231.112.84:8080/api
     container_name: haghighi_admin
     ports:
-      - "8082:80"  # Changed to 8082
+      - "8082:80"
     networks:
       - frontend_network
     depends_on:
       - backend
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
@@ -128,7 +101,9 @@ services:
       retries: 3
       start_period: 10s
 
-  # Prisma Studio (Development tool - not for production)
+  # -------------------------------
+  # Prisma Studio (Dev only)
+  # -------------------------------
   prisma-studio:
     build:
       context: ./backend
@@ -146,12 +121,10 @@ services:
         condition: service_healthy
     command: npx prisma studio
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
 
+# -------------------------------
+# Volumes & Networks
+# -------------------------------
 volumes:
   postgres_data:
     driver: local
@@ -163,4 +136,3 @@ networks:
   frontend_network:
     driver: bridge
     internal: false
-
