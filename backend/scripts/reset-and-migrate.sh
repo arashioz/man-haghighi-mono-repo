@@ -1,36 +1,91 @@
-#!/bin/sh
-# Don't use set -e here, we want to handle errors gracefully
+#!/bin/bash
 
-# فقط اگر RESET_DB=true باشد، دیتابیس پاک شود
-if [ "$RESET_DB" = "true" ]; then
-  echo "🔴 Resetting database..."
-  # Suppress error about _prisma_migrations table not existing (it's normal on first reset)
-  # The error is harmless - database will be reset successfully
-  npx prisma db push --force-reset 2>&1 | grep -v "does not exist" || {
-    # Even if there are warnings, the reset usually succeeds
-    echo "⚠️  Some warnings during reset (this is usually fine)"
-  }
-  echo "✅ Database reset completed"
-fi
+# Script to reset database and apply all migrations from scratch
+# WARNING: This will delete all data in the database!
+# Use only for development or when you have a backup
 
-# مرحله‌ای مایگریشن‌ها را اعمال کن
-echo "🟡 Applying migrations..."
-if npx prisma migrate deploy 2>&1; then
-  echo "✅ Migrations applied successfully"
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+print_step() {
+    echo -e "${BLUE}==>${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+# Check if running inside Docker container
+if [ -f /.dockerenv ]; then
+    CONTAINER_NAME="current"
+    print_step "Running inside Docker container"
 else
-  echo "⚠️  Migration deploy had issues, trying db push as fallback..."
-  npx prisma db push --accept-data-loss || {
-    echo "⚠️  db push also failed, but continuing..."
-    true
-  }
+    # Check if backend container is running
+    if ! docker ps | grep -q haghighi_backend; then
+        print_error "Backend container (haghighi_backend) is not running"
+        print_error "Please start the containers first: docker-compose up -d"
+        exit 1
+    fi
+    CONTAINER_NAME="haghighi_backend"
+    print_step "Running migrations on container: $CONTAINER_NAME"
 fi
 
-# seed را اجرا کن
-echo "🟢 Running seed..."
-if npx prisma db seed 2>&1; then
-  echo "✅ Seed completed successfully"
+# Warning
+print_error "WARNING: This script will DELETE ALL DATA in the database!"
+print_error "Make sure you have a backup before proceeding!"
+echo ""
+read -p "Are you sure you want to continue? (yes/no): " confirm
+
+if [ "$confirm" != "yes" ]; then
+    print_warning "Operation cancelled"
+    exit 0
+fi
+
+# Reset database and apply all migrations
+print_step "Resetting database and applying all migrations..."
+
+if [ "$CONTAINER_NAME" = "current" ]; then
+    # Generate Prisma Client
+    print_step "Generating Prisma Client..."
+    npx prisma generate || {
+        print_error "Failed to generate Prisma Client"
+        exit 1
+    }
+    
+    # Reset database (drops all tables and applies migrations)
+    print_step "Resetting database..."
+    npx prisma migrate reset --force || {
+        print_error "Failed to reset database"
+        exit 1
+    }
 else
-  echo "⚠️  Seed had issues, but continuing..."
+    # Generate Prisma Client
+    print_step "Generating Prisma Client..."
+    docker exec "$CONTAINER_NAME" npx prisma generate || {
+        print_error "Failed to generate Prisma Client"
+        exit 1
+    }
+    
+    # Reset database (drops all tables and applies migrations)
+    print_step "Resetting database..."
+    docker exec "$CONTAINER_NAME" npx prisma migrate reset --force || {
+        print_error "Failed to reset database"
+        exit 1
+    }
 fi
 
-echo "✅ Database ready"
+print_success "Database reset and all migrations applied successfully!"

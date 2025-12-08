@@ -298,10 +298,20 @@ if [ $BACKEND_WAIT_COUNT -lt $MAX_BACKEND_WAIT ]; then
         print_warning "Prisma generate failed, but continuing..."
     }
     
-    print_step "Pushing database schema..."
-    docker exec haghighi_backend npx prisma db push --accept-data-loss 2>/dev/null || {
-        print_warning "Prisma db push failed or not needed"
-    }
+    print_step "Running Prisma migrations (deploy mode)..."
+    print_warning "This will apply all pending migrations in order"
+    docker exec haghighi_backend npx prisma migrate deploy 2>&1 | while IFS= read -r line; do
+        echo "  $line"
+    done
+    
+    MIGRATE_EXIT_CODE=${PIPESTATUS[0]}
+    if [ $MIGRATE_EXIT_CODE -eq 0 ]; then
+        print_success "All migrations applied successfully"
+    else
+        print_error "Migration failed with exit code: $MIGRATE_EXIT_CODE"
+        print_warning "You may need to manually fix the database schema"
+        print_warning "Try running: docker exec haghighi_backend npx prisma migrate deploy"
+    fi
 else
     print_warning "Skipping Prisma migrations - backend container not ready"
 fi
