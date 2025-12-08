@@ -41,30 +41,83 @@ baseline_migrations() {
 # First, check and apply rename migration if needed
 apply_rename_migration
 
+# Pre-check: Resolve any existing failed migrations before attempting new ones
+echo "🔍 Pre-checking for existing failed migrations..."
+PRE_CHECK_STATUS=$(npx prisma migrate status 2>&1)
+if echo "$PRE_CHECK_STATUS" | grep -qi "failed"; then
+    echo "⚠️  Found existing failed migrations. Attempting to resolve before proceeding..."
+    # Try to resolve all known problematic migrations proactively
+    for migration in "20250101000000_add_podcast_thumbnail" "20250115000000_add_otp_fields"; do
+        echo "  Attempting to resolve: $migration"
+        if npx prisma migrate resolve --applied "$migration" 2>/dev/null; then
+            echo "    ✅ Resolved $migration as applied"
+        elif npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null; then
+            echo "    ✅ Resolved $migration as rolled-back"
+        else
+            echo "    ⚠️  Could not resolve $migration (may not be failed)"
+        fi
+    done
+    echo ""
+fi
+
 # Function to resolve failed migrations
 resolve_failed_migrations() {
     echo "🔧 Resolving failed migrations..."
     
-    # Get list of failed migrations from Prisma
-    FAILED_MIGRATIONS=$(npx prisma migrate status 2>&1 | grep -i "failed" | awk '{print $1}' || echo "")
+    # First, get the full migration status
+    MIGRATE_STATUS=$(npx prisma migrate status 2>&1)
     
+    # Extract failed migrations from status output
+    # Look for lines containing "failed" or migration names that failed
+    FAILED_MIGRATIONS=$(echo "$MIGRATE_STATUS" | grep -iE "(failed|20250101000000_add_podcast_thumbnail|20250115000000_add_otp_fields)" | grep -oE "[0-9]{14}_[a-z_]+" | sort -u || echo "")
+    
+    # Also check the known problematic migrations
+    KNOWN_MIGRATIONS="20250101000000_add_podcast_thumbnail 20250115000000_add_otp_fields"
+    
+    echo "  Checking for failed migrations..."
+    
+    # Try to resolve known migrations first
+    for migration in $KNOWN_MIGRATIONS; do
+        echo "    Checking migration: $migration..."
+        # Check if this migration is in failed state
+        if echo "$MIGRATE_STATUS" | grep -qi "$migration.*failed"; then
+            echo "      Found failed migration: $migration, attempting to resolve..."
+            # Try applied first (if changes already exist in DB)
+            if npx prisma migrate resolve --applied "$migration" 2>/dev/null; then
+                echo "      ✅ Marked $migration as applied"
+            elif npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null; then
+                echo "      ✅ Marked $migration as rolled-back"
+            else
+                echo "      ⚠️  Could not resolve $migration automatically"
+            fi
+        fi
+    done
+    
+    # Resolve any other failed migrations found
     if [ -n "$FAILED_MIGRATIONS" ]; then
-        echo "  Found failed migrations, attempting to resolve..."
+        echo "  Found additional failed migrations, attempting to resolve..."
         for migration in $FAILED_MIGRATIONS; do
+            # Skip if already processed
+            if echo "$KNOWN_MIGRATIONS" | grep -q "$migration"; then
+                continue
+            fi
             echo "    Resolving $migration..."
-            # Try to mark as applied first (if column already exists, migration is effectively applied)
-            npx prisma migrate resolve --applied "$migration" 2>/dev/null || \
-            npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null || \
-            echo "      (Could not resolve $migration automatically)"
+            if npx prisma migrate resolve --applied "$migration" 2>/dev/null; then
+                echo "      ✅ Marked $migration as applied"
+            elif npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null; then
+                echo "      ✅ Marked $migration as rolled-back"
+            else
+                echo "      ⚠️  Could not resolve $migration automatically"
+            fi
         done
     fi
     
-    # Also try to resolve the specific known failed migration
-    # If column already exists, mark migration as applied
-    echo "  Attempting to resolve 20250101000000_add_podcast_thumbnail..."
-    npx prisma migrate resolve --applied "20250101000000_add_podcast_thumbnail" 2>/dev/null || \
-    npx prisma migrate resolve --rolled-back "20250101000000_add_podcast_thumbnail" 2>/dev/null || \
-    echo "  (Migration 20250101000000_add_podcast_thumbnail resolution attempted)"
+    # Final check - try to resolve all known problematic migrations one more time
+    echo "  Final resolution attempt for known migrations..."
+    for migration in $KNOWN_MIGRATIONS; do
+        npx prisma migrate resolve --applied "$migration" 2>/dev/null || \
+        npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null || true
+    done
 }
 
 # Function to handle P3018 errors (migration failed to apply)
@@ -115,11 +168,23 @@ if [ $MIGRATE_EXIT -eq 0 ]; then
 elif echo "$MIGRATE_OUTPUT" | grep -q "P3009"; then
     echo "⚠️  Found failed migrations (P3009). Resolving..."
     resolve_failed_migrations
-    echo "✅ Retrying migrate deploy after resolving failed migrations..."
-    npx prisma migrate deploy || {
-        echo "⚠️  Migrate deploy still failed. Using db push as fallback..."
-        npx prisma db push --accept-data-loss || true
-    }
+    echo ""
+    echo "🔄 Retrying migrate deploy after resolving failed migrations..."
+    sleep 2  # Give database a moment to update
+    RETRY_OUTPUT=$(npx prisma migrate deploy 2>&1)
+    RETRY_EXIT=$?
+    if [ $RETRY_EXIT -eq 0 ]; then
+        echo "✅ Migrations deployed successfully after resolution"
+    else
+        echo "⚠️  Migrate deploy still failed after resolution. Error:"
+        echo "$RETRY_OUTPUT"
+        echo ""
+        echo "🔄 Using db push as fallback to sync schema..."
+        npx prisma db push --accept-data-loss || {
+            echo "⚠️  db push also failed, but continuing..."
+            true
+        }
+    fi
 elif echo "$MIGRATE_OUTPUT" | grep -q "P3018"; then
     echo "⚠️  Migration failed to apply (P3018). Extracting migration name..."
     # Extract migration name from error output
