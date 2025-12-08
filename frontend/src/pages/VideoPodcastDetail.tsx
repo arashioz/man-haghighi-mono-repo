@@ -92,7 +92,7 @@ const VideoPodcastDetail: React.FC = () => {
   const thumbnailUrl = getImageUrl(videoPodcast.thumbnail) || undefined;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-[#040404] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
