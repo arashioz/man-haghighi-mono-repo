@@ -42,7 +42,7 @@ const UploadCenter: React.FC = () => {
   const fetchCourses = async () => {
     try {
       const data = await coursesService.getAll();
-      setCourses(data.data || data || []);
+      setCourses(data || []);
     } catch (err) {
       console.error('Error fetching courses:', err);
     }
