@@ -50,6 +50,12 @@ RUN chmod +x ./scripts/*.sh
 # Uploads directory
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
 
+# Fix ownership of node_modules, prisma, and dist BEFORE switching user
+# This allows Prisma to write to node_modules when needed (e.g., during migrations)
+RUN chown -R nestjs:nodejs /app/node_modules && \
+    chown -R nestjs:nodejs /app/prisma && \
+    chown -R nestjs:nodejs /app/dist
+
 # Switch to non-root
 USER nestjs
 
