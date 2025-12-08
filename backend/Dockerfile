@@ -67,4 +67,4 @@ HEALTHCHECK --interval=30m --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start command
-CMD ["sh", "-c", " ./scripts/seed-with-migration.sh  && npm run start"]
+CMD ["sh", "-c", "./scripts/seed-with-migration.sh && npm run start:prod"]
