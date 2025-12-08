@@ -169,10 +169,10 @@ const UserDashboard: React.FC = () => {
     }
 
     try {
-      await authService.changePassword(
-        passwordForm.currentPassword || undefined,
-        passwordForm.newPassword
-      );
+      await authService.changePassword({
+        currentPassword: passwordForm.currentPassword || undefined,
+        newPassword: passwordForm.newPassword
+      });
       setPasswordSuccess('رمز عبور با موفقیت تغییر یافت');
       setPasswordForm({
         currentPassword: '',

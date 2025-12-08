@@ -54,25 +54,16 @@ if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
         print_step "RESET_DB is not set to 'true' - skipping database reset"
         print_step "Running migrations only..."
         # Just run migrations without reset
+        # Note: Prisma Client is already generated during Docker build, so we skip generation
         if [ "$CONTAINER_NAME" = "current" ]; then
-            print_step "Generating Prisma Client..."
-            npx prisma generate || {
-                print_error "Failed to generate Prisma Client"
-                exit 1
-            }
             print_step "Applying migrations..."
             npx prisma migrate deploy || {
                 print_error "Failed to apply migrations"
                 exit 1
             }
         else
-            print_step "Generating Prisma Client..."
-            docker exec "$CONTAINER_NAME" npx prisma generate || {
-                print_error "Failed to generate Prisma Client"
-                exit 1
-            }
             print_step "Applying migrations..."
-            docker exec "$CONTAINER_NAME" npx prisma migrate deploy || {
+            npx prisma migrate deploy || {
                 print_error "Failed to apply migrations"
                 exit 1
             }
@@ -96,14 +87,8 @@ fi
 # Reset database and apply all migrations
 print_step "Resetting database and applying all migrations..."
 
+# Note: Prisma Client is already generated during Docker build, so we skip generation
 if [ "$CONTAINER_NAME" = "current" ]; then
-    # Generate Prisma Client
-    print_step "Generating Prisma Client..."
-    npx prisma generate || {
-        print_error "Failed to generate Prisma Client"
-        exit 1
-    }
-    
     # Reset database (drops all tables and applies migrations)
     print_step "Resetting database..."
     npx prisma migrate reset --force || {
@@ -111,16 +96,9 @@ if [ "$CONTAINER_NAME" = "current" ]; then
         exit 1
     }
 else
-    # Generate Prisma Client
-    print_step "Generating Prisma Client..."
-    docker exec "$CONTAINER_NAME" npx prisma generate || {
-        print_error "Failed to generate Prisma Client"
-        exit 1
-    }
-    
     # Reset database (drops all tables and applies migrations)
     print_step "Resetting database..."
-    docker exec "$CONTAINER_NAME" npx prisma migrate reset --force || {
+    npx prisma migrate reset --force || {
         print_error "Failed to reset database"
         exit 1
     }
