@@ -122,10 +122,10 @@ export const authService = {
     return response.data;
   },
 
-  changePassword: async (currentPassword: string | undefined, newPassword: string): Promise<{ message: string }> => {
+  changePassword: async (data: { currentPassword?: string; newPassword: string }): Promise<{ message: string }> => {
     const response = await api.patch('/auth/password', {
-      currentPassword,
-      newPassword,
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
     });
     return response.data;
   },

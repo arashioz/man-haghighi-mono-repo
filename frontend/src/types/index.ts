@@ -9,6 +9,7 @@ export interface User {
   role: 'ADMIN' | 'USER';
   isActive: boolean;
   isOld?: boolean;
+  mustChangePassword?: boolean;
   education?: string;
   university?: string;
   job?: string;
@@ -169,6 +170,7 @@ export interface AudioStreamInfo {
 export interface AuthResponse {
   user: User;
   token: string;
+  mustChangePassword?: boolean;
 }
 
 export interface LoginCredentials {
