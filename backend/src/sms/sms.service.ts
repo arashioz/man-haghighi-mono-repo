@@ -10,33 +10,30 @@ export class SmsService {
   private readonly apiUrl = 'https://api.iranpayamak.com/ws/v1';
 
   constructor(private configService: ConfigService) {
-    this.apiKey = this.configService.get<string>('IRANPAYAMAK_API_KEY', '');
-    this.lineNumber = this.configService.get<string>('IRANPAYAMAK_LINE_NUMBER', '');
-    this.patternCode = this.configService.get<string>('IRANPAYAMAK_PATTERN_CODE', '');
+    this.apiKey = this.configService.get<string>('IRANPAYAMAK_API_KEY', 'KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=');
+    this.lineNumber = this.configService.get<string>('IRANPAYAMAK_LINE_NUMBER', '+9810004150535353');
+    this.patternCode = this.configService.get<string>('IRANPAYAMAK_PATTERN_CODE', 'verification-code');
     
     if (!this.apiKey || !this.lineNumber || !this.patternCode) {
-      this.logger.warn('⚠️  IranPayamak SMS credentials are not fully configured. SMS functionality may not work.');
+      this.logger.warn('IranPayamak SMS credentials are not fully configured. SMS functionality may not work.');
     }
   }
 
-  /**
-   * Send OTP SMS using IranPayamak Pattern SMS API
-   * @param phoneNumber Phone number in format 09123456789
-   * @param otpCode 6-digit OTP code
-   * @returns Promise<boolean> true if sent successfully
-   */
   async sendOtp(phoneNumber: string, otpCode: string): Promise<boolean> {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
     if (!this.apiKey || !this.lineNumber || !this.patternCode) {
+      if (isDevelopment) {
+        this.logger.warn(`SMS service not configured. OTP for ${phoneNumber}: ${otpCode} (development mode)`);
+        return true;
+      }
       this.logger.error('IranPayamak SMS credentials are not configured');
       throw new Error('SMS service is not configured');
     }
 
     try {
-      // Format phone number for IranPayamak API (09120000000 format)
       const formattedPhone = this.formatPhoneNumber(phoneNumber);
       
-      // Send SMS using IranPayamak Pattern SMS API
-      // Using var1 for OTP code (you can adjust based on your pattern variables)
       const response = await fetch(`${this.apiUrl}/sms/pattern`, {
         method: 'POST',
         headers: {
@@ -47,7 +44,7 @@ export class SmsService {
         body: JSON.stringify({
           code: this.patternCode,
           attributes: {
-            var1: otpCode, // OTP code - adjust var name based on your pattern
+            var1: otpCode,
           },
           recipient: formattedPhone,
           line_number: this.lineNumber,
@@ -58,6 +55,12 @@ export class SmsService {
       if (!response.ok) {
         const errorText = await response.text();
         this.logger.error(`Failed to send SMS: ${response.status} - ${errorText}`);
+        
+        if (isDevelopment) {
+          this.logger.warn(`SMS sending failed, but allowing in development. OTP for ${phoneNumber}: ${otpCode}`);
+          return true;
+        }
+        
         return false;
       }
 
@@ -66,19 +69,19 @@ export class SmsService {
       return true;
     } catch (error) {
       this.logger.error(`Error sending OTP SMS: ${error.message}`, error.stack);
+      
+      if (isDevelopment) {
+        this.logger.warn(`SMS error occurred, but allowing in development. OTP for ${phoneNumber}: ${otpCode}`);
+        return true;
+      }
+      
       return false;
     }
   }
 
-  /**
-   * Format phone number for IranPayamak API
-   * Expected format: 09120000000 (with leading 0)
-   */
   private formatPhoneNumber(phone: string): string {
-    // Remove all non-digit characters
     let cleaned = phone.replace(/\D/g, '');
     
-    // Ensure it starts with 0 and has 11 digits
     if (!cleaned.startsWith('0') && cleaned.length === 10) {
       cleaned = '0' + cleaned;
     } else if (cleaned.startsWith('98') && cleaned.length === 12) {
@@ -87,7 +90,6 @@ export class SmsService {
       cleaned = '0' + cleaned.slice(3);
     }
     
-    // Ensure 11 digits total
     if (cleaned.length > 11) {
       cleaned = cleaned.slice(-11);
     }

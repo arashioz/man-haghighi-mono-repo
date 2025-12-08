@@ -48,8 +48,8 @@ const Users: React.FC = () => {
   const [newUser, setNewUser] = useState({
     phone: '',
     email: '',
-    username: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     education: '',
@@ -211,19 +211,27 @@ const Users: React.FC = () => {
     e.preventDefault();
     setError(''); // Clear any previous errors
     
-    if (!newUser.username.trim()) {
-      setError('نام کاربری الزامی است');
-      return;
-    }
-    
-    if (!newUser.password.trim()) {
-      setError('رمز عبور الزامی است');
-      return;
-    }
-    
-    if (newUser.password.length < 6) {
-      setError('رمز عبور باید حداقل ۶ کاراکتر باشد');
-      return;
+    // Validate password for USER role
+    if (newUser.role === 'USER') {
+      if (!newUser.password.trim()) {
+        setError('رمز عبور الزامی است');
+        return;
+      }
+      
+      if (newUser.password.length < 6) {
+        setError('رمز عبور باید حداقل ۶ کاراکتر باشد');
+        return;
+      }
+      
+      if (!newUser.confirmPassword.trim()) {
+        setError('تأیید رمز عبور الزامی است');
+        return;
+      }
+      
+      if (newUser.password !== newUser.confirmPassword) {
+        setError('رمز عبور و تأیید رمز عبور مطابقت ندارند');
+        return;
+      }
     }
     
     // Validate role-specific requirements
@@ -245,8 +253,6 @@ const Users: React.FC = () => {
     
     try {
       const userData: any = {
-        username: newUser.username.trim(),
-        password: newUser.password,
         role: newUser.role,
         isActive: newUser.isActive,
       };
@@ -260,6 +266,10 @@ const Users: React.FC = () => {
       if (newUser.job.trim()) userData.job = newUser.job.trim();
       if (newUser.state.trim()) userData.state = newUser.state.trim();
       if (newUser.gender.trim()) userData.gender = newUser.gender.trim();
+      if (newUser.role === 'USER' && newUser.password.trim()) {
+        userData.password = newUser.password;
+        userData.confirmPassword = newUser.confirmPassword;
+      }
 
       const createdUser = await usersService.create(userData);
       setUsers([...users, createdUser]);
@@ -282,8 +292,8 @@ const Users: React.FC = () => {
       setNewUser({
         phone: '',
         email: '',
-        username: '',
         password: '',
+        confirmPassword: '',
         firstName: '',
         lastName: '',
         education: '',
@@ -827,19 +837,6 @@ const Users: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              نام کاربری <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={newUser.username}
-              onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              placeholder="نام کاربری منحصر به فرد"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
               شماره تلفن {newUser.role !== 'ADMIN' && <span className="text-red-500">*</span>}
             </label>
             <input
@@ -870,19 +867,38 @@ const Users: React.FC = () => {
               <p className="text-xs text-gray-500 mt-1">کاربران عادی فقط با شماره تلفن وارد می‌شوند</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              رمز عبور
-            </label>
-            <input
-              type="password"
-              value={newUser.password}
-              onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              minLength={6}
-            />
-          </div>
+          {newUser.role === 'USER' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  رمز عبور <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                  minLength={6}
+                  placeholder="حداقل ۶ کاراکتر"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  تأیید رمز عبور <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={newUser.confirmPassword}
+                  onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                  minLength={6}
+                  placeholder="تأیید رمز عبور"
+                />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               نقش

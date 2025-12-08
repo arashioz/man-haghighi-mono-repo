@@ -40,8 +40,8 @@ export class AuthService {
     const {
       email,
       phone,
-      username,
       password,
+      confirmPassword,
       firstName,
       lastName,
       role,
@@ -66,9 +66,38 @@ export class AuthService {
       throw new UnauthorizedException('Non-admin users must have a phone number');
     }
 
-    // Password is required only for ADMIN users
-    if (role === 'ADMIN' && !password) {
-      throw new UnauthorizedException('Password is required for ADMIN users');
+    if (role === 'USER') {
+      if (!password) {
+        throw new UnauthorizedException('Password is required for regular users');
+      }
+      if (!confirmPassword) {
+        throw new UnauthorizedException('Confirm password is required');
+      }
+      if (password !== confirmPassword) {
+        throw new UnauthorizedException('Password and confirm password do not match');
+      }
+    }
+
+    const username = `${firstName.trim()} ${lastName.trim()}`.trim();
+    
+    let finalUsername = username;
+    let usernameCounter = 1;
+    while (true) {
+      const existingUsername = await this.prisma.user.findFirst({
+        where: {
+          username: {
+            equals: finalUsername,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+      });
+      
+      if (!existingUsername) {
+        break;
+      }
+      
+      finalUsername = `${username} ${usernameCounter}`;
+      usernameCounter++;
     }
 
     const existingUser = await this.prisma.user.findFirst({
@@ -83,12 +112,6 @@ export class AuthService {
             },
           ] : []),
           ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
-          {
-            username: {
-              equals: username,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          },
         ],
       },
     });
@@ -100,7 +123,7 @@ export class AuthService {
     const userData: Prisma.UserCreateInput = {
       email: normalizedEmail,
       phone: normalizedPhone,
-      username,
+      username: finalUsername,
       firstName,
       lastName,
       role: role as UserRole,
@@ -111,7 +134,6 @@ export class AuthService {
       gender: gender ?? null,
     } as any;
 
-    // Hash and set password if provided (for all users, not just ADMIN)
     if (password) {
       const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -167,7 +189,6 @@ export class AuthService {
       });
     }
 
-    // Try to find user by email OR phone OR username
     const user = await this.prisma.user.findFirst({
       where: {
         OR: orConditions,
@@ -178,34 +199,27 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is not active');
     }
 
-    // If password is provided, authenticate with password (all roles can use password)
     if (password) {
-      // For old users logging in with phone number, if password is not set or invalid,
-      // automatically fall back to OTP flow instead of throwing error
       const isOldUserWithPhone = (user as any).isOld && normalizedPhone && user.phone === normalizedPhone;
+      const isUserRole = user.role === 'USER';
       
       if (!user.password) {
-        if (isOldUserWithPhone && user.role === 'USER') {
-          // Fall through to OTP flow for old users
+        if (isUserRole) {
         } else {
           throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
         }
       } else {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-          // For old users with phone, fall back to OTP flow
-          if (isOldUserWithPhone && user.role === 'USER') {
-            // Fall through to OTP flow
+          if (isUserRole && normalizedPhone && user.phone === normalizedPhone) {
           } else {
             throw new UnauthorizedException('Invalid credentials');
           }
         } else {
-          // Password is valid, proceed with normal login
           const token = this.jwtService.sign({
             sub: user.id,
             email: user.email,
@@ -240,53 +254,54 @@ export class AuthService {
       }
     }
 
-    // If password is not provided, initiate OTP flow
-    // Only USER role can use OTP authentication
     if (user.role !== 'USER') {
       throw new UnauthorizedException('OTP authentication is only available for regular users. Please use password authentication.');
     }
 
-    // Only phone numbers can use OTP
     if (!normalizedPhone) {
       throw new UnauthorizedException('Phone number required for OTP authentication. Please provide a phone number or use password authentication.');
     }
 
-    // Verify the login input matches the user's phone
     if (user.phone !== normalizedPhone) {
       throw new UnauthorizedException('Phone number does not match user account');
     }
 
-    // Generate and send OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Save OTP to database
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         otp: otpCode,
         otpExpiresAt,
-      },
+      } as any,
     });
 
-    // Send OTP via SMS
     try {
       const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
       
       if (!smsSent) {
-        throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`SMS sending failed, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
+        } else {
+          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        }
       }
     } catch (error) {
-      // If SMS service is not configured, still allow OTP to be generated (for testing)
-      // In production, you should configure SMS service properly
       if (error.message === 'SMS service is not configured') {
         this.logger.warn(`SMS service not configured. OTP generated: ${otpCode} for phone: ${normalizedPhone} (for testing only)`);
-        // In development/testing, we can allow this, but in production this should fail
         if (process.env.NODE_ENV === 'production') {
           throw new UnauthorizedException('SMS service is not configured. Please contact administrator.');
         }
-      } else {
+      } else if (error instanceof UnauthorizedException) {
         throw error;
+      } else {
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`SMS error occurred, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
+        } else {
+          this.logger.error(`SMS error: ${error.message}`);
+          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        }
       }
     }
 
@@ -309,9 +324,6 @@ export class AuthService {
     return user;
   }
 
-  /**
-   * Send OTP to user's phone number
-   */
   async sendOtp(sendOtpDto: SendOtpDto) {
     const { phone } = sendOtpDto;
     const normalizedPhone = normalizePhone(phone);
@@ -320,67 +332,64 @@ export class AuthService {
       throw new UnauthorizedException('Invalid phone number format');
     }
 
-    // Find user by phone
     const user = await this.prisma.user.findUnique({
       where: { phone: normalizedPhone },
     });
 
     if (!user) {
-      // Don't reveal if user exists or not for security
-      // Still send success response to prevent phone enumeration
       return { message: 'If the phone number is registered, an OTP will be sent.' };
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is not active');
     }
 
-    // Only USER role can use OTP
     if (user.role !== 'USER') {
       throw new UnauthorizedException('OTP authentication is only available for regular users');
     }
 
-    // Generate 6-digit OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Save OTP to database
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         otp: otpCode,
         otpExpiresAt,
-      },
+      } as any,
     });
 
-    // Send OTP via SMS
     try {
       const smsSent = await this.smsService.sendOtp(normalizedPhone, otpCode);
       
       if (!smsSent) {
-        throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`SMS sending failed, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
+        } else {
+          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        }
       }
     } catch (error) {
-      // If SMS service is not configured, still allow OTP to be generated (for testing)
-      // In production, you should configure SMS service properly
       if (error.message === 'SMS service is not configured') {
         this.logger.warn(`SMS service not configured. OTP generated: ${otpCode} for phone: ${normalizedPhone} (for testing only)`);
-        // In development/testing, we can allow this, but in production this should fail
         if (process.env.NODE_ENV === 'production') {
           throw new UnauthorizedException('SMS service is not configured. Please contact administrator.');
         }
-      } else {
+      } else if (error instanceof UnauthorizedException) {
         throw error;
+      } else {
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`SMS error occurred, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
+        } else {
+          this.logger.error(`SMS error: ${error.message}`);
+          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+        }
       }
     }
 
     return { message: 'OTP sent successfully' };
   }
 
-  /**
-   * Verify OTP and login user
-   */
   async verifyOtp(verifyOtpDto: VerifyOtpDto) {
     const { phone, otp } = verifyOtpDto;
     const normalizedPhone = normalizePhone(phone);
@@ -389,55 +398,47 @@ export class AuthService {
       throw new UnauthorizedException('Invalid phone number format');
     }
 
-    // Find user by phone (include OTP fields for verification)
     const user = await this.prisma.user.findUnique({
       where: { phone: normalizedPhone },
       select: {
         ...authUserPublicSelect,
         otp: true,
         otpExpiresAt: true,
-      },
-    });
+      } as any,
+    }) as any;
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is not active');
     }
 
-    // Only USER role can use OTP
     if (user.role !== 'USER') {
       throw new UnauthorizedException('OTP authentication is only available for regular users');
     }
 
-    // Check if OTP exists and is valid
     if (!user.otp || !user.otpExpiresAt) {
       throw new UnauthorizedException('No OTP found. Please request a new OTP.');
     }
 
-    // Check if OTP is expired
     if (new Date() > user.otpExpiresAt) {
       throw new UnauthorizedException('OTP has expired. Please request a new OTP.');
     }
 
-    // Verify OTP
     if (user.otp !== otp) {
       throw new UnauthorizedException('Invalid OTP');
     }
 
-    // Clear OTP after successful verification
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         otp: null,
         otpExpiresAt: null,
-      },
+      } as any,
     });
 
-    // Generate JWT token
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
@@ -588,14 +589,9 @@ export class AuthService {
     };
   }
 
-  /**
-   * Change user password
-   * Only for USER role
-   */
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
     const { currentPassword, newPassword } = changePasswordDto;
 
-    // Get user with password field
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -609,12 +605,10 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Only USER role can change password
     if (user.role !== 'USER') {
       throw new UnauthorizedException('Password change is only available for regular users');
     }
 
-    // If user already has a password, verify current password
     if (user.password) {
       if (!currentPassword) {
         throw new UnauthorizedException('Current password is required');
@@ -626,11 +620,9 @@ export class AuthService {
       }
     }
 
-    // Hash new password
     const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    // Update password
     await this.prisma.user.update({
       where: { id: userId },
       data: {

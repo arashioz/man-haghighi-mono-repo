@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, Matches, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Match } from '../../common/decorators/match.decorator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'john@example.com', required: false })
@@ -12,16 +13,19 @@ export class RegisterDto {
   @IsString()
   phone?: string;
 
-  @ApiProperty({ example: 'johndoe' })
+  @ApiProperty({ example: 'password123', description: 'Password for regular users. Required for USER role.' })
+  @ValidateIf((o) => o.role === 'USER')
   @IsString()
-  @IsNotEmpty()
-  username: string;
-
-  @ApiProperty({ example: 'password123', required: false, description: 'Optional password for all users. Required for ADMIN users.' })
-  @IsOptional()
-  @IsString()
-  @MinLength(6)
+  @IsNotEmpty({ message: 'Password is required for regular users' })
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password?: string;
+
+  @ApiProperty({ example: 'password123', description: 'Confirm password. Must match password.' })
+  @ValidateIf((o) => o.role === 'USER')
+  @IsString()
+  @IsNotEmpty({ message: 'Confirm password is required for regular users' })
+  @Match('password', { message: 'Confirm password must match password' })
+  confirmPassword?: string;
 
   @ApiProperty({ example: 'John' })
   @IsString()
