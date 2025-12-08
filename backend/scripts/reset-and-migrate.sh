@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Script to reset database and apply all migrations from scratch
 # WARNING: This will delete all data in the database!
@@ -44,15 +44,53 @@ else
     print_step "Running migrations on container: $CONTAINER_NAME"
 fi
 
-# Warning
-print_error "WARNING: This script will DELETE ALL DATA in the database!"
-print_error "Make sure you have a backup before proceeding!"
-echo ""
-read -p "Are you sure you want to continue? (yes/no): " confirm
+# Check if running in non-interactive mode (Docker)
+if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
+    # Running in Docker or RESET_DB is set
+    if [ "$RESET_DB" = "true" ]; then
+        print_warning "RESET_DB is set to 'true' - proceeding with database reset"
+        print_error "WARNING: This will DELETE ALL DATA in the database!"
+    else
+        print_step "RESET_DB is not set to 'true' - skipping database reset"
+        print_step "Running migrations only..."
+        # Just run migrations without reset
+        if [ "$CONTAINER_NAME" = "current" ]; then
+            print_step "Generating Prisma Client..."
+            npx prisma generate || {
+                print_error "Failed to generate Prisma Client"
+                exit 1
+            }
+            print_step "Applying migrations..."
+            npx prisma migrate deploy || {
+                print_error "Failed to apply migrations"
+                exit 1
+            }
+        else
+            print_step "Generating Prisma Client..."
+            docker exec "$CONTAINER_NAME" npx prisma generate || {
+                print_error "Failed to generate Prisma Client"
+                exit 1
+            }
+            print_step "Applying migrations..."
+            docker exec "$CONTAINER_NAME" npx prisma migrate deploy || {
+                print_error "Failed to apply migrations"
+                exit 1
+            }
+        fi
+        print_success "Migrations applied successfully!"
+        exit 0
+    fi
+else
+    # Interactive mode (local development)
+    print_error "WARNING: This script will DELETE ALL DATA in the database!"
+    print_error "Make sure you have a backup before proceeding!"
+    echo ""
+    read -p "Are you sure you want to continue? (yes/no): " confirm
 
-if [ "$confirm" != "yes" ]; then
-    print_warning "Operation cancelled"
-    exit 0
+    if [ "$confirm" != "yes" ]; then
+        print_warning "Operation cancelled"
+        exit 0
+    fi
 fi
 
 # Reset database and apply all migrations

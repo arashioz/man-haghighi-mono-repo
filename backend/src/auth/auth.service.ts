@@ -17,6 +17,7 @@ const authUserPublicSelect = {
   role: true,
   isActive: true,
   isOld: true,
+  mustChangePassword: true,
   education: true,
   university: true,
   job: true,
@@ -229,6 +230,9 @@ export class AuthService {
 
           const legacyUser = user as any;
 
+          // Check if user must change password
+          const mustChangePassword = (legacyUser.mustChangePassword === true);
+
           return {
             user: {
               id: legacyUser.id,
@@ -240,6 +244,7 @@ export class AuthService {
               role: legacyUser.role,
               isActive: legacyUser.isActive,
               isOld: legacyUser.isOld,
+              mustChangePassword: mustChangePassword,
               education: legacyUser.education,
               university: legacyUser.university,
               job: legacyUser.job,
@@ -249,6 +254,7 @@ export class AuthService {
               updatedAt: legacyUser.updatedAt,
             },
             token,
+            mustChangePassword: mustChangePassword,
           };
         }
       }
@@ -464,6 +470,8 @@ export class AuthService {
       role: user.role,
     });
 
+    const mustChangePassword = (user as any).mustChangePassword === true;
+
     return {
       user: {
         id: user.id,
@@ -475,6 +483,7 @@ export class AuthService {
         role: user.role,
         isActive: user.isActive,
         isOld: user.isOld,
+        mustChangePassword: mustChangePassword,
         education: user.education,
         university: user.university,
         job: user.job,
@@ -484,6 +493,7 @@ export class AuthService {
         updatedAt: user.updatedAt,
       },
       token,
+      mustChangePassword: mustChangePassword,
     };
   }
 
@@ -616,8 +626,9 @@ export class AuthService {
         id: true,
         password: true,
         role: true,
-      },
-    });
+        mustChangePassword: true,
+      } as any,
+    }) as any;
 
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -627,14 +638,24 @@ export class AuthService {
       throw new UnauthorizedException('Password change is only available for regular users');
     }
 
-    if (user.password) {
+    // If user must change password, skip current password validation
+    const mustChangePassword = (user as any).mustChangePassword === true;
+
+    if (!mustChangePassword && user.password) {
       if (!currentPassword) {
         throw new UnauthorizedException('Current password is required');
       }
 
       const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
       if (!isPasswordValid) {
+        this.logger.warn(`Failed password change attempt for user ${userId}`);
         throw new UnauthorizedException('Current password is incorrect');
+      }
+
+      // Check if new password is different from current password
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
+        throw new UnauthorizedException('New password must be different from current password');
       }
     }
 
@@ -645,8 +666,11 @@ export class AuthService {
       where: { id: userId },
       data: {
         password: hashedPassword,
-      },
+        mustChangePassword: false, // Reset the flag after password change
+      } as any,
     });
+
+    this.logger.log(`Password changed successfully for user ${userId}${mustChangePassword ? ' (forced password change)' : ''}`);
 
     return { message: 'Password changed successfully' };
   }

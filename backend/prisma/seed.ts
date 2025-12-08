@@ -547,11 +547,28 @@ async function main() {
   }
 
   console.log('');
+  // ✅ Update old users password to user123 and set mustChangePassword flag
+  console.log('🔄 Updating old users passwords...');
+  const hashedUser123Password = await bcrypt.hash('user123', 10);
+  const oldUsersUpdate = await prisma.user.updateMany({
+    where: {
+      isOld: true,
+    },
+    data: {
+      password: hashedUser123Password,
+      mustChangePassword: true,
+    },
+  });
+  console.log(`✅ Updated ${oldUsersUpdate.count} old users with password 'user123' and mustChangePassword flag`);
+
   console.log('🎉 Database seeded successfully!');
   console.log('');
   console.log('📝 Login credentials:');
   console.log('   Email: admin@haghighi.com');
   console.log('   Password: admin123');
+  console.log('');
+  console.log('📝 Old users default password:');
+  console.log('   Password: user123 (must be changed on first login)');
   console.log('');
 }
 

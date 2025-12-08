@@ -25,6 +25,7 @@ model User {
   role      UserRole @default(USER)
   isActive  Boolean  @default(true)
   isOld     Boolean  @default(false) // Flag for old imported users
+  mustChangePassword Boolean @default(false) // Force user to change password on next login
   parentId  String?
   isBlocked Boolean  @default(false) // Rate limit blocking
   blockedUntil DateTime? // When the block expires

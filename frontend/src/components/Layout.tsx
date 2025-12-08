@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAudioPlayer } from '../contexts/AudioPlayerContext';
 import AudioPlayerBar from './AudioPlayerBar';
+import ForcePasswordChangeModal from './ForcePasswordChangeModal';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -189,6 +190,9 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
 
       {/* Audio Player Bar */}
       <AudioPlayerBar />
+
+      {/* Force Password Change Modal */}
+      <ForcePasswordChangeModal isOpen={user?.mustChangePassword === true} />
 
     </div>
   );
