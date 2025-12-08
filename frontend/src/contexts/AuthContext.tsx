@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, LoginCredentials, RegisterCredentials, UpdateProfilePayload } from '../types';
+import { User, LoginCredentials, RegisterCredentials, UpdateProfilePayload, AuthResponse } from '../types';
 import { authService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
+  setSession: (authResponse: AuthResponse) => void;
   register: (credentials: RegisterCredentials) => Promise<void>;
   updateProfile: (payload: UpdateProfilePayload) => Promise<User>;
   logout: () => void;
@@ -30,6 +31,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const setSession = useCallback((response: AuthResponse) => {
+    setUser(response.user);
+    setToken(response.token);
+    localStorage.setItem('token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+  }, []);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -68,10 +76,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials) => {
     try {
       const response = await authService.login(credentials);
-      setUser(response.user);
-      setToken(response.token);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      setSession(response);
     } catch (error) {
       throw error;
     }
@@ -80,10 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (credentials: RegisterCredentials) => {
     try {
       const response = await authService.register(credentials);
-      setUser(response.user);
-      setToken(response.token);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      setSession(response);
     } catch (error) {
       throw error;
     }
@@ -92,10 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (payload: UpdateProfilePayload) => {
     try {
       const response = await authService.updateProfile(payload);
-      setUser(response.user);
-      setToken(response.token);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
+      setSession(response);
       return response.user;
     } catch (error) {
       throw error;
@@ -106,6 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     login,
+    setSession,
     register,
     updateProfile,
     logout,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersService, slidersService, articlesService, podcastsService, videoPodcastsService, coursesService, salesService, salesTeamsService } from '../services/api';
+import { usersService, slidersService, articlesService, podcastsService, videoPodcastsService, coursesService, salesService, salesTeamsService, adminService } from '../services/api';
 import { SalesTeam } from '../types';
 
 const PeopleIcon = () => (
@@ -76,6 +76,7 @@ const Dashboard: React.FC = () => {
   const [myTeam, setMyTeam] = useState<SalesTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [backupLoading, setBackupLoading] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -223,6 +224,29 @@ const Dashboard: React.FC = () => {
     return 'داشبورد کاربری';
   };
 
+  const handleBackup = async () => {
+    try {
+      setBackupLoading(true);
+      const blob = await adminService.createDatabaseBackup();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      a.download = `haghighi_backup_${timestamp}.sql`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در ایجاد بکاپ');
+      console.error('Backup error:', err);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
   const statCards = getStatCards();
 
   if (loading) {
@@ -253,9 +277,32 @@ const Dashboard: React.FC = () => {
   return (
     <div className="ios-fade-in">
       {/* Header با طراحی iOS */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-semibold text-gray-900 mb-2">{getPageTitle()}</h1>
-        <p className="text-[17px] text-[#8E8E93]">{getPageDescription()}</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-semibold text-gray-900 mb-2">{getPageTitle()}</h1>
+          <p className="text-[17px] text-[#8E8E93]">{getPageDescription()}</p>
+        </div>
+        {user?.role === 'ADMIN' && (
+          <button
+            onClick={handleBackup}
+            disabled={backupLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {backupLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>در حال ایجاد بکاپ...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>دانلود بکاپ دیتابیس</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Stats Cards با طراحی iOS 16 */}

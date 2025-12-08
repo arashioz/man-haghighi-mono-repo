@@ -20,6 +20,7 @@ import { AudiosModule } from './audios/audios.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { LogsModule } from './logs/logs.module';
+import { AdminModule } from './admin/admin.module';
 import { HealthController } from './health/health.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
@@ -49,6 +50,7 @@ import { validateEnv } from './config/env.validation';
     }),
     PrismaModule,
     LogsModule,
+    AdminModule,
     AuthModule,
     UsersModule,
     SalesModule,

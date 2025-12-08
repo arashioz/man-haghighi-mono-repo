@@ -121,6 +121,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopMenuCollapsed, setDesktopMenuCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -167,7 +168,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {getMenuItems(user?.role || 'USER').map((item) => (
             <button
               key={item.text}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                setMobileOpen(false);
+              }}
               className={`ios-nav-item w-full flex items-center px-4 py-3 mb-1.5 transition-all duration-200 ${
                 location.pathname === item.path
                   ? 'active'
@@ -220,14 +224,93 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
 
       {/* Desktop Sidebar با iOS Style */}
-      <div className="hidden sm:block w-80 flex-shrink-0">
-        <div className="fixed right-0 top-0 h-screen w-80 ios-sidebar">
-          {drawer}
+      <div className={`hidden sm:block flex-shrink-0 transition-all duration-300 ${desktopMenuCollapsed ? 'w-20' : 'w-64'}`}>
+        <div className={`fixed right-0 top-0 h-screen ios-sidebar transition-all duration-300 ${desktopMenuCollapsed ? 'w-20' : 'w-64'}`}>
+          <div className="h-full flex flex-col ios-fade-in">
+            {/* Collapse Button */}
+            <div className="p-4 border-b border-gray-100">
+              <button
+                onClick={() => setDesktopMenuCollapsed(!desktopMenuCollapsed)}
+                className="w-full flex items-center justify-center p-2 rounded-xl hover:bg-gray-100 transition-colors"
+                title={desktopMenuCollapsed ? 'باز کردن منو' : 'بستن منو'}
+              >
+                <svg className={`w-5 h-5 text-gray-600 transition-transform ${desktopMenuCollapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Header با طراحی iOS */}
+            {!desktopMenuCollapsed && (
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-3xl flex items-center justify-center shadow-lg">
+                  <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                  </svg>
+                </div>
+                <h1 className="text-xl font-semibold text-gray-900 mb-1">من حقیقی</h1>
+                <p className="text-sm text-[#8E8E93]">
+                  {user?.role === 'ADMIN' ? 'پنل مدیریت' : 
+                   user?.role === 'SALES_MANAGER' ? 'پنل مدیر فروش' : 
+                   user?.role === 'SALES_PERSON' ? 'پنل فروشنده' : 'پنل کاربری'}
+                </p>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex-1 py-2 overflow-y-auto">
+              <nav className="px-4">
+                {getMenuItems(user?.role || 'USER').map((item) => (
+                  <button
+                    key={item.text}
+                    onClick={() => navigate(item.path)}
+                    className={`ios-nav-item w-full flex items-center ${desktopMenuCollapsed ? 'justify-center px-2' : 'px-4'} py-3 mb-1.5 transition-all duration-200 ${
+                      location.pathname === item.path
+                        ? 'active'
+                        : 'text-gray-700'
+                    }`}
+                    title={desktopMenuCollapsed ? item.text : ''}
+                  >
+                    <span className={location.pathname === item.path ? 'text-white' : 'text-[#8E8E93]'}>
+                      {item.icon}
+                    </span>
+                    {!desktopMenuCollapsed && (
+                      <span className={`text-[15px] mr-3 ${location.pathname === item.path ? 'font-medium' : ''}`}>
+                        {item.text}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </nav>
+            </div>
+            
+            {/* User Profile با طراحی iOS */}
+            {!desktopMenuCollapsed && (
+              <div className="p-4 border-t border-gray-100">
+                <div className="flex items-center p-3 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="w-11 h-11 bg-gradient-to-br from-[#007AFF] to-[#5AC8FA] rounded-full flex items-center justify-center text-white font-medium text-base ml-3 shadow-md">
+                    {user?.firstName?.[0] || user?.phone?.[0] || 'A'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-medium text-gray-900 truncate">
+                      {user?.firstName} {user?.lastName}
+                    </p>
+                    <p className="text-xs text-[#8E8E93] flex items-center mt-0.5">
+                      <span className="w-2 h-2 bg-green-500 rounded-full ml-1.5"></span>
+                      {user?.role === 'ADMIN' ? 'مدیر' : 
+                       user?.role === 'SALES_MANAGER' ? 'مدیر فروش' : 
+                       user?.role === 'SALES_PERSON' ? 'فروشنده' : 'کاربر'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen sm:mr-4">
+      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${desktopMenuCollapsed ? 'sm:mr-20' : 'sm:mr-64'}`}>
         {/* Header با Blur Effect */}
         <header className="ios-header sticky top-0 z-40">
           <div className="flex items-center justify-between px-6 py-4">
