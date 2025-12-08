@@ -45,14 +45,14 @@ services:
         condition: service_healthy
     environment:
       RESET_DB: "false"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود (برای production باید false باشد)
-    restart: "no"  # Temporarily disabled to prevent restart loop - change back to "unless-stopped" after fixing
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30m
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: sh -c "./scripts/reset-and-migrate.sh && npm run start:prod"
+    command: sh -c "./scripts/migrate.sh && npm run start:prod"
 
   # -------------------------------
   # Frontend
