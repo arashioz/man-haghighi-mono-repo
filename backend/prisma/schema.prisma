@@ -26,6 +26,10 @@ model User {
   isActive  Boolean  @default(true)
   isOld     Boolean  @default(false) // Flag for old imported users
   parentId  String?
+  isBlocked Boolean  @default(false) // Rate limit blocking
+  blockedUntil DateTime? // When the block expires
+  rateLimitViolations Int @default(0) // Count of rate limit violations
+  lastRateLimitViolation DateTime? // Last violation time
   education String?
   university String?
   job       String?
@@ -413,6 +417,30 @@ model Log {
   @@index([url])
   @@index([statusCode])
   @@map("logs")
+}
+
+model Settings {
+  id        String   @id @default("settings")
+  siteName  String?  @default("سایت")
+  siteDescription String? @db.Text
+  siteEmail String?
+  sitePhone String?
+  maintenanceMode Boolean @default(false)
+  maintenanceMessage String? @db.Text
+  smsEnabled Boolean @default(false)
+  smsProvider String?
+  smsApiKey String?
+  emailEnabled Boolean @default(false)
+  emailProvider String?
+  emailApiKey String?
+  backupEnabled Boolean @default(true)
+  backupFrequency String? @default("daily")
+  maxUploadSize Int? @default(104857600) // 100MB in bytes
+  allowedFileTypes String[] @default(["image/jpeg", "image/png", "image/gif", "video/mp4", "audio/mpeg"])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("settings")
 }
 
 enum UserRole {

@@ -11,6 +11,7 @@ import {
   Query,
   Res,
   Headers,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AudiosService } from './audios.service';
 import { CreateAudioDto, UpdateAudioDto } from './dto/audio.dto';
@@ -74,6 +75,13 @@ export class AudiosController {
     @Headers('range') range?: string,
   ) {
     try {
+      // Check if user has access to this audio
+      const hasAccess = await this.audiosService.checkAudioAccess(req.user.id, id);
+      
+      if (!hasAccess) {
+        throw new ForbiddenException('You do not have access to this audio');
+      }
+
       const audio = await this.audiosService.findOne(id);
       const audioPath = path.join(process.cwd(), 'uploads', audio.audioFile);
 

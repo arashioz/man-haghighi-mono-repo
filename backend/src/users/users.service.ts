@@ -16,6 +16,10 @@ const baseUserSelect = {
   role: true,
   isActive: true,
   isOld: true,
+  isBlocked: true,
+  blockedUntil: true,
+  rateLimitViolations: true,
+  lastRateLimitViolation: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -348,6 +352,8 @@ export class UsersService {
       job,
       state,
       gender,
+      password,
+      confirmPassword,
     } = updateUserDto;
 
     let normalizedEmail: string | null | undefined;
@@ -479,7 +485,36 @@ export class UsersService {
     }
 
     if (role !== undefined) {
-      updateData.role = role as UserRole;
+      // Prevent changing role to/from ADMIN
+      const currentUser = await this.prisma.user.findUnique({
+        where: { id },
+        select: { role: true },
+      });
+      
+      if (currentUser) {
+        const newRole = role as UserRole;
+        // Prevent changing to ADMIN or from ADMIN
+        if (currentUser.role === 'ADMIN' || newRole === 'ADMIN') {
+          throw new ConflictException('Cannot change ADMIN role');
+        }
+        updateData.role = newRole;
+      } else {
+        updateData.role = role as UserRole;
+      }
+    }
+
+    // Handle password change
+    if (password) {
+      if (!confirmPassword) {
+        throw new ConflictException('Confirm password is required when changing password');
+      }
+      if (password !== confirmPassword) {
+        throw new ConflictException('Password and confirm password do not match');
+      }
+      
+      const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      updateData.password = hashedPassword;
     }
 
     return this.prisma.user.update({
@@ -745,6 +780,37 @@ export class UsersService {
       orderBy: {
         firstName: 'asc',
       },
+    });
+  }
+
+  async blockUser(id: string) {
+    await this.findOne(id);
+    
+    const blockedUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours from now
+    
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        isBlocked: true,
+        blockedUntil,
+        rateLimitViolations: { increment: 1 },
+        lastRateLimitViolation: new Date(),
+      },
+      select: baseUserSelect,
+    });
+  }
+
+  async unblockUser(id: string) {
+    await this.findOne(id);
+    
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        isBlocked: false,
+        blockedUntil: null,
+        rateLimitViolations: 0,
+      },
+      select: baseUserSelect,
     });
   }
 }

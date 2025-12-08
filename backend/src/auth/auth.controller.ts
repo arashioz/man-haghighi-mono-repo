@@ -22,10 +22,22 @@ export class AuthController {
     return this.authService.register(registerDto);
   }
 
+  @Get('login')
+  @Public()
+  @ApiOperation({ summary: 'Login endpoint info' })
+  @ApiResponse({ status: 200, description: 'Login endpoint information' })
+  getLoginInfo() {
+    return {
+      message: 'Please use POST method to login',
+      endpoint: '/api/auth/login',
+      methods: ['POST'],
+    };
+  }
+
   @Post('login')
   @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 requests per minute
+  @Throttle({ default: { limit: 2, ttl: 60000 } })
   @ApiOperation({ 
     summary: 'Login user with dual authentication',
     description: 'Supports two authentication methods: 1) Username/password login (provide password), 2) OTP login (omit password, will send OTP to phone number)'

@@ -164,4 +164,31 @@ export class AudiosService {
       },
     });
   }
+
+  async checkAudioAccess(userId: string, audioId: string): Promise<boolean> {
+    const audioAccess = await this.prisma.audioAccess.findUnique({
+      where: {
+        userId_audioId: {
+          userId,
+          audioId,
+        },
+      },
+    });
+
+    if (audioAccess) {
+      return true;
+    }
+
+    const audio = await this.findOne(audioId);
+    const enrollment = await this.prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId: audio.courseId,
+        },
+      },
+    });
+
+    return !!enrollment;
+  }
 }

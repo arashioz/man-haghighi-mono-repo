@@ -166,6 +166,18 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   gender?: string;
+
+  @ApiProperty({ example: 'newpassword123', required: false, description: 'New password for the user. Admin can change any user password.' })
+  @IsOptional()
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  password?: string;
+
+  @ApiProperty({ example: 'newpassword123', required: false, description: 'Confirm new password. Must match password.' })
+  @IsOptional()
+  @IsString()
+  @Match('password', { message: 'Confirm password must match password' })
+  confirmPassword?: string;
 }
 
 export class PaginationQueryDto {

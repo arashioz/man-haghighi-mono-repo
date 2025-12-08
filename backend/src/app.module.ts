@@ -19,13 +19,16 @@ import { VideosModule } from './videos/videos.module';
 import { AudiosModule } from './audios/audios.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { UploadCenterModule } from './upload-center/upload-center.module';
 import { LogsModule } from './logs/logs.module';
 import { AdminModule } from './admin/admin.module';
+import { SettingsModule } from './settings/settings.module';
 import { HealthController } from './health/health.controller';
 import { AppController } from './app.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { ProgressiveThrottlerGuard } from './common/guards/progressive-throttler.guard';
 import { validateEnv } from './config/env.validation';
 
 @Module({
@@ -52,6 +55,7 @@ import { validateEnv } from './config/env.validation';
     PrismaModule,
     LogsModule,
     AdminModule,
+    SettingsModule,
     AuthModule,
     UsersModule,
     SalesModule,
@@ -65,6 +69,7 @@ import { validateEnv } from './config/env.validation';
     AudiosModule,
     WorkshopsModule,
     UploadsModule,
+    UploadCenterModule,
   ],
   providers: [
     {
@@ -81,7 +86,7 @@ import { validateEnv } from './config/env.validation';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ProgressiveThrottlerGuard,
     },
   ],
 })

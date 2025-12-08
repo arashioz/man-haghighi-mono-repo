@@ -82,6 +82,11 @@ export class UrlService {
         thumbnail: this.getFileUrl(video.thumbnail),
         videoFile: this.getFileUrl(video.videoFile),
       })) || [],
+      audios: course.audios?.map((audio: any) => ({
+        ...audio,
+        thumbnail: this.getFileUrl(audio.thumbnail),
+        audioFile: this.getFileUrl(audio.audioFile),
+      })) || [],
     };
   }
 

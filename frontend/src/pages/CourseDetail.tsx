@@ -63,6 +63,10 @@ const CourseDetail: React.FC = () => {
     navigate(`/courses/${id}/videos/${videoId}`);
   };
 
+  const handleAudioClick = (audioId: string) => {
+    navigate(`/courses/${id}/audios/${audioId}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
@@ -209,14 +213,7 @@ const CourseDetail: React.FC = () => {
                           ? 'border-white/20 hover:shadow-md hover:border-purple-400/50 cursor-pointer bg-[#0a0a0a]' 
                           : 'border-white/10 opacity-75 bg-[#0a0a0a]'
                       }`}
-                      onClick={isEnrolled ? () => {
-                        const audioUrl = `${API_ORIGIN}/api/audios/${audio.id}/stream`;
-                        const token = localStorage.getItem('token');
-                        const streamUrl = token 
-                          ? `${audioUrl}?token=${encodeURIComponent(token)}`
-                          : audioUrl;
-                        window.open(streamUrl, '_blank');
-                      } : undefined}
+                      onClick={isEnrolled ? () => handleAudioClick(audio.id) : undefined}
                     >
                       {audio.thumbnail && (
                         <img

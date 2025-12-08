@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { RegisterCredentials } from '../types';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const Register: React.FC = () => {
   const [credentials, setCredentials] = useState<RegisterCredentials>({
@@ -37,7 +38,12 @@ const Register: React.FC = () => {
     }
 
     try {
-      await register(credentials);
+      // Normalize phone number before sending
+      const normalizedCredentials = {
+        ...credentials,
+        phone: normalizePhoneNumber(credentials.phone),
+      };
+      await register(normalizedCredentials);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'ثبت نام ناموفق');

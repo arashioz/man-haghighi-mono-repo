@@ -298,11 +298,11 @@ const Logs: React.FC = () => {
             onClick={() => {
               handleFilterChange('level', '');
               // Filter by common database-related contexts
-              const dbContexts = stats.byContext?.filter((c: any) => {
-                const ctx = (c.context || '').toLowerCase();
+              const dbContexts = stats?.byContext?.filter((c: any) => {
+                const ctx = (c?.context || '').toLowerCase();
                 return ctx.includes('database') || ctx.includes('prisma') || ctx.includes('db') || ctx.includes('query');
               });
-              if (dbContexts && dbContexts.length > 0) {
+              if (dbContexts && dbContexts.length > 0 && dbContexts[0]?.context) {
                 // Use the first database context found
                 handleFilterChange('context', dbContexts[0].context);
               } else {
@@ -318,11 +318,12 @@ const Logs: React.FC = () => {
                 <p className="text-sm text-gray-600 mb-1">لاگ‌های دیتابیس</p>
                 <p className="text-2xl font-bold text-purple-600">
                   {(() => {
-                    const dbContexts = stats.byContext?.filter((c: any) => {
-                      const ctx = (c.context || '').toLowerCase();
+                    if (!stats?.byContext) return 0;
+                    const dbContexts = stats.byContext.filter((c: any) => {
+                      const ctx = (c?.context || '').toLowerCase();
                       return ctx.includes('database') || ctx.includes('prisma') || ctx.includes('db') || ctx.includes('query');
-                    }) || [];
-                    return dbContexts.reduce((sum: number, c: any) => sum + (c.count || 0), 0);
+                    });
+                    return dbContexts.reduce((sum: number, c: any) => sum + (c?.count || 0), 0);
                   })()}
                 </p>
               </div>

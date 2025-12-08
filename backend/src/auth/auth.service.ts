@@ -284,6 +284,7 @@ export class AuthService {
         if (process.env.NODE_ENV !== 'production') {
           this.logger.warn(`SMS sending failed, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
         } else {
+          this.logger.error(`SMS sending returned false for phone: ${normalizedPhone}`);
           throw new UnauthorizedException('Failed to send OTP. Please try again later.');
         }
       }
@@ -296,11 +297,19 @@ export class AuthService {
       } else if (error instanceof UnauthorizedException) {
         throw error;
       } else {
+        // Log the full error details for debugging
+        this.logger.error(`SMS error in login:`, {
+          message: error.message,
+          stack: error.stack,
+          phone: normalizedPhone,
+        });
+        
         if (process.env.NODE_ENV !== 'production') {
           this.logger.warn(`SMS error occurred, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
         } else {
-          this.logger.error(`SMS error: ${error.message}`);
-          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+          // Include more details in production error message if available
+          const errorDetails = error.message || 'Unknown error';
+          throw new UnauthorizedException(`Failed to send OTP. ${errorDetails}`);
         }
       }
     }
@@ -366,6 +375,7 @@ export class AuthService {
         if (process.env.NODE_ENV !== 'production') {
           this.logger.warn(`SMS sending failed, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
         } else {
+          this.logger.error(`SMS sending returned false for phone: ${normalizedPhone}`);
           throw new UnauthorizedException('Failed to send OTP. Please try again later.');
         }
       }
@@ -378,11 +388,19 @@ export class AuthService {
       } else if (error instanceof UnauthorizedException) {
         throw error;
       } else {
+        // Log the full error details for debugging
+        this.logger.error(`SMS error in sendOtp:`, {
+          message: error.message,
+          stack: error.stack,
+          phone: normalizedPhone,
+        });
+        
         if (process.env.NODE_ENV !== 'production') {
           this.logger.warn(`SMS error occurred, but allowing in development. OTP: ${otpCode} for phone: ${normalizedPhone}`);
         } else {
-          this.logger.error(`SMS error: ${error.message}`);
-          throw new UnauthorizedException('Failed to send OTP. Please try again later.');
+          // Include more details in production error message if available
+          const errorDetails = error.message || 'Unknown error';
+          throw new UnauthorizedException(`Failed to send OTP. ${errorDetails}`);
         }
       }
     }

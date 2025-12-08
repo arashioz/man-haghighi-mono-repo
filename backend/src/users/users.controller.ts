@@ -180,4 +180,24 @@ export class UsersController {
     return this.usersService.unassignSalesPersonFromManager(salesPersonId);
   }
 
+  @Post(':id/block')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Block user for rate limiting violations (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User blocked successfully' })
+  async blockUser(@Param('id') id: string) {
+    return this.usersService.blockUser(id);
+  }
+
+  @Post(':id/unblock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unblock user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User unblocked successfully' })
+  async unblockUser(@Param('id') id: string) {
+    return this.usersService.unblockUser(id);
+  }
+
 }
