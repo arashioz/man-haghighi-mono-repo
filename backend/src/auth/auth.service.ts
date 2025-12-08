@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
 import { SmsService } from '../sms/sms.service';
@@ -183,6 +183,11 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
+    // Only USER role can use password/OTP login
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('This login method is only available for regular users');
+    }
+
     // If password is provided, authenticate with password
     if (password) {
       if (!user.password) {
@@ -317,6 +322,11 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
+    // Only USER role can use OTP
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('OTP authentication is only available for regular users');
+    }
+
     // Generate 6-digit OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
@@ -382,6 +392,11 @@ export class AuthService {
     // Check if user is active
     if (!user.isActive) {
       throw new UnauthorizedException('Account is not active');
+    }
+
+    // Only USER role can use OTP
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('OTP authentication is only available for regular users');
     }
 
     // Check if OTP exists and is valid
@@ -557,5 +572,58 @@ export class AuthService {
       user,
       token,
     };
+  }
+
+  /**
+   * Change user password
+   * Only for USER role
+   */
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const { currentPassword, newPassword } = changePasswordDto;
+
+    // Get user with password field
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        password: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Only USER role can change password
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('Password change is only available for regular users');
+    }
+
+    // If user already has a password, verify current password
+    if (user.password) {
+      if (!currentPassword) {
+        throw new UnauthorizedException('Current password is required');
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
+    }
+
+    // Hash new password
+    const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return { message: 'Password changed successfully' };
   }
 }

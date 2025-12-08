@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { coursesService, videosService, audiosService, workshopsService } from '../services/api';
+import { coursesService, videosService, audiosService, workshopsService, authService } from '../services/api';
 import { Course, Video, Audio, Workshop } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -28,6 +28,14 @@ const UserDashboard: React.FC = () => {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -131,6 +139,61 @@ const UserDashboard: React.FC = () => {
     resetProfileForm();
     setProfileError('');
     setProfileSuccess('');
+  };
+
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setPasswordForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validation
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('رمز عبور باید حداقل ۶ کاراکتر باشد');
+      setPasswordSaving(false);
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('رمز عبور جدید و تکرار آن یکسان نیستند');
+      setPasswordSaving(false);
+      return;
+    }
+
+    try {
+      await authService.changePassword(
+        passwordForm.currentPassword || undefined,
+        passwordForm.newPassword
+      );
+      setPasswordSuccess('رمز عبور با موفقیت تغییر یافت');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (err: any) {
+      setPasswordError(err.response?.data?.message || 'خطا در تغییر رمز عبور');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handlePasswordReset = () => {
+    setPasswordForm({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+    setPasswordError('');
+    setPasswordSuccess('');
   };
 
   const profileFieldsToComplete: Array<'education' | 'university' | 'job' | 'state' | 'gender'> = [
@@ -387,6 +450,98 @@ const UserDashboard: React.FC = () => {
                   disabled={profileSaving}
                 >
                   {profileSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Password Change Section - Only for USER role */}
+        {user?.role === 'USER' && (
+          <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
+            <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">تغییر رمز عبور</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                می‌توانید رمز عبور خود را تنظیم یا تغییر دهید
+              </p>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="p-4 sm:p-6 space-y-4">
+              {passwordSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                  {passwordSuccess}
+                </div>
+              )}
+              {passwordError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                  {passwordError}
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+                    رمز عبور فعلی (در صورت وجود)
+                  </label>
+                  <input
+                    id="currentPassword"
+                    name="currentPassword"
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={handlePasswordChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="اگر قبلاً رمز عبور تنظیم کرده‌اید، وارد کنید"
+                    disabled={passwordSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                    رمز عبور جدید
+                  </label>
+                  <input
+                    id="newPassword"
+                    name="newPassword"
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={handlePasswordChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="حداقل ۶ کاراکتر"
+                    required
+                    minLength={6}
+                    disabled={passwordSaving}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                    تکرار رمز عبور جدید
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={handlePasswordChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                    placeholder="رمز عبور جدید را دوباره وارد کنید"
+                    required
+                    minLength={6}
+                    disabled={passwordSaving}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handlePasswordReset}
+                  className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  disabled={passwordSaving}
+                >
+                  بازنشانی
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                  disabled={passwordSaving}
+                >
+                  {passwordSaving ? 'در حال ذخیره...' : 'تغییر رمز عبور'}
                 </button>
               </div>
             </form>
