@@ -7,87 +7,127 @@
 # Note: We don't use 'set -e' here because we want to continue even if some migrations fail
 # set -e
 
-# Function to check if initial tables exist
-check_initial_tables_exist() {
-    # Check if users table exists by trying to query it
+# Function to check if a specific table exists
+check_table_exists() {
+    local table_name=$1
     if [ "$CONTAINER_NAME" = "current" ]; then
-        # Use a simple query that will fail if table doesn't exist
         npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null || return 1
-SELECT 1 FROM "users" LIMIT 1;
+SELECT 1 FROM "$table_name" LIMIT 1;
 EOF
     else
-        # For docker, we need to check via postgres directly or use prisma
-        docker exec $CONTAINER_NAME sh -c 'npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null || exit 1
-SELECT 1 FROM "users" LIMIT 1;
-EOF' || return 1
+        docker exec $CONTAINER_NAME sh -c "npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null || exit 1
+SELECT 1 FROM \"$table_name\" LIMIT 1;
+EOF" || return 1
     fi
     return 0
 }
 
-# Function to ensure initial migration is applied
-ensure_initial_migration() {
-    print_step "Checking if initial migration is applied..."
+# Function to check if essential tables exist
+check_initial_tables_exist() {
+    # Check if users table exists (most critical)
+    if ! check_table_exists "users"; then
+        return 1
+    fi
+    return 0
+}
+
+# Function to check if all required tables exist
+check_all_required_tables_exist() {
+    local missing_tables=""
+    local required_tables="users logs"
     
-    if check_initial_tables_exist; then
-        print_success "Initial tables exist, skipping initial migration check"
-        return 0
+    for table in $required_tables; do
+        if ! check_table_exists "$table"; then
+            missing_tables="$missing_tables $table"
+        fi
+    done
+    
+    if [ -n "$missing_tables" ]; then
+        print_warning "Missing tables:$missing_tables"
+        return 1
     fi
     
-    print_warning "Initial tables not found - ensuring initial migration is applied..."
+    return 0
+}
+
+# Function to resolve and retry a specific migration
+resolve_and_retry_migration() {
+    local migration_name=$1
+    local table_to_check=$2
     
-    # Check if initial migration exists in migration history
-    local initial_migration="20251013230351_initial"
+    print_step "Resolving migration: $migration_name"
     
     if [ "$CONTAINER_NAME" = "current" ]; then
-        # Check migration status
-        MIGRATION_STATUS=$(npx prisma migrate status 2>&1 || echo "")
-        
-        # If initial migration is marked as applied but tables don't exist, mark as rolled-back
-        if echo "$MIGRATION_STATUS" | grep -q "$initial_migration"; then
-            if echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*applied"; then
-                print_warning "Initial migration marked as applied but tables don't exist - resolving..."
-                npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
-            elif echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*failed"; then
-                print_warning "Initial migration failed - resolving..."
-                npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
-            fi
-        fi
-        
-        # Try to apply initial migration specifically
-        print_step "Attempting to apply initial migration..."
-        INITIAL_OUTPUT=$(npx prisma migrate deploy 2>&1)
-        
-        # Check if it succeeded by verifying tables exist
-        sleep 1
-        if check_initial_tables_exist; then
-            print_success "Initial migration applied successfully"
-            return 0
-        else
-            print_warning "Initial migration may still be pending"
-        fi
+        # Mark as rolled-back
+        npx prisma migrate resolve --rolled-back "$migration_name" 2>/dev/null || true
+        # Try to apply again
+        npx prisma migrate deploy 2>&1 >/dev/null || true
     else
-        MIGRATION_STATUS=$(docker exec $CONTAINER_NAME npx prisma migrate status 2>&1 || echo "")
+        docker exec $CONTAINER_NAME npx prisma migrate resolve --rolled-back "$migration_name" 2>/dev/null || true
+        docker exec $CONTAINER_NAME npx prisma migrate deploy 2>&1 >/dev/null || true
+    fi
+    
+    # Wait a bit and check if table exists now
+    sleep 1
+    if [ -n "$table_to_check" ]; then
+        if check_table_exists "$table_to_check"; then
+            print_success "Migration $migration_name applied - table $table_to_check now exists"
+            return 0
+        fi
+    fi
+    
+    return 1
+}
+
+# Function to ensure required migrations are applied
+ensure_required_migrations() {
+    print_step "Checking if all required tables exist..."
+    
+    # Check for initial migration (creates users table)
+    if ! check_table_exists "users"; then
+        print_warning "Users table not found - ensuring initial migration is applied..."
+        local initial_migration="20251013230351_initial"
         
-        if echo "$MIGRATION_STATUS" | grep -q "$initial_migration"; then
-            if echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*applied"; then
-                print_warning "Initial migration marked as applied but tables don't exist - resolving..."
-                docker exec $CONTAINER_NAME npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
-            elif echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*failed"; then
-                print_warning "Initial migration failed - resolving..."
-                docker exec $CONTAINER_NAME npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
+        if [ "$CONTAINER_NAME" = "current" ]; then
+            MIGRATION_STATUS=$(npx prisma migrate status 2>&1 || echo "")
+            if echo "$MIGRATION_STATUS" | grep -q "$initial_migration"; then
+                if echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*applied"; then
+                    print_warning "Initial migration marked as applied but users table doesn't exist - resolving..."
+                    npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
+                fi
+            fi
+        else
+            MIGRATION_STATUS=$(docker exec $CONTAINER_NAME npx prisma migrate status 2>&1 || echo "")
+            if echo "$MIGRATION_STATUS" | grep -q "$initial_migration"; then
+                if echo "$MIGRATION_STATUS" | grep -q "$initial_migration.*applied"; then
+                    print_warning "Initial migration marked as applied but users table doesn't exist - resolving..."
+                    docker exec $CONTAINER_NAME npx prisma migrate resolve --rolled-back "$initial_migration" 2>/dev/null || true
+                fi
             fi
         fi
         
+        # Try to apply migrations
         print_step "Attempting to apply initial migration..."
-        INITIAL_OUTPUT=$(docker exec $CONTAINER_NAME npx prisma migrate deploy 2>&1)
+        if [ "$CONTAINER_NAME" = "current" ]; then
+            npx prisma migrate deploy 2>&1 >/dev/null || true
+        else
+            docker exec $CONTAINER_NAME npx prisma migrate deploy 2>&1 >/dev/null || true
+        fi
         
         sleep 1
-        if check_initial_tables_exist; then
-            print_success "Initial migration applied successfully"
-            return 0
-        else
-            print_warning "Initial migration may still be pending"
+        if ! check_table_exists "users"; then
+            print_warning "Users table still not found after migration attempt"
         fi
+    fi
+    
+    # Check for logs table migration
+    if ! check_table_exists "logs"; then
+        print_warning "Logs table not found - ensuring logs migration is applied..."
+        local logs_migration="20251208000000_add_logs_table"
+        
+        resolve_and_retry_migration "$logs_migration" "logs" || {
+            print_warning "Could not apply logs migration automatically"
+        }
     fi
     
     return 0
@@ -98,8 +138,8 @@ safe_migrate_deploy() {
     local max_retries=3
     local retry_count=0
     
-    # First, ensure initial migration is applied
-    ensure_initial_migration
+    # First, ensure required migrations are applied
+    ensure_required_migrations
     
     while [ $retry_count -lt $max_retries ]; do
         if [ "$CONTAINER_NAME" = "current" ]; then
@@ -121,14 +161,14 @@ safe_migrate_deploy() {
                 print_warning "Migration failed: $FAILED_MIGRATION"
                 
                 # Special handling for migrations that depend on initial tables
-                if ! check_initial_tables_exist; then
-                    print_error "Initial tables don't exist - this migration depends on them"
-                    print_step "Ensuring initial migration is applied first..."
-                    ensure_initial_migration
+                if ! check_table_exists "users"; then
+                    print_error "Users table doesn't exist - this migration depends on it"
+                    print_step "Ensuring required migrations are applied first..."
+                    ensure_required_migrations
                     # Retry immediately without marking as rolled-back
                     retry_count=$((retry_count + 1))
                     if [ $retry_count -lt $max_retries ]; then
-                        print_step "Retry $retry_count/$max_retries (after ensuring initial migration)..."
+                        print_step "Retry $retry_count/$max_retries (after ensuring required migrations)..."
                         sleep 2
                         continue
                     fi
@@ -228,10 +268,13 @@ if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
                 print_info "Check migration status later with: npx prisma migrate status"
             }
             
-            # Final check: verify initial tables exist
-            if ! check_initial_tables_exist; then
-                print_error "CRITICAL: Initial tables still don't exist after migration attempts!"
+            # Final check: verify required tables exist
+            if ! check_all_required_tables_exist; then
+                print_error "CRITICAL: Some required tables still don't exist after migration attempts!"
                 print_warning "The application may not work correctly. Please check migration status manually."
+                print_info "Run: npx prisma migrate status"
+            else
+                print_success "All required tables exist"
             fi
         else
             # Try to resolve known problematic migrations
@@ -245,10 +288,13 @@ if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
                 print_info "Check migration status later with: docker exec $CONTAINER_NAME npx prisma migrate status"
             }
             
-            # Final check: verify initial tables exist
-            if ! check_initial_tables_exist; then
-                print_error "CRITICAL: Initial tables still don't exist after migration attempts!"
+            # Final check: verify required tables exist
+            if ! check_all_required_tables_exist; then
+                print_error "CRITICAL: Some required tables still don't exist after migration attempts!"
                 print_warning "The application may not work correctly. Please check migration status manually."
+                print_info "Run: docker exec $CONTAINER_NAME npx prisma migrate status"
+            else
+                print_success "All required tables exist"
             fi
         fi
         print_success "Migration process completed (some migrations may have been skipped)"
