@@ -421,9 +421,12 @@ const HomeV2: React.FC<HomeV2Props> = ({
             const slideData = typeof slide !== 'string' ? (slide as any).data : null;
             const slidePoster = typeof slide !== 'string' && isVideo ? (slide as any).poster : undefined;
             
+            // Use unique ID from slider data if available, otherwise use source URL or index
+            const uniqueKey = slideData?.id || slideSrc || `slide-${index}`;
+            
             return (
               <motion.div
-                key={index}
+                key={uniqueKey}
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: currentSlide === index ? 1 : 0,
@@ -434,7 +437,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               >
                 {isVideo && slideSrc ? (
                   <video
-                    key={slideSrc}
+                    key={`${uniqueKey}-video`}
                     src={slideSrc}
                     poster={slidePoster}
                     className="h-full w-full object-cover"
@@ -445,6 +448,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   />
                 ) : slideSrc ? (
                   <img
+                    key={`${uniqueKey}-img`}
                     src={slideSrc}
                     alt={slideData?.title || `Hero slide ${index + 1}`}
                     className="h-full w-full object-cover"
@@ -458,18 +462,24 @@ const HomeV2: React.FC<HomeV2Props> = ({
           {/* Slider Indicators */}
           {heroSlides.length > 1 && (
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-              {heroSlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentSlide(index)}
-                  className={`h-2 rounded-full transition-all ${
-                    currentSlide === index
-                      ? 'w-8 bg-yellow-400'
-                      : 'w-2 bg-white/30 hover:bg-white/50'
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
+              {heroSlides.map((slide, index) => {
+                const slideData = typeof slide !== 'string' ? (slide as any).data : null;
+                const slideSrc = typeof slide === 'string' ? slide : (slide as any).source;
+                const uniqueKey = slideData?.id || slideSrc || `indicator-${index}`;
+                
+                return (
+                  <button
+                    key={uniqueKey}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`h-2 rounded-full transition-all ${
+                      currentSlide === index
+                        ? 'w-8 bg-yellow-400'
+                        : 'w-2 bg-white/30 hover:bg-white/50'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -1186,7 +1196,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {galleryImages.map((image, index) => (
               <motion.div
-                key={`${image}-${index}`}
+                key={image || `gallery-fallback-${index}`}
                 variants={fadeUp}
                 whileHover={{ y: -4, scale: 1.05 }}
                 className="group relative h-64 overflow-hidden rounded-[30px] border border-white/10 cursor-pointer"

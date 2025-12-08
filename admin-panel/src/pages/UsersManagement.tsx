@@ -55,6 +55,8 @@ const UsersManagement: React.FC = () => {
   const [selectedUserForProducts, setSelectedUserForProducts] = useState<User | null>(null);
   const [selectedUserProductsData, setSelectedUserProductsData] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingPassword, setEditingPassword] = useState('');
+  const [editingConfirmPassword, setEditingConfirmPassword] = useState('');
   const [newUser, setNewUser] = useState({
     phone: '',
     email: '',
@@ -293,6 +295,8 @@ const UsersManagement: React.FC = () => {
 
   const handleEditUser = async (user: User) => {
     setEditingUser(user);
+    setEditingPassword('');
+    setEditingConfirmPassword('');
     setIsEditModalOpen(true);
     
     try {
@@ -328,16 +332,46 @@ const UsersManagement: React.FC = () => {
       return;
     }
     
+    // Validate password if provided
+    if (editingPassword || editingConfirmPassword) {
+      if (!editingPassword.trim()) {
+        setError('رمز عبور الزامی است');
+        return;
+      }
+      
+      if (editingPassword.length < 6) {
+        setError('رمز عبور باید حداقل ۶ کاراکتر باشد');
+        return;
+      }
+      
+      if (!editingConfirmPassword.trim()) {
+        setError('تأیید رمز عبور الزامی است');
+        return;
+      }
+      
+      if (editingPassword !== editingConfirmPassword) {
+        setError('رمز عبور و تأیید رمز عبور مطابقت ندارند');
+        return;
+      }
+    }
+    
     try {
       // Only send editable fields
-      const updateData = {
+      const updateData: any = {
         username: editingUser.username,
         phone: editingUser.phone,
         email: editingUser.email,
         firstName: editingUser.firstName,
         lastName: editingUser.lastName,
         isActive: editingUser.isActive,
+        role: editingUser.role,
       };
+      
+      // Add password if provided
+      if (editingPassword) {
+        updateData.password = editingPassword;
+        updateData.confirmPassword = editingConfirmPassword;
+      }
       
       const updatedUser = await usersService.update(editingUser.id, updateData);
       setUsers(users.map(user => user.id === editingUser.id ? updatedUser : user));
@@ -346,9 +380,37 @@ const UsersManagement: React.FC = () => {
       
       setIsEditModalOpen(false);
       setEditingUser(null);
+      setEditingPassword('');
+      setEditingConfirmPassword('');
       setEditingUserCourses([]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در به‌روزرسانی کاربر');
+    }
+  };
+
+  const handleBlockUser = async (userId: string) => {
+    if (!window.confirm('آیا مطمئن هستید که می‌خواهید این کاربر را بلاک کنید؟')) {
+      return;
+    }
+    
+    try {
+      const updatedUser = await usersService.blockUser(userId);
+      setUsers(users.map(user => user.id === userId ? updatedUser : user));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در بلاک کردن کاربر');
+    }
+  };
+
+  const handleUnblockUser = async (userId: string) => {
+    if (!window.confirm('آیا مطمئن هستید که می‌خواهید این کاربر را آنبلاک کنید؟')) {
+      return;
+    }
+    
+    try {
+      const updatedUser = await usersService.unblockUser(userId);
+      setUsers(users.map(user => user.id === userId ? updatedUser : user));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در آنبلاک کردن کاربر');
     }
   };
 
@@ -574,13 +636,30 @@ const UsersManagement: React.FC = () => {
                     )}
                   </td>
                   <td className="px-2 py-3 text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      user.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.isActive ? 'فعال' : 'غیرفعال'}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.isActive ? 'فعال' : 'غیرفعال'}
+                      </span>
+                      {user.isBlocked && (
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          بلاک شده
+                          {user.blockedUntil && (
+                            <span className="block text-xs mt-0.5">
+                              تا {new Date(user.blockedUntil).toLocaleDateString('fa-IR')}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {user.rateLimitViolations && user.rateLimitViolations > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {user.rateLimitViolations} تخلف
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-2 py-3 text-xs text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString('fa-IR')}
@@ -1108,12 +1187,50 @@ const UsersManagement: React.FC = () => {
                 value={editingUser.role}
                 onChange={(e) => editingUser && setEditingUser({...editingUser, role: e.target.value as 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER'})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={editingUser.role === 'ADMIN'}
               >
                 <option value="USER">کاربر</option>
                 <option value="SALES_PERSON">فروشنده</option>
                 <option value="SALES_MANAGER">مدیر فروش</option>
-                <option value="ADMIN">مدیر سایت</option>
+                {editingUser.role === 'ADMIN' && <option value="ADMIN">مدیر سایت</option>}
               </select>
+              {editingUser.role === 'ADMIN' && (
+                <p className="text-xs text-gray-500 mt-1">نقش مدیر سایت قابل تغییر نیست</p>
+              )}
+            </div>
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">تغییر رمز عبور</h3>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+                <p className="text-xs text-yellow-800">
+                  <strong>نکته:</strong> رمز عبور فعلی به صورت هش شده در پایگاه داده ذخیره شده و قابل نمایش نیست. برای تغییر رمز عبور، رمز جدید را وارد کنید.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  رمز عبور جدید (اختیاری)
+                </label>
+                <input
+                  type="password"
+                  value={editingPassword}
+                  onChange={(e) => setEditingPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="حداقل ۶ کاراکتر"
+                  minLength={6}
+                />
+              </div>
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  تأیید رمز عبور جدید
+                </label>
+                <input
+                  type="password"
+                  value={editingConfirmPassword}
+                  onChange={(e) => setEditingConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="تأیید رمز عبور"
+                  minLength={6}
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1153,6 +1270,59 @@ const UsersManagement: React.FC = () => {
                 فعال
               </label>
             </div>
+            
+            {/* Block Status Section */}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">وضعیت بلاک (Rate Limiting)</h3>
+              {editingUser.isBlocked ? (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-orange-800">کاربر بلاک شده است</span>
+                    <button
+                      type="button"
+                      onClick={() => handleUnblockUser(editingUser.id)}
+                      className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                    >
+                      آنبلاک کردن
+                    </button>
+                  </div>
+                  {editingUser.blockedUntil && (
+                    <p className="text-xs text-orange-700">
+                      بلاک تا: {new Date(editingUser.blockedUntil).toLocaleString('fa-IR')}
+                    </p>
+                  )}
+                  {editingUser.rateLimitViolations && editingUser.rateLimitViolations > 0 && (
+                    <p className="text-xs text-orange-700 mt-1">
+                      تعداد تخلفات: {editingUser.rateLimitViolations}
+                    </p>
+                  )}
+                  {editingUser.lastRateLimitViolation && (
+                    <p className="text-xs text-orange-700 mt-1">
+                      آخرین تخلف: {new Date(editingUser.lastRateLimitViolation).toLocaleString('fa-IR')}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-green-800">کاربر بلاک نشده است</span>
+                    <button
+                      type="button"
+                      onClick={() => handleBlockUser(editingUser.id)}
+                      className="px-3 py-1 text-xs font-medium text-white bg-orange-600 rounded hover:bg-orange-700"
+                    >
+                      بلاک کردن
+                    </button>
+                  </div>
+                  {editingUser.rateLimitViolations && editingUser.rateLimitViolations > 0 && (
+                    <p className="text-xs text-green-700 mt-2">
+                      تعداد تخلفات قبلی: {editingUser.rateLimitViolations}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            
             <div className="flex justify-end space-x-2 space-x-reverse pt-4">
               <button
                 type="button"

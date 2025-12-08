@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, VideoPodcast, Course, Video, Audio, Workshop, WorkshopParticipant, Log } from '../types';
+import { AuthResponse, LoginCredentials, User, Slider, Article, Podcast, VideoPodcast, Course, Video, Audio, Workshop, WorkshopParticipant, Log, UploadedFileInfo } from '../types';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
 const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
@@ -110,6 +110,16 @@ export const usersService = {
 
   remove: async (id: string): Promise<void> => {
     await api.delete(`/users/${id}`);
+  },
+
+  blockUser: async (id: string): Promise<User> => {
+    const response = await api.post(`/users/${id}/block`);
+    return response.data;
+  },
+
+  unblockUser: async (id: string): Promise<User> => {
+    const response = await api.post(`/users/${id}/unblock`);
+    return response.data;
   },
 
   getUserCourses: async (id: string) => {
@@ -1514,6 +1524,48 @@ export const adminService = {
   createDatabaseBackup: async (): Promise<Blob> => {
     const response = await api.get('/admin/backup', {
       responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
+export const settingsService = {
+  getSettings: async () => {
+    const response = await api.get('/settings');
+    return response.data;
+  },
+
+  updateSettings: async (settings: any) => {
+    const response = await api.patch('/settings', settings);
+    return response.data;
+  },
+};
+
+export const uploadCenterService = {
+  getAllFiles: async () => {
+    const response = await api.get('/upload-center');
+    return response.data;
+  },
+
+  getVideos: async () => {
+    const response = await api.get('/upload-center/videos');
+    return response.data;
+  },
+
+  getAudios: async () => {
+    const response = await api.get('/upload-center/audios');
+    return response.data;
+  },
+
+  deleteFile: async (filename: string) => {
+    await api.delete(`/upload-center/${encodeURIComponent(filename)}`);
+  },
+
+  assignFileToCourse: async (filename: string, courseId: string, title?: string, description?: string) => {
+    const response = await api.post(`/upload-center/${encodeURIComponent(filename)}/assign`, {
+      courseId,
+      title,
+      description,
     });
     return response.data;
   },

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const Login: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
@@ -22,7 +23,8 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      await authService.sendOtp(phone);
+      const normalizedPhone = normalizePhoneNumber(phone);
+      await authService.sendOtp(normalizedPhone);
       setStep('otp');
       setCountdown(120); // 2 minutes countdown
       const interval = setInterval(() => {
@@ -47,7 +49,8 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      const response = await authService.verifyOtp(phone, otp);
+      const normalizedPhone = normalizePhoneNumber(phone);
+      const response = await authService.verifyOtp(normalizedPhone, otp);
       setSession(response);
       navigate('/dashboard');
     } catch (err: any) {
@@ -63,8 +66,13 @@ const Login: React.FC = () => {
     setError('');
 
     try {
+      // Normalize phone number if login input is a phone number
+      const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput) 
+        ? normalizePhoneNumber(loginInput) 
+        : loginInput;
+      
       await authLogin({
-        login: loginInput,
+        login: normalizedLogin,
         password: loginPassword,
       });
       navigate('/dashboard');
@@ -81,7 +89,8 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      await authService.sendOtp(phone);
+      const normalizedPhone = normalizePhoneNumber(phone);
+      await authService.sendOtp(normalizedPhone);
       setCountdown(120);
       const interval = setInterval(() => {
         setCountdown((prev) => {

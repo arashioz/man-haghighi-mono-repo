@@ -19,5 +19,16 @@ export class AppController {
       },
     });
   }
+
+  @Get('login')
+  @ApiOperation({ summary: 'Login endpoint redirect' })
+  @ApiResponse({ status: 200, description: 'Login endpoint information' })
+  getLogin(@Res() res: Response) {
+    return res.json({
+      message: 'Please use POST method to login',
+      endpoint: '/api/auth/login',
+      methods: ['POST'],
+    });
+  }
 }
 

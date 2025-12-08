@@ -15,6 +15,7 @@ import UserDashboard from './pages/UserDashboard';
 import ArticleDetail from './pages/ArticleDetail';
 import CourseDetail from './pages/CourseDetail';
 import VideoPlayer from './pages/VideoPlayer';
+import AudioPlayer from './pages/AudioPlayer';
 import VideoPodcastDetail from './pages/VideoPodcastDetail';
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
               <Route path="/courses" element={<Courses />} />
               <Route path="/courses/:id" element={<CourseDetail />} />
               <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />
+              <Route path="/courses/:courseId/audios/:audioId" element={<AudioPlayer />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<UserDashboard />} />

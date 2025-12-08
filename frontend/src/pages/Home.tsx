@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { slidersService, coursesService, articlesService, podcastsService, videoPodcastsService, workshopsService } from '../services/api';
 import { Slider, Course, Article, Podcast, VideoPodcast, Workshop } from '../types';
 import HomeV2 from '../components/home/HomeV2';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const Home: React.FC = () => {
   const [sliders, setSliders] = useState<Slider[]>([]);
@@ -50,9 +51,11 @@ const Home: React.FC = () => {
 
     setPreRegisterLoading(true);
     try {
+      // Normalize phone number before sending
+      const normalizedPhone = normalizePhoneNumber(preRegisterData.customerPhone);
       await workshopsService.preRegister(preRegisterModal.workshop.id, {
         customerName: preRegisterData.customerName,
-        customerPhone: preRegisterData.customerPhone,
+        customerPhone: normalizedPhone,
       });
       
       alert('پیش‌ثبت‌نام با موفقیت انجام شد!');

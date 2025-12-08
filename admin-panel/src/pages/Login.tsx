@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginCredentials } from '../types';
+import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const Login: React.FC = () => {
   const [loginType, setLoginType] = useState<'admin' | 'sales' | 'seller'>('admin');
@@ -20,7 +21,14 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      await login(credentials);
+      // Normalize phone number if login input is a phone number (not admin)
+      const normalizedCredentials = {
+        ...credentials,
+        login: loginType !== 'admin' && /^[\d۰-۹٠-٩+\s-]+$/.test(credentials.login)
+          ? normalizePhoneNumber(credentials.login)
+          : credentials.login,
+      };
+      await login(normalizedCredentials);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'ورود ناموفق');

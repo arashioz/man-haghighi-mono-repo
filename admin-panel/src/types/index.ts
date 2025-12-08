@@ -9,6 +9,10 @@ export interface User {
   role: 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER';
   isActive: boolean;
   isOld?: boolean;
+  isBlocked?: boolean;
+  blockedUntil?: string;
+  rateLimitViolations?: number;
+  lastRateLimitViolation?: string;
   education?: string;
   university?: string;
   job?: string;
@@ -233,4 +237,20 @@ export interface Log {
   requestBody?: any;
   response?: any;
   createdAt: string;
+}
+
+export interface UploadedFileInfo {
+  filename: string;
+  path: string;
+  size: number;
+  sizeFormatted: string;
+  mimetype: string;
+  type: 'video' | 'audio' | 'image' | 'document' | 'other';
+  createdAt: string;
+  assignedToCourse?: {
+    courseId: string;
+    courseTitle: string;
+    videoId?: string;
+    audioId?: string;
+  };
 }
