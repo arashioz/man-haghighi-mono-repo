@@ -14,8 +14,9 @@ RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
-# Copy tsconfig.json for seed command
+# Copy tsconfig files for seed command
 COPY tsconfig.json ./tsconfig.json
+COPY tsconfig.seed.json ./tsconfig.seed.json
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -45,6 +46,8 @@ RUN npm ci --only=production --legacy-peer-deps && \
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.seed.json ./tsconfig.seed.json
 
 # Copy migration script with ownership
 COPY --chown=nestjs:nodejs scripts/migrate.sh ./scripts/migrate.sh
