@@ -125,6 +125,31 @@ services:
       retries: 3
       start_period: 10s
 
+  # Prisma CLI Service (for running Prisma commands)
+  prisma:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haghighi_prisma
+    env_file: .env
+    volumes:
+      - ./backend/prisma:/app/prisma
+      - ./backend/package.json:/app/package.json
+      - ./backend/package-lock.json:/app/package-lock.json
+      - ./backend/node_modules:/app/node_modules
+    networks:
+      - backend_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # This service doesn't run by default - use it with docker-compose run
+    # Example: docker-compose run --rm prisma npx prisma migrate dev
+    # Example: docker-compose run --rm prisma npx prisma studio
+    # Example: docker-compose run --rm prisma npx prisma generate
+    command: tail -f /dev/null
+    profiles:
+      - tools
+
 volumes:
   postgres_data:
     driver: local

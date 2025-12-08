@@ -749,8 +749,11 @@ const Courses: React.FC = () => {
       setError(''); // Clear any previous errors
       
       const data = await coursesService.getEnrollments(course.id);
-      // Ensure data is an array and has proper structure
-      if (Array.isArray(data)) {
+      // Backend returns { course, enrollments, total }
+      if (data && Array.isArray(data.enrollments)) {
+        setEnrollments(data.enrollments);
+      } else if (Array.isArray(data)) {
+        // Fallback for backward compatibility
         setEnrollments(data);
       } else {
         console.error('Invalid enrollments data format:', data);
@@ -809,7 +812,13 @@ const Courses: React.FC = () => {
       
       // Refresh enrollments list
       const data = await coursesService.getEnrollments(selectedCourse.id);
-      setEnrollments(data);
+      if (data && Array.isArray(data.enrollments)) {
+        setEnrollments(data.enrollments);
+      } else if (Array.isArray(data)) {
+        setEnrollments(data);
+      } else {
+        setEnrollments([]);
+      }
       setSelectedUserIds(new Set());
       setTargetCourseId('');
       

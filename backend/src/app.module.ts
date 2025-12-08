@@ -22,13 +22,14 @@ import { UploadsModule } from './uploads/uploads.module';
 import { LogsModule } from './logs/logs.module';
 import { AdminModule } from './admin/admin.module';
 import { HealthController } from './health/health.controller';
+import { AppController } from './app.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { validateEnv } from './config/env.validation';
 
 @Module({
-  controllers: [HealthController],
+  controllers: [AppController, HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

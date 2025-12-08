@@ -4,6 +4,7 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { Public } from './public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -11,8 +12,9 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
+  @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 requests per minute
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({ status: 201, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -21,8 +23,9 @@ export class AuthController {
   }
 
   @Post('login')
+  @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 requests per minute
   @ApiOperation({ 
     summary: 'Login user with dual authentication',
     description: 'Supports two authentication methods: 1) Username/password login (provide password), 2) OTP login (omit password, will send OTP to phone number)'
@@ -34,8 +37,9 @@ export class AuthController {
   }
 
   @Post('send-otp')
+  @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute (increased from 3 to prevent rate limit issues during testing)
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 requests per minute
   @ApiOperation({ summary: 'Send OTP to phone number (for regular users)' })
   @ApiResponse({ status: 200, description: 'OTP sent successfully' })
   @ApiResponse({ status: 401, description: 'Invalid phone number or account not active' })
@@ -44,8 +48,9 @@ export class AuthController {
   }
 
   @Post('verify-otp')
+  @Public()
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+  @Throttle({ default: { limit: 2, ttl: 60000 } }) // 2 requests per minute
   @ApiOperation({ summary: 'Verify OTP and login (for regular users)' })
   @ApiResponse({ status: 200, description: 'OTP verified and user logged in successfully' })
   @ApiResponse({ status: 401, description: 'Invalid OTP or expired' })
