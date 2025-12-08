@@ -52,7 +52,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: sh -c "./scripts/migrate.sh && npm run start:prod"
+    command: npm run start:prod
 
   # -------------------------------
   # Frontend
