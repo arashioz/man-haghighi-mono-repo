@@ -55,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
   return (
     <div className={`min-h-screen ${shouldUseDarkTheme ? 'bg-[#040404]' : 'bg-gray-50'}`}>
       {/* Navigation - Always glass/black */}
-      <nav className="sticky top-0 z-50 backdrop-blur-md rounded-b-2xl mx-4 mt-2 bg-black/60 border border-white/10">
+      <nav className={`sticky top-0 z-50 backdrop-blur-md ${shouldUseDarkTheme ? 'rounded-b-2xl mx-4 mt-2' : 'mx-4'} bg-black border border-white/10`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
@@ -108,7 +108,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
 
                   {/* User Dropdown */}
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-50 bg-black/90 border border-white/10 backdrop-blur-md">
+                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 z-50 bg-black border border-white/10 backdrop-blur-md">
                       <button
                         onClick={() => {
                           navigate('/dashboard');
@@ -162,7 +162,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden">
-            <div className="px-4 pt-2 pb-4 space-y-2 backdrop-blur-md rounded-b-2xl bg-black/60 border border-white/10">
+            <div className="px-4 pt-2 pb-4 space-y-2 backdrop-blur-md rounded-b-2xl bg-black border border-white/10">
               {navigationItems.map((item) => (
                 <button
                   key={item.path}
