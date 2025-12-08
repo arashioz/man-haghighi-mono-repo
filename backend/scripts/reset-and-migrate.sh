@@ -7,6 +7,41 @@
 # Note: We don't use 'set -e' here because we want to continue even if some migrations fail
 # set -e
 
+# Function to wait for database to be ready
+wait_for_database() {
+    local max_attempts=30
+    local attempt=0
+    
+    print_step "Waiting for database to be ready..."
+    
+    while [ $attempt -lt $max_attempts ]; do
+        if [ "$CONTAINER_NAME" = "current" ]; then
+            if npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null; then
+SELECT 1;
+EOF
+                print_success "Database is ready"
+                return 0
+            fi
+        else
+            if docker exec $CONTAINER_NAME npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null; then
+SELECT 1;
+EOF
+                print_success "Database is ready"
+                return 0
+            fi
+        fi
+        
+        attempt=$((attempt + 1))
+        if [ $((attempt % 5)) -eq 0 ]; then
+            print_info "Still waiting for database... (attempt $attempt/$max_attempts)"
+        fi
+        sleep 1
+    done
+    
+    print_error "Database is not ready after $max_attempts attempts"
+    return 1
+}
+
 # Function to check if a specific table exists
 check_table_exists() {
     local table_name=$1
@@ -241,6 +276,12 @@ else
     CONTAINER_NAME="haghighi_backend"
     print_step "Running migrations on container: $CONTAINER_NAME"
 fi
+
+# Wait for database to be ready before proceeding
+wait_for_database || {
+    print_error "Failed to connect to database. Exiting..."
+    exit 1
+}
 
 # Check if running in non-interactive mode (Docker)
 if [ -f /.dockerenv ] || [ -n "$RESET_DB" ]; then
