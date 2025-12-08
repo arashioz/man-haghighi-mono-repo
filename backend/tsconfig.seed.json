@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    },
+    "transpileOnly": true,
+    "files": true
+  },
+  "include": ["prisma/**/*", "src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+
