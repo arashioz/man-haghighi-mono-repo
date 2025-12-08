@@ -28,28 +28,13 @@ log_error() {
     echo -e "${RED}✗${NC} $1"
 }
 
-# Wait for database to be ready
-wait_for_database() {
-    log_info "Waiting for database to be ready..."
-    local max_attempts=30
-    local attempt=0
-    
-    while [ $attempt -lt $max_attempts ]; do
-        if npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null; then
+# Check database connection (simple check, no waiting)
+check_database() {
+    if npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null; then
 SELECT 1;
 EOF
-            log_success "Database is ready"
-            return 0
-        fi
-        
-        attempt=$((attempt + 1))
-        if [ $((attempt % 5)) -eq 0 ]; then
-            log_info "Still waiting... (attempt $attempt/$max_attempts)"
-        fi
-        sleep 1
-    done
-    
-    log_error "Database not ready after $max_attempts attempts"
+        return 0
+    fi
     return 1
 }
 
@@ -158,11 +143,17 @@ verify_tables() {
 main() {
     log_info "Starting migration process..."
     
-    # Wait for database
-    if ! wait_for_database; then
-        log_error "Cannot connect to database. Exiting..."
+    # Check database connection
+    if ! check_database; then
+        log_error "Cannot connect to database!"
+        log_error "Please make sure:"
+        log_error "  1. Postgres container is running: docker ps | grep postgres"
+        log_error "  2. DATABASE_URL is correct: echo \$DATABASE_URL"
+        log_error "  3. Network connectivity is OK"
         exit 1
     fi
+    
+    log_success "Database connection OK"
     
     # Check for existing failed migrations and resolve them
     log_info "Checking for existing failed migrations..."
