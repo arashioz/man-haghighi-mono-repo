@@ -22,5 +22,13 @@
     "paths": {
       "@/*": ["src/*"]
     }
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    },
+    "transpileOnly": true,
+    "files": true
   }
 }
