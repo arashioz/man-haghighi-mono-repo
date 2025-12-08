@@ -6,8 +6,8 @@ import { RegisterCredentials } from '../types';
 const Register: React.FC = () => {
   const [credentials, setCredentials] = useState<RegisterCredentials>({
     phone: '',
-    username: '',
-    password: undefined, // No password for regular users
+    password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     role: 'USER', 
@@ -21,6 +21,20 @@ const Register: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Validate password match
+    if (credentials.password !== credentials.confirmPassword) {
+      setError('رمز عبور و تأیید رمز عبور مطابقت ندارند');
+      setLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (credentials.password.length < 6) {
+      setError('رمز عبور باید حداقل ۶ کاراکتر باشد');
+      setLoading(false);
+      return;
+    }
 
     try {
       await register(credentials);
@@ -80,22 +94,6 @@ const Register: React.FC = () => {
                 disabled={loading}
               />
             </div>
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                نام کاربری
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="نام کاربری"
-                value={credentials.username}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
@@ -130,25 +128,40 @@ const Register: React.FC = () => {
                 />
               </div>
             </div>
-            {credentials.role === 'ADMIN' && (
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  رمز عبور (فقط برای ادمین)
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required={credentials.role === 'ADMIN'}
-                  className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="رمز عبور"
-                  value={credentials.password || ''}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </div>
-            )}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                رمز عبور
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="رمز عبور (حداقل ۶ کاراکتر)"
+                value={credentials.password}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                تأیید رمز عبور
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="تأیید رمز عبور"
+                value={credentials.confirmPassword}
+                onChange={handleChange}
+                disabled={loading}
+              />
+            </div>
           </div>
 
           <div>

@@ -28,8 +28,8 @@ export class UsersService {
     const {
       email,
       phone,
-      username,
       password,
+      confirmPassword,
       firstName,
       lastName,
       avatar,
@@ -52,6 +52,54 @@ export class UsersService {
       throw new ConflictException('Non-admin users must have a phone number');
     }
 
+    // Password validation for USER role
+    const userRole = (role ?? 'USER') as UserRole;
+    if (userRole === 'USER') {
+      if (!password) {
+        throw new ConflictException('Password is required for regular users');
+      }
+      if (!confirmPassword) {
+        throw new ConflictException('Confirm password is required');
+      }
+      if (password !== confirmPassword) {
+        throw new ConflictException('Password and confirm password do not match');
+      }
+    }
+
+    // Generate username from firstName + lastName
+    let username = '';
+    if (firstName && lastName) {
+      username = `${firstName.trim()} ${lastName.trim()}`.trim();
+    } else if (firstName) {
+      username = firstName.trim();
+    } else if (lastName) {
+      username = lastName.trim();
+    } else {
+      // Fallback: use phone or email if names are not provided
+      username = normalizedPhone || normalizedEmail || 'User';
+    }
+
+    // Check for unique username (in case of duplicates, add a number)
+    let finalUsername = username;
+    let usernameCounter = 1;
+    while (true) {
+      const existingUsername = await this.prisma.user.findFirst({
+        where: {
+          username: {
+            equals: finalUsername,
+            mode: Prisma.QueryMode.insensitive,
+          },
+        },
+      });
+      
+      if (!existingUsername) {
+        break;
+      }
+      
+      finalUsername = `${username} ${usernameCounter}`;
+      usernameCounter++;
+    }
+
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
@@ -64,34 +112,31 @@ export class UsersService {
             },
           ] : []),
           ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
-          {
-            username: {
-              equals: username,
-              mode: Prisma.QueryMode.insensitive,
-            },
-          }
         ],
       },
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email, phone, or username already exists');
+      throw new ConflictException('User with this email or phone already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
 
     const userData: Prisma.UserCreateInput = {
       email: normalizedEmail,
       phone: normalizedPhone,
-      username,
-      password: hashedPassword,
+      username: finalUsername,
       firstName,
       lastName,
       avatar,
-      role: (role ?? 'USER') as UserRole,
+      role: userRole,
       isActive: isActive ?? true,
       isOld,
-    };
+    } as any;
+
+    if (hashedPassword) {
+      userData.password = hashedPassword;
+    }
 
     const user = await this.prisma.user.create({
       data: userData,
