@@ -1,50 +1,64 @@
-# --- Stage 1: Build ---
-    FROM node:18-alpine AS builder
+# Stage 1: Build
+FROM node:18-alpine3.19 AS builder
+WORKDIR /app
 
-    WORKDIR /app
-    
-    COPY package*.json ./
-    COPY prisma ./prisma/
-    
-    # Install all deps (including dev)
-    RUN npm ci
-    
-    COPY . .
-    
-    # Build NestJS
-    RUN npm run build
-    RUN npx prisma generate
-    
-    
-    # --- Stage 2: Production ---
-    FROM node:18-alpine AS production
-    
-    WORKDIR /app
-    
-    # Create non-root user
-    RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-    
-    COPY package*.json ./
-    
-    # Install production dependencies
-    RUN npm ci --only=production
-    
-    # Install ONLY what seed needs
-    RUN npm install ts-node typescript @types/node --save-dev
-    
-    # Copy build output
-    COPY --from=builder /app/dist ./dist
-    COPY --from=builder /app/prisma ./prisma
-    COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-    
-    USER appuser
-    
-    EXPOSE 3000
-    
-    # Run migrations → run seed.ts → start app
-    CMD sh -c "\
-      npx prisma migrate deploy && \
-      npx ts-node --project tsconfig.seed.json prisma/seed.ts && \
-      npm run start:prod \
-    "
-    
+# Copy package files + prisma
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all deps for build
+RUN npm ci --legacy-peer-deps
+
+# Copy source
+COPY . .
+
+# Copy tsconfig files
+COPY tsconfig.json ./tsconfig.json
+COPY tsconfig.seed.json ./tsconfig.seed.json
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Build app
+RUN npm run build
+
+# Stage 2: Production
+FROM node:18-alpine3.19 AS production
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
+
+# Copy package.json
+COPY package*.json ./
+
+# Install production deps + ts-node for seeding
+RUN npm ci --only=production --legacy-peer-deps && \
+    npm install --save-dev ts-node typescript tsconfig-paths --legacy-peer-deps
+
+# Copy built app + prisma + tsconfig
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+COPY --from=builder /app/tsconfig.seed.json ./tsconfig.seed.json
+
+# Copy migration scripts from builder
+COPY --from=builder --chown=nestjs:nodejs /app/scripts/ ./scripts/
+RUN chmod +x ./scripts/*.sh
+
+# Uploads directory
+RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
+
+# Switch to non-root
+USER nestjs
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Start command
+CMD ["sh", "-c", "./scripts/migrate.sh && npm run start:prod"]
