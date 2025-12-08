@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logsService } from '../services/api';
 import { Log } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -41,8 +41,9 @@ const Logs: React.FC = () => {
     totalPages: 0,
   });
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
+      setLoading(true);
       setError('');
       const params: any = {
         page: pagination.page,
@@ -59,19 +60,20 @@ const Logs: React.FC = () => {
 
       const response = await logsService.getLogs(params);
       setLogs(response.logs || []);
-      setPagination({
-        page: response.pagination?.page || pagination.page,
-        limit: response.pagination?.limit || pagination.limit,
+      setPagination((prev) => ({
+        ...prev,
+        page: response.pagination?.page || prev.page,
+        limit: response.pagination?.limit || prev.limit,
         total: response.pagination?.total || 0,
         totalPages: response.pagination?.totalPages || 0,
-      });
+      }));
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت لاگ‌ها');
       console.error('Error fetching logs:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, filters]);
 
   const fetchStats = async () => {
     try {
@@ -85,7 +87,19 @@ const Logs: React.FC = () => {
   useEffect(() => {
     fetchLogs();
     fetchStats();
-  }, [pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, fetchLogs]);
+
+  // Fetch logs when filters change (debounced) - but not for search which has its own button
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!filters.search) { // Only auto-fetch if search is empty (search uses button)
+        setPagination((prev) => ({ ...prev, page: 1 }));
+        fetchLogs();
+      }
+    }, 500); // Debounce filter changes
+
+    return () => clearTimeout(timer);
+  }, [filters.level, filters.context, filters.url, filters.statusCode, filters.startDate, filters.endDate, fetchLogs]);
 
   useEffect(() => {
     if (autoRefresh) {
@@ -115,7 +129,6 @@ const Logs: React.FC = () => {
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const handleSearch = () => {
@@ -336,6 +349,11 @@ const Logs: React.FC = () => {
               type="text"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
               placeholder="جستجو..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />

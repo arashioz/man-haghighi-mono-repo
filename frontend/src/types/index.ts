@@ -173,7 +173,7 @@ export interface AuthResponse {
 
 export interface LoginCredentials {
   login: string;
-  password: string;
+  password?: string;
 }
 
 export interface RegisterCredentials {

@@ -740,17 +740,27 @@ const Courses: React.FC = () => {
   };
 
   const handleOpenUsersModal = async (course: Course) => {
-    setSelectedCourse(course);
-    setIsUsersModalOpen(true);
-    setLoadingEnrollments(true);
-    setSelectedUserIds(new Set());
-    setTargetCourseId('');
-    
     try {
+      setSelectedCourse(course);
+      setIsUsersModalOpen(true);
+      setLoadingEnrollments(true);
+      setSelectedUserIds(new Set());
+      setTargetCourseId('');
+      setError(''); // Clear any previous errors
+      
       const data = await coursesService.getEnrollments(course.id);
-      setEnrollments(data);
+      // Ensure data is an array and has proper structure
+      if (Array.isArray(data)) {
+        setEnrollments(data);
+      } else {
+        console.error('Invalid enrollments data format:', data);
+        setEnrollments([]);
+        setError('فرمت داده‌های دریافتی نامعتبر است');
+      }
     } catch (err: any) {
+      console.error('Error fetching enrollments:', err);
       setError(err.response?.data?.message || 'خطا در دریافت کاربران دوره');
+      setEnrollments([]);
     } finally {
       setLoadingEnrollments(false);
     }
@@ -1962,33 +1972,35 @@ const Courses: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {enrollments.map((enrollment) => (
-                        <tr key={enrollment.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <input
-                              type="checkbox"
-                              checked={selectedUserIds.has(enrollment.userId)}
-                              onChange={() => handleToggleUser(enrollment.userId)}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {enrollment.user.username}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {enrollment.user.firstName || ''} {enrollment.user.lastName || ''}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {enrollment.user.email || '-'}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {enrollment.user.phone || '-'}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR')}
-                          </td>
-                        </tr>
-                      ))}
+                      {enrollments
+                        .filter((enrollment) => enrollment && enrollment.user) // Filter out invalid enrollments
+                        .map((enrollment) => (
+                          <tr key={enrollment.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={selectedUserIds.has(enrollment.userId)}
+                                onChange={() => handleToggleUser(enrollment.userId)}
+                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {enrollment.user?.username || '-'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {enrollment.user?.firstName || ''} {enrollment.user?.lastName || ''}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {enrollment.user?.email || '-'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {enrollment.user?.phone || '-'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {enrollment.enrolledAt ? new Date(enrollment.enrolledAt).toLocaleDateString('fa-IR') : '-'}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

@@ -43,7 +43,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      RESET_DB: "true"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود
+      RESET_DB: "false"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود (برای production باید false باشد)
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]

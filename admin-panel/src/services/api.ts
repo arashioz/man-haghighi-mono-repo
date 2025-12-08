@@ -1510,3 +1510,12 @@ export const logsService = {
   },
 };
 
+export const adminService = {
+  createDatabaseBackup: async (): Promise<Blob> => {
+    const response = await api.get('/admin/backup', {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
