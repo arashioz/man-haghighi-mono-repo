@@ -183,12 +183,7 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
-    // Only USER role can use password/OTP login
-    if (user.role !== 'USER') {
-      throw new UnauthorizedException('This login method is only available for regular users');
-    }
-
-    // If password is provided, authenticate with password
+    // If password is provided, authenticate with password (all roles can use password)
     if (password) {
       if (!user.password) {
         throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
@@ -232,6 +227,11 @@ export class AuthService {
     }
 
     // If password is not provided, initiate OTP flow
+    // Only USER role can use OTP authentication
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('OTP authentication is only available for regular users. Please use password authentication.');
+    }
+
     // Only phone numbers can use OTP
     if (!normalizedPhone) {
       throw new UnauthorizedException('Phone number required for OTP authentication. Please provide a phone number or use password authentication.');
