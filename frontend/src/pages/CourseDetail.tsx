@@ -1,42 +1,98 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { coursesService, API_ORIGIN } from '../services/api';
+import { coursesService, API_ORIGIN, audiosService } from '../services/api';
 import { Course } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
 
 // Audio Player Component
-const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
+const AudioPlayerComponent: React.FC<{ audioId: string }> = ({ audioId }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [audioUrl, setAudioUrl] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
+  // Fetch audio stream URL
+  useEffect(() => {
+    const fetchAudioUrl = async () => {
+      try {
+        setLoading(true);
+        const streamData = await audiosService.getAudioStreamUrl(audioId);
+        setAudioUrl(streamData.streamUrl);
+      } catch (error) {
+        console.error('Error fetching audio stream URL:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (audioId) {
+      fetchAudioUrl();
+    }
+  }, [audioId]);
+
+  // Initialize audio element
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !audioUrl) return;
 
-    const updateTime = () => setCurrentTime(audio.currentTime);
+    // Set audio source
+    if (audio.src !== audioUrl) {
+      audio.src = audioUrl;
+      audio.load();
+    }
+
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime);
+    };
+    
     const updateDuration = () => {
       if (audio.duration && isFinite(audio.duration)) {
         setDuration(audio.duration);
       }
     };
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    
+    const handlePlay = () => {
+      setIsPlaying(true);
+    };
+    
+    const handlePause = () => {
+      setIsPlaying(false);
+    };
+
+    const handleLoadedMetadata = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+
+    const handleCanPlay = () => {
+      console.log('Audio can play');
+    };
+
+    const handleError = (e: Event) => {
+      const audioElement = e.target as HTMLAudioElement;
+      console.error('Audio error:', audioElement.error);
+    };
 
     audio.addEventListener('timeupdate', updateTime);
-    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
     audio.addEventListener('durationchange', updateDuration);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
-      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('durationchange', updateDuration);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
     };
   }, [audioUrl]);
 
@@ -47,15 +103,19 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play().catch(console.error);
+      audio.play().catch((error) => {
+        console.error('Error playing audio:', error);
+        setIsPlaying(false);
+      });
     }
   };
 
   const handleSeek = (time: number) => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.currentTime = time;
-      setCurrentTime(time);
+    if (audio && duration > 0) {
+      const seekTime = Math.max(0, Math.min(time, duration));
+      audio.currentTime = seekTime;
+      setCurrentTime(seekTime);
     }
   };
 
@@ -68,9 +128,38 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  if (loading) {
+    return (
+      <div className="bg-[#0a0a0a] border border-purple-400/30 rounded-lg p-3">
+        <div className="text-xs text-white/60">در حال بارگذاری...</div>
+      </div>
+    );
+  }
+
+  if (!audioUrl) {
+    return (
+      <div className="bg-[#0a0a0a] border border-red-400/30 rounded-lg p-3">
+        <div className="text-xs text-red-400">خطا در بارگذاری فایل صوتی</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#0a0a0a] border border-purple-400/30 rounded-lg p-3">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
+      <audio 
+        ref={audioRef} 
+        preload="metadata" 
+        crossOrigin="anonymous" 
+        className="hidden"
+        onError={(e) => {
+          const audioElement = e.target as HTMLAudioElement;
+          console.error('Audio playback error:', {
+            code: audioElement.error?.code,
+            message: audioElement.error?.message,
+            url: audioUrl
+          });
+        }}
+      />
       
       {/* Progress Bar */}
       <div className="mb-2">
@@ -81,6 +170,20 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
           step="0.1"
           value={currentTime}
           onChange={(e) => handleSeek(parseFloat(e.target.value))}
+          onMouseDown={(e) => {
+            // Pause while seeking
+            const audio = audioRef.current;
+            if (audio && isPlaying) {
+              audio.pause();
+            }
+          }}
+          onMouseUp={(e) => {
+            // Resume after seeking if it was playing
+            const audio = audioRef.current;
+            if (audio && isPlaying) {
+              audio.play().catch(console.error);
+            }
+          }}
           className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
           style={{
             background: `linear-gradient(to right, rgb(168, 85, 247) 0%, rgb(168, 85, 247) ${progress}%, rgba(255, 255, 255, 0.2) ${progress}%, rgba(255, 255, 255, 0.2) 100%)`,
@@ -91,9 +194,13 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <button
-          onClick={togglePlayPause}
-          className="w-8 h-8 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlayPause();
+          }}
+          className="w-8 h-8 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label={isPlaying ? 'توقف' : 'پخش'}
+          disabled={!audioUrl}
         >
           {isPlaying ? (
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -130,6 +237,16 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
           cursor: pointer;
           border: 2px solid white;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-runnable-track {
+          height: 8px;
+          border-radius: 4px;
+        }
+        
+        input[type="range"]::-moz-range-track {
+          height: 8px;
+          border-radius: 4px;
         }
       `}</style>
     </div>
@@ -487,67 +604,52 @@ const CourseDetail: React.FC = () => {
               <div className="mt-8 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-white mb-6">فایل‌های صوتی دوره</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {course.audios.map((audio) => {
-                    // Get audio stream URL for enrolled users
-                    const audioStreamUrl = isEnrolled 
-                      ? `${API_ORIGIN}/api/audios/${audio.id}/stream?token=${encodeURIComponent(localStorage.getItem('token') || '')}`
-                      : null;
-                    
-                    return (
-                      <div 
-                        key={audio.id} 
-                        className={`border rounded-lg p-4 transition-all ${
-                          isEnrolled 
-                            ? 'border-white/20 hover:shadow-md hover:border-purple-400/50 bg-[#0a0a0a]' 
-                            : 'border-white/10 opacity-75 bg-[#0a0a0a]'
-                        }`}
-                      >
-                        {audio.thumbnail && (
-                          <img
-                            src={getImageUrl(audio.thumbnail)!}
-                            alt={audio.title}
-                            className="w-full h-32 object-cover rounded mb-3"
-                          />
-                        )}
-                        <div className="flex items-center mb-3">
-                          <svg className="w-8 h-8 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                          </svg>
-                          <h3 className="font-semibold text-white">
-                            {audio.title}
-                          </h3>
-                        </div>
-                        {audio.description && (
-                          <p className="text-sm text-white/70 mb-2">
-                            {audio.description}
-                          </p>
-                        )}
-                        {audio.duration && (
-                          <p className="text-sm text-white/60 mb-3">
-                            مدت زمان: {Math.floor(audio.duration / 60)} دقیقه
-                          </p>
-                        )}
-                        {!isEnrolled && (
-                          <div className="mt-3 p-2 bg-yellow-400/20 border border-yellow-400/30 rounded text-sm text-yellow-400">
-                            🔒 برای دسترسی به این فایل صوتی ثبت‌نام کنید
-                          </div>
-                        )}
-                        {isEnrolled && audioStreamUrl && (
-                          <div className="mt-3">
-                            <AudioPlayerComponent audioUrl={audioStreamUrl} />
-                          </div>
-                        )}
-                        {isEnrolled && !audioStreamUrl && (
-                          <button
-                            onClick={() => handleAudioClick(audio.id)}
-                            className="mt-3 w-full p-2 bg-green-500/20 border border-green-500/30 rounded text-sm text-green-400 hover:bg-green-500/30 transition-colors"
-                          >
-                            ✅ برای پخش کلیک کنید
-                          </button>
-                        )}
+                  {course.audios.map((audio) => (
+                    <div 
+                      key={audio.id} 
+                      className={`border rounded-lg p-4 transition-all ${
+                        isEnrolled 
+                          ? 'border-white/20 hover:shadow-md hover:border-purple-400/50 bg-[#0a0a0a]' 
+                          : 'border-white/10 opacity-75 bg-[#0a0a0a]'
+                      }`}
+                    >
+                      {audio.thumbnail && (
+                        <img
+                          src={getImageUrl(audio.thumbnail)!}
+                          alt={audio.title}
+                          className="w-full h-32 object-cover rounded mb-3"
+                        />
+                      )}
+                      <div className="flex items-center mb-3">
+                        <svg className="w-8 h-8 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                        </svg>
+                        <h3 className="font-semibold text-white">
+                          {audio.title}
+                        </h3>
                       </div>
-                    );
-                  })}
+                      {audio.description && (
+                        <p className="text-sm text-white/70 mb-2">
+                          {audio.description}
+                        </p>
+                      )}
+                      {audio.duration && (
+                        <p className="text-sm text-white/60 mb-3">
+                          مدت زمان: {Math.floor(audio.duration / 60)} دقیقه
+                        </p>
+                      )}
+                      {!isEnrolled && (
+                        <div className="mt-3 p-2 bg-yellow-400/20 border border-yellow-400/30 rounded text-sm text-yellow-400">
+                          🔒 برای دسترسی به این فایل صوتی ثبت‌نام کنید
+                        </div>
+                      )}
+                      {isEnrolled && (
+                        <div className="mt-3">
+                          <AudioPlayerComponent audioId={audio.id} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
