@@ -52,7 +52,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: npm run start:prod
+    command: node dist/src/main
 
   # -------------------------------
   # Frontend

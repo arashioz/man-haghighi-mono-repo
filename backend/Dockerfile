@@ -2,61 +2,48 @@
 FROM node:18-alpine3.19 AS builder
 WORKDIR /app
 
-# Copy package files + prisma
+# Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all deps for build
+# Install dependencies
 RUN npm ci --legacy-peer-deps
 
-# Copy source
+# Copy source code
 COPY . .
 
-# Copy tsconfig files
-COPY tsconfig.json ./tsconfig.json
-COPY tsconfig.seed.json ./tsconfig.seed.json
-
-# Generate Prisma Client
-RUN npx prisma generate
-
-# Build app
-RUN npm run build
+# Generate Prisma Client and build
+RUN npx prisma generate && npm run build
 
 # Stage 2: Production
-FROM node:18-alpine3.19 AS production
+FROM node:18-alpine3.19
 WORKDIR /app
 
 # Create non-root user
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 
-# Copy package.json
+# Copy package files
 COPY package*.json ./
 
-# Install production deps + ts-node for seeding
-RUN npm ci --only=production --legacy-peer-deps && \
-    npm install --save-dev ts-node typescript tsconfig-paths --legacy-peer-deps
+# Install production dependencies only
+RUN npm ci --only=production --legacy-peer-deps
 
-# Copy built app + prisma + tsconfig
+# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY --from=builder /app/tsconfig.seed.json ./tsconfig.seed.json
 
-# Copy migration scripts from builder
-COPY --from=builder --chown=nestjs:nodejs /app/scripts/ ./scripts/
-RUN chmod +x ./scripts/*.sh
+# Copy scripts (for manual migration execution)
+COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
+RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
-# Uploads directory
+# Create uploads directory
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
 
-# Fix ownership of node_modules, prisma, and dist BEFORE switching user
-# This allows Prisma to write to node_modules when needed (e.g., during migrations)
-RUN chown -R nestjs:nodejs /app/node_modules && \
-    chown -R nestjs:nodejs /app/prisma && \
-    chown -R nestjs:nodejs /app/dist
+# Fix ownership
+RUN chown -R nestjs:nodejs /app/node_modules /app/prisma /app/dist
 
-# Switch to non-root
+# Switch to non-root user
 USER nestjs
 
 # Expose port
@@ -66,5 +53,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30m --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start command (migrations should be run manually)
+# Start application (migrations must be run manually)
 CMD ["npm", "run", "start:prod"]
