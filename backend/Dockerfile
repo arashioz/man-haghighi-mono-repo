@@ -30,6 +30,8 @@ RUN npm ci --legacy-peer-deps
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/tsconfig.seed.json ./tsconfig.seed.json
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
