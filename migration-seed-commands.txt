@@ -20,3 +20,20 @@ docker exec haghighi_backend sh -c "cd /app && npm run prisma:seed"
 # بررسی وضعیت Migration
 docker exec haghighi_backend sh -c "cd /app && npx prisma migrate status"
 
+# ========================================
+# حل مشکل Failed Migration (خطای P3009)
+# ========================================
+
+# روش 1: استفاده از اسکریپت
+./fix-failed-migration.sh
+
+# روش 2: دستورات دستی
+# اگر migration rollback شده باشد:
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate resolve --rolled-back 20250115000000_add_otp_fields"
+
+# اگر migration واقعاً اجرا شده باشد:
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate resolve --applied 20250115000000_add_otp_fields"
+
+# بعد از resolve، دوباره migration را اجرا کنید:
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate deploy"
+
