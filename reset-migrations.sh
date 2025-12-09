@@ -103,3 +103,4 @@ echo "   - Run seed if needed: ./run-migration-seed.sh"
 echo "   - Check migration status: docker exec $CONTAINER_NAME sh -c 'cd /app && npx prisma migrate status'"
 echo ""
 
+    
