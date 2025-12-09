@@ -5,6 +5,137 @@ import { Course } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
 
+// Audio Player Component
+const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('durationchange', updateDuration);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('durationchange', updateDuration);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+    };
+  }, [audioUrl]);
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(console.error);
+    }
+  };
+
+  const handleSeek = (time: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="bg-[#0a0a0a] border border-purple-400/30 rounded-lg p-3">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
+      
+      {/* Progress Bar */}
+      <div className="mb-2">
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={currentTime}
+          onChange={(e) => handleSeek(parseFloat(e.target.value))}
+          className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+          style={{
+            background: `linear-gradient(to right, rgb(168, 85, 247) 0%, rgb(168, 85, 247) ${progress}%, rgba(255, 255, 255, 0.2) ${progress}%, rgba(255, 255, 255, 0.2) 100%)`,
+          }}
+        />
+      </div>
+      
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={togglePlayPause}
+          className="w-8 h-8 rounded-full bg-purple-500 hover:bg-purple-600 text-white flex items-center justify-center transition-colors"
+          aria-label={isPlaying ? 'توقف' : 'پخش'}
+        >
+          {isPlaying ? (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <span className="text-xs text-white/80 font-mono">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
+      </div>
+      
+      <style>{`
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: rgb(168, 85, 247);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: rgb(168, 85, 247);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [course, setCourse] = useState<Course | null>(null);
@@ -356,53 +487,67 @@ const CourseDetail: React.FC = () => {
               <div className="mt-8 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg p-6">
                 <h2 className="text-2xl font-bold text-white mb-6">فایل‌های صوتی دوره</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {course.audios.map((audio) => (
-                    <div 
-                      key={audio.id} 
-                      className={`border rounded-lg p-4 transition-all ${
-                        isEnrolled 
-                          ? 'border-white/20 hover:shadow-md hover:border-purple-400/50 cursor-pointer bg-[#0a0a0a]' 
-                          : 'border-white/10 opacity-75 bg-[#0a0a0a]'
-                      }`}
-                      onClick={isEnrolled ? () => handleAudioClick(audio.id) : undefined}
-                    >
-                      {audio.thumbnail && (
-                        <img
-                          src={getImageUrl(audio.thumbnail)!}
-                          alt={audio.title}
-                          className="w-full h-32 object-cover rounded mb-3"
-                        />
-                      )}
-                      <div className="flex items-center mb-3">
-                        <svg className="w-8 h-8 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                        </svg>
-                        <h3 className="font-semibold text-white">
-                          {audio.title}
-                        </h3>
+                  {course.audios.map((audio) => {
+                    // Get audio stream URL for enrolled users
+                    const audioStreamUrl = isEnrolled 
+                      ? `${API_ORIGIN}/api/audios/${audio.id}/stream?token=${encodeURIComponent(localStorage.getItem('token') || '')}`
+                      : null;
+                    
+                    return (
+                      <div 
+                        key={audio.id} 
+                        className={`border rounded-lg p-4 transition-all ${
+                          isEnrolled 
+                            ? 'border-white/20 hover:shadow-md hover:border-purple-400/50 bg-[#0a0a0a]' 
+                            : 'border-white/10 opacity-75 bg-[#0a0a0a]'
+                        }`}
+                      >
+                        {audio.thumbnail && (
+                          <img
+                            src={getImageUrl(audio.thumbnail)!}
+                            alt={audio.title}
+                            className="w-full h-32 object-cover rounded mb-3"
+                          />
+                        )}
+                        <div className="flex items-center mb-3">
+                          <svg className="w-8 h-8 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                          </svg>
+                          <h3 className="font-semibold text-white">
+                            {audio.title}
+                          </h3>
+                        </div>
+                        {audio.description && (
+                          <p className="text-sm text-white/70 mb-2">
+                            {audio.description}
+                          </p>
+                        )}
+                        {audio.duration && (
+                          <p className="text-sm text-white/60 mb-3">
+                            مدت زمان: {Math.floor(audio.duration / 60)} دقیقه
+                          </p>
+                        )}
+                        {!isEnrolled && (
+                          <div className="mt-3 p-2 bg-yellow-400/20 border border-yellow-400/30 rounded text-sm text-yellow-400">
+                            🔒 برای دسترسی به این فایل صوتی ثبت‌نام کنید
+                          </div>
+                        )}
+                        {isEnrolled && audioStreamUrl && (
+                          <div className="mt-3">
+                            <AudioPlayerComponent audioUrl={audioStreamUrl} />
+                          </div>
+                        )}
+                        {isEnrolled && !audioStreamUrl && (
+                          <button
+                            onClick={() => handleAudioClick(audio.id)}
+                            className="mt-3 w-full p-2 bg-green-500/20 border border-green-500/30 rounded text-sm text-green-400 hover:bg-green-500/30 transition-colors"
+                          >
+                            ✅ برای پخش کلیک کنید
+                          </button>
+                        )}
                       </div>
-                      {audio.description && (
-                        <p className="text-sm text-white/70 mb-2">
-                          {audio.description}
-                        </p>
-                      )}
-                      {audio.duration && (
-                        <p className="text-sm text-white/60">
-                          مدت زمان: {Math.floor(audio.duration / 60)} دقیقه
-                        </p>
-                      )}
-                      {!isEnrolled && (
-                        <div className="mt-3 p-2 bg-yellow-400/20 border border-yellow-400/30 rounded text-sm text-yellow-400">
-                          🔒 برای دسترسی به این فایل صوتی ثبت‌نام کنید
-                        </div>
-                      )}
-                      {isEnrolled && (
-                        <div className="mt-3 p-2 bg-green-500/20 border border-green-500/30 rounded text-sm text-green-400">
-                          ✅ برای پخش کلیک کنید
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
