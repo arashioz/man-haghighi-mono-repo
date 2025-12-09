@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { coursesService, API_ORIGIN } from '../services/api';
 import { Course } from '../types';
@@ -14,6 +14,13 @@ const CourseDetail: React.FC = () => {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Video player state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [showControls, setShowControls] = useState(true);
 
   const fetchCourse = async () => {
     try {
@@ -39,6 +46,73 @@ const CourseDetail: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Video player event handlers
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updateTime = () => setCurrentTime(video.currentTime);
+    const updateDuration = () => {
+      if (video.duration && isFinite(video.duration)) {
+        setDuration(video.duration);
+      }
+    };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleLoadedMetadata = () => {
+      if (video.duration && isFinite(video.duration)) {
+        setDuration(video.duration);
+      }
+    };
+
+    video.addEventListener('timeupdate', updateTime);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('durationchange', updateDuration);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('timeupdate', updateTime);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('durationchange', updateDuration);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+    };
+  }, [course?.videoFile]);
+
+  const togglePlayPause = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (isPlaying) {
+      video.pause();
+    } else {
+      video.play().catch(console.error);
+    }
+  };
+
+  const handleSeek = (time: number) => {
+    const video = videoRef.current;
+    if (video) {
+      video.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const handleEnroll = async () => {
     if (!user) {
@@ -110,31 +184,101 @@ const CourseDetail: React.FC = () => {
             <div className="bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg overflow-hidden">
               {/* Course Intro Video */}
               {course.videoFile && (
-                <div className="w-full">
-                  <video
-                    className="w-full h-auto max-h-[600px] bg-black object-contain"
-                    style={{ 
-                      direction: 'ltr',
-                      pointerEvents: 'auto',
-                      touchAction: 'manipulation'
-                    }}
-                    controls
-                    controlsList="nodownload"
-                    preload="metadata"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <source
-                      src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
-                      type="video/mp4"
-                    />
-                    <source
-                      src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
-                      type="video/webm"
-                    />
-                    مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
-                  </video>
+                <div className="w-full relative group" onMouseEnter={() => setShowControls(true)} onMouseLeave={() => setShowControls(true)}>
+                  <div className="relative aspect-video bg-black">
+                    <video
+                      ref={videoRef}
+                      className="w-full h-full object-contain"
+                      style={{ 
+                        direction: 'ltr',
+                        pointerEvents: 'auto',
+                        touchAction: 'manipulation'
+                      }}
+                      preload="metadata"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePlayPause();
+                      }}
+                      onError={(e) => {
+                        const videoElement = e.target as HTMLVideoElement;
+                        console.error('Video error:', videoElement.error);
+                      }}
+                    >
+                      <source
+                        src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
+                        type="video/mp4"
+                      />
+                      <source
+                        src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}
+                        type="video/webm"
+                      />
+                      مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                    </video>
+                    
+                    {/* Custom Controls Overlay - Center Play/Pause (only when paused) */}
+                    {!isPlaying && (
+                      <div className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity ${showControls ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 pointer-events-none`}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePlayPause();
+                          }}
+                          className="w-20 h-20 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-all hover:scale-110 shadow-2xl pointer-events-auto"
+                          aria-label="پخش"
+                        >
+                          <svg className="w-10 h-10 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Bottom Controls Bar */}
+                    <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/70 to-transparent p-4 transition-opacity ${showControls || isPlaying ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100`}>
+                      {/* Progress Bar */}
+                      <div className="mb-3">
+                        <input
+                          type="range"
+                          min="0"
+                          max={duration || 0}
+                          step="0.1"
+                          value={currentTime}
+                          onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider-thumb"
+                          style={{
+                            background: `linear-gradient(to right, rgb(234, 179, 8) 0%, rgb(234, 179, 8) ${progress}%, rgba(255, 255, 255, 0.2) ${progress}%, rgba(255, 255, 255, 0.2) 100%)`,
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Time and Controls */}
+                      <div className="flex items-center justify-between text-white text-sm">
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePlayPause();
+                            }}
+                            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                            aria-label={isPlaying ? 'توقف' : 'پخش'}
+                          >
+                            {isPlaying ? (
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            )}
+                          </button>
+                          <span className="font-mono text-xs sm:text-sm">
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {!course.videoFile && course.thumbnail && (
@@ -380,6 +524,39 @@ const CourseDetail: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      <style>{`
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: rgb(234, 179, 8);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: rgb(234, 179, 8);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-webkit-slider-runnable-track {
+          height: 8px;
+          border-radius: 4px;
+        }
+        
+        input[type="range"]::-moz-range-track {
+          height: 8px;
+          border-radius: 4px;
+        }
+      `}</style>
     </div>
   );
 };
