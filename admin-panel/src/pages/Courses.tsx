@@ -1,12 +1,143 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
-import { coursesService, api, videosService, audiosService } from '../services/api';
+import { coursesService, api, videosService, audiosService, API_ORIGIN } from '../services/api';
 import { Course, Video, Audio } from '../types';
 import { truncateWords } from '../utils/text';
+
+// Audio Player Component
+const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('durationchange', updateDuration);
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('durationchange', updateDuration);
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+    };
+  }, [audioUrl]);
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      audio.play().catch(console.error);
+    }
+  };
+
+  const handleSeek = (time: number) => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  const formatTime = (seconds: number): string => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="bg-white border border-purple-200 rounded-lg p-3">
+      <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
+      
+      {/* Progress Bar */}
+      <div className="mb-2">
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={currentTime}
+          onChange={(e) => handleSeek(parseFloat(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          style={{
+            background: `linear-gradient(to right, rgb(147, 51, 234) 0%, rgb(147, 51, 234) ${progress}%, rgba(229, 231, 235, 1) ${progress}%, rgba(229, 231, 235, 1) 100%)`,
+          }}
+        />
+      </div>
+      
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={togglePlayPause}
+          className="w-8 h-8 rounded-full bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center transition-colors"
+          aria-label={isPlaying ? 'توقف' : 'پخش'}
+        >
+          {isPlaying ? (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <span className="text-xs text-gray-600 font-mono">
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
+      </div>
+      
+      <style>{`
+        input[type="range"]::-webkit-slider-thumb {
+          appearance: none;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: rgb(147, 51, 234);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: rgb(147, 51, 234);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const MAX_EPISODES_PER_TYPE = 50;
 
@@ -1774,19 +1905,17 @@ const Courses: React.FC = () => {
                         rows={2}
                       />
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="space-y-2">
                       {audio.audioFile ? (
-                        <a
-                          href={audio.audioFile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-600 hover:text-purple-800"
-                        >
-                          پخش فایل صوتی
-                        </a>
+                        <AudioPlayerComponent 
+                          audioUrl={audio.audioFile.startsWith('http') 
+                            ? audio.audioFile 
+                            : `${API_ORIGIN}/uploads/${audio.audioFile}`} 
+                        />
                       ) : (
-                        <span>فایل صوتی بارگذاری نشده است.</span>
+                        <span className="text-xs text-gray-500">فایل صوتی بارگذاری نشده است.</span>
                       )}
+                    </div>
                       <div className="flex gap-2">
                         <button
                           type="button"
