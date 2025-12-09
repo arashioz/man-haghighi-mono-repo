@@ -1,0 +1,22 @@
+# دستورات Migration و Seed برای سرور
+
+# روش 1: استفاده از اسکریپت
+./run-migration-seed.sh
+
+# روش 2: دستورات دستی (یکجا)
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate deploy" && docker exec haghighi_backend sh -c "cd /app && npx prisma generate" && docker exec haghighi_backend sh -c "cd /app && npm run prisma:seed"
+
+# یا به صورت جداگانه:
+
+# Migration
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate deploy"
+
+# Generate Prisma Client
+docker exec haghighi_backend sh -c "cd /app && npx prisma generate"
+
+# Seed
+docker exec haghighi_backend sh -c "cd /app && npm run prisma:seed"
+
+# بررسی وضعیت Migration
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate status"
+
