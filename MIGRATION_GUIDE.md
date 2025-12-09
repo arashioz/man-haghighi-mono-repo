@@ -158,3 +158,4 @@ docker exec haghighi_backend npx prisma migrate deploy
 docker exec haghighi_backend npx prisma studio
 ```
 
+

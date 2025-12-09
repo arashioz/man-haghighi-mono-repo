@@ -109,3 +109,4 @@ docker exec haghighi_postgres psql -U haghighi_user -d haghighi_db -c "\d podcas
 docker exec haghighi_backend ls -la /app/prisma/migrations/ | grep podcast
 ```
 
+

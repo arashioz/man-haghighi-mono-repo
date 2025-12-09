@@ -34,3 +34,4 @@ CREATE INDEX "logs_url_idx" ON "logs"("url");
 -- CreateIndex
 CREATE INDEX "logs_statusCode_idx" ON "logs"("statusCode");
 
+
