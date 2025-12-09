@@ -10,7 +10,8 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "emitDecoratorMetadata": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "types": ["node", "bcryptjs"]
   },
   "ts-node": {
     "compilerOptions": {

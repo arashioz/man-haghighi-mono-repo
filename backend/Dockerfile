@@ -23,8 +23,8 @@ RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 
 COPY package*.json ./
 
-# ❗ Install ALL dependencies (including ts-node & TypeScript)
-RUN npm ci --legacy-peer-deps
+# Install all dependencies including devDependencies for seed script
+RUN npm ci --legacy-peer-deps --include=dev
 
 # Copy artifacts from builder
 COPY --from=builder /app/dist ./dist

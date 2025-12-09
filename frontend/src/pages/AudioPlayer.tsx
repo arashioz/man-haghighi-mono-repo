@@ -67,13 +67,9 @@ const AudioPlayer: React.FC = () => {
       const streamData = await audiosService.getAudioStreamUrl(audioId!);
       setAudioInfo(streamData);
       
-      const token = localStorage.getItem('token');
-      const baseUrl = API_ORIGIN;
-      const streamUrl = token 
-        ? `${baseUrl}/api/audios/${audioId}/stream?token=${encodeURIComponent(token)}`
-        : streamData.streamUrl;
-      
-      setAudioUrl(streamUrl);
+      // Use the streamUrl from backend which includes token in query parameter
+      // Backend JWT strategy supports token from query parameter
+      setAudioUrl(streamData.streamUrl);
       
       if (streamData.courseId) {
         const [courseData, audiosData] = await Promise.all([
@@ -101,11 +97,19 @@ const AudioPlayer: React.FC = () => {
 
     const audio = audioRef.current;
     
-    // Load saved progress
-    const savedTime = loadProgress(audioId!);
-    if (savedTime > 0) {
-      audio.currentTime = savedTime;
+    // Set audio source
+    if (audio.src !== audioUrl) {
+      audio.src = audioUrl;
+      audio.load();
     }
+    
+    // Load saved progress after metadata is loaded
+    const loadSavedProgress = () => {
+      const savedTime = loadProgress(audioId!);
+      if (savedTime > 0 && savedTime < audio.duration) {
+        audio.currentTime = savedTime;
+      }
+    };
 
     // Update current time
     const updateTime = () => {
@@ -118,12 +122,19 @@ const AudioPlayer: React.FC = () => {
 
     // Update duration
     const updateDuration = () => {
-      setDuration(audio.duration);
+      if (audio.duration && isFinite(audio.duration)) {
+        setDuration(audio.duration);
+        loadSavedProgress();
+      }
     };
 
     // Handle play/pause
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => {
+      setIsPlaying(true);
+    };
+    const handlePause = () => {
+      setIsPlaying(false);
+    };
 
     // Handle ended
     const handleEnded = () => {
@@ -132,12 +143,25 @@ const AudioPlayer: React.FC = () => {
       saveProgress(audioId!, 0);
     };
 
+    // Handle load start
+    const handleLoadStart = () => {
+      console.log('Audio loading started:', audioUrl);
+    };
+
+    // Handle can play
+    const handleCanPlay = () => {
+      console.log('Audio can play');
+      loadSavedProgress();
+    };
+
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('durationchange', updateDuration);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('loadstart', handleLoadStart);
+    audio.addEventListener('canplay', handleCanPlay);
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime);
@@ -146,6 +170,8 @@ const AudioPlayer: React.FC = () => {
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('loadstart', handleLoadStart);
+      audio.removeEventListener('canplay', handleCanPlay);
     };
   }, [audioUrl, audioId]);
 
@@ -258,6 +284,7 @@ const AudioPlayer: React.FC = () => {
         ref={audioRef}
         src={audioUrl}
         preload="metadata"
+        crossOrigin="anonymous"
         onError={(e) => {
           const audioElement = e.target as HTMLAudioElement;
           const error = audioElement.error;
