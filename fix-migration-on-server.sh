@@ -42,3 +42,4 @@ echo "✅ Fix completed!"
 echo ""
 echo "⚠️  IMPORTANT: After verifying everything works, change restart policy back to 'unless-stopped' in docker-compose-alt-ports.yml"
 
+
