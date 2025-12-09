@@ -20,6 +20,10 @@ const UploadCenter: React.FC = () => {
     description: '',
   });
   const [assigning, setAssigning] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchFiles();
@@ -48,16 +52,28 @@ const UploadCenter: React.FC = () => {
     }
   };
 
-  const handleDelete = async (filename: string) => {
-    if (!window.confirm('آیا از حذف این فایل اطمینان دارید؟')) {
+  const handleDelete = async (filename: string, force: boolean = false) => {
+    const message = force 
+      ? 'آیا از حذف این فایل اطمینان دارید؟ این فایل از دیتابیس و دیسک حذف خواهد شد.'
+      : 'آیا از حذف این فایل اطمینان دارید؟';
+    
+    if (!window.confirm(message)) {
       return;
     }
 
     try {
-      await uploadCenterService.deleteFile(filename);
+      await uploadCenterService.deleteFile(filename, force);
       setFiles(files.filter(f => f.filename !== filename));
+      setError('');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در حذف فایل');
+      const errorMessage = err.response?.data?.message || 'خطا در حذف فایل';
+      if (errorMessage.includes('assigned') || errorMessage.includes('in use')) {
+        if (window.confirm('این فایل به یک دوره اختصاص داده شده است. آیا می‌خواهید آن را به صورت اجباری حذف کنید؟')) {
+          await handleDelete(filename, true);
+        }
+      } else {
+        setError(errorMessage);
+      }
     }
   };
 
@@ -68,7 +84,7 @@ const UploadCenter: React.FC = () => {
     }
     setSelectedFile(file);
     setAssignForm({
-      courseId: '',
+      courseId: file.assignedToCourse?.courseId || '',
       title: file.filename.replace(/\.[^/.]+$/, ''),
       description: '',
     });
@@ -81,6 +97,13 @@ const UploadCenter: React.FC = () => {
       return;
     }
 
+    const isReassign = selectedFile.assignedToCourse && 
+      selectedFile.assignedToCourse.courseId !== assignForm.courseId;
+
+    if (isReassign && !window.confirm('این فایل قبلاً به دوره دیگری اختصاص داده شده است. آیا می‌خواهید اختصاص آن را تغییر دهید؟')) {
+      return;
+    }
+
     try {
       setAssigning(true);
       setError('');
@@ -88,27 +111,62 @@ const UploadCenter: React.FC = () => {
         selectedFile.filename,
         assignForm.courseId,
         assignForm.title,
-        assignForm.description
+        assignForm.description,
+        isReassign
       );
       setIsAssignModalOpen(false);
       setSelectedFile(null);
       await fetchFiles();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در اختصاص فایل به دوره');
+      const errorMessage = err.response?.data?.message || 'خطا در اختصاص فایل به دوره';
+      if (errorMessage.includes('already assigned')) {
+        if (window.confirm('این فایل قبلاً اختصاص داده شده است. آیا می‌خواهید اختصاص آن را تغییر دهید؟')) {
+          await uploadCenterService.assignFileToCourse(
+            selectedFile.filename,
+            assignForm.courseId,
+            assignForm.title,
+            assignForm.description,
+            true
+          );
+          setIsAssignModalOpen(false);
+          setSelectedFile(null);
+          await fetchFiles();
+        }
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setAssigning(false);
     }
   };
 
   const getFilteredFiles = () => {
+    let filtered = files;
     if (activeTab === 'videos') {
-      return files.filter(f => f.type === 'video');
+      filtered = files.filter(f => f.type === 'video');
+    } else if (activeTab === 'audios') {
+      filtered = files.filter(f => f.type === 'audio');
     }
-    if (activeTab === 'audios') {
-      return files.filter(f => f.type === 'audio');
-    }
-    return files;
+    
+    // Pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
   };
+
+  const getTotalPages = () => {
+    let filtered = files;
+    if (activeTab === 'videos') {
+      filtered = files.filter(f => f.type === 'video');
+    } else if (activeTab === 'audios') {
+      filtered = files.filter(f => f.type === 'audio');
+    }
+    return Math.ceil(filtered.length / itemsPerPage);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -208,7 +266,7 @@ const UploadCenter: React.FC = () => {
       </div>
 
       {/* Files List */}
-      {filteredFiles.length > 0 ? (
+      {getFilteredFiles().length > 0 ? (
         <div className="ios-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -286,23 +344,23 @@ const UploadCenter: React.FC = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center gap-2">
-                        {(file.type === 'video' || file.type === 'audio') && !file.assignedToCourse && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {(file.type === 'video' || file.type === 'audio') && (
                           <button
                             onClick={() => handleAssignClick(file)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className={`${file.assignedToCourse ? 'text-orange-600 hover:text-orange-900' : 'text-blue-600 hover:text-blue-900'}`}
+                            title={file.assignedToCourse ? 'تغییر اختصاص' : 'اختصاص به دوره'}
                           >
-                            اختصاص به دوره
+                            {file.assignedToCourse ? 'تغییر اختصاص' : 'اختصاص به دوره'}
                           </button>
                         )}
-                        {!file.assignedToCourse && (
-                          <button
-                            onClick={() => handleDelete(file.filename)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            حذف
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDelete(file.filename, false)}
+                          className="text-red-600 hover:text-red-900"
+                          title={file.assignedToCourse ? 'حذف اجباری (از دیتابیس و دیسک)' : 'حذف'}
+                        >
+                          حذف
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -310,6 +368,46 @@ const UploadCenter: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          {getTotalPages() > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                نمایش {((currentPage - 1) * itemsPerPage) + 1} تا {Math.min(currentPage * itemsPerPage, activeTab === 'videos' ? files.filter(f => f.type === 'video').length : activeTab === 'audios' ? files.filter(f => f.type === 'audio').length : files.length)} از {activeTab === 'videos' ? files.filter(f => f.type === 'video').length : activeTab === 'audios' ? files.filter(f => f.type === 'audio').length : files.length} فایل
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  قبلی
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: getTotalPages() }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 border rounded-lg text-sm ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(getTotalPages(), prev + 1))}
+                  disabled={currentPage === getTotalPages()}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  بعدی
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <EmptyState
@@ -332,7 +430,9 @@ const UploadCenter: React.FC = () => {
             setSelectedFile(null);
             setAssignForm({ courseId: '', title: '', description: '' });
           }}
-          title={`اختصاص ${selectedFile.type === 'video' ? 'ویدیو' : 'فایل صوتی'} به دوره`}
+          title={selectedFile.assignedToCourse 
+            ? `تغییر اختصاص ${selectedFile.type === 'video' ? 'ویدیو' : 'فایل صوتی'}`
+            : `اختصاص ${selectedFile.type === 'video' ? 'ویدیو' : 'فایل صوتی'} به دوره`}
         >
           <div className="space-y-4">
             <div>

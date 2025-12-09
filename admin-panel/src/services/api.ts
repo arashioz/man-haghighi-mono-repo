@@ -1557,12 +1557,14 @@ export const uploadCenterService = {
     return response.data;
   },
 
-  deleteFile: async (filename: string) => {
-    await api.delete(`/upload-center/${encodeURIComponent(filename)}`);
+  deleteFile: async (filename: string, force: boolean = false) => {
+    const url = `/upload-center/${encodeURIComponent(filename)}${force ? '?force=true' : ''}`;
+    await api.delete(url);
   },
 
-  assignFileToCourse: async (filename: string, courseId: string, title?: string, description?: string) => {
-    const response = await api.post(`/upload-center/${encodeURIComponent(filename)}/assign`, {
+  assignFileToCourse: async (filename: string, courseId: string, title?: string, description?: string, forceReassign: boolean = false) => {
+    const url = `/upload-center/${encodeURIComponent(filename)}/assign${forceReassign ? '?forceReassign=true' : ''}`;
+    const response = await api.post(url, {
       courseId,
       title,
       description,

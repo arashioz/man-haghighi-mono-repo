@@ -5,11 +5,12 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UploadCenterService } from './upload-center.service';
 import { AssignFileToCourseDto } from './dto/upload-center.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -48,25 +49,33 @@ export class UploadCenterController {
   @Delete(':filename')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete an uploaded file (Admin only)' })
+  @ApiQuery({ name: 'force', required: false, type: Boolean, description: 'Force delete even if file is assigned' })
   @ApiResponse({ status: 200, description: 'File deleted successfully' })
   @ApiResponse({ status: 404, description: 'File not found' })
   @ApiResponse({ status: 400, description: 'File is in use and cannot be deleted' })
-  async deleteFile(@Param('filename') filename: string) {
-    await this.uploadCenterService.deleteFile(filename);
+  async deleteFile(
+    @Param('filename') filename: string,
+    @Query('force') force?: string,
+  ) {
+    const forceDelete = force === 'true' || force === '1';
+    await this.uploadCenterService.deleteFile(filename, forceDelete);
     return { message: 'File deleted successfully' };
   }
 
   @Post(':filename/assign')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Assign a file to a course (Admin only)' })
+  @ApiQuery({ name: 'forceReassign', required: false, type: Boolean, description: 'Force reassign if already assigned' })
   @ApiResponse({ status: 200, description: 'File assigned to course successfully' })
   @ApiResponse({ status: 404, description: 'File or course not found' })
   @ApiResponse({ status: 400, description: 'Invalid operation' })
   async assignFileToCourse(
     @Param('filename') filename: string,
     @Body() assignDto: AssignFileToCourseDto,
+    @Query('forceReassign') forceReassign?: string,
   ) {
-    return this.uploadCenterService.assignFileToCourse(filename, assignDto);
+    const force = forceReassign === 'true' || forceReassign === '1';
+    return this.uploadCenterService.assignFileToCourse(filename, assignDto, force);
   }
 }
 

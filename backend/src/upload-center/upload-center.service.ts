@@ -127,7 +127,7 @@ export class UploadCenterService {
     return allFiles.filter(file => file.type === FileType.AUDIO);
   }
 
-  async deleteFile(filename: string): Promise<void> {
+  async deleteFile(filename: string, force: boolean = false): Promise<void> {
     const uploadsDir = this.getUploadsDirectory();
     const filePath = join(uploadsDir, filename);
 
@@ -135,44 +135,93 @@ export class UploadCenterService {
       throw new NotFoundException('File not found');
     }
 
-    // Check if file is used in database
-    const video = await this.prisma.video.findFirst({
-      where: { videoFile: filename },
-    });
+    // If force delete, remove from database first
+    if (force) {
+      // Delete video if exists
+      const video = await this.prisma.video.findFirst({
+        where: { videoFile: filename },
+      });
+      if (video) {
+        await this.prisma.video.delete({ where: { id: video.id } });
+      }
 
-    if (video) {
-      throw new BadRequestException('Cannot delete file: it is assigned to a video');
+      // Delete audio if exists
+      const audio = await this.prisma.audio.findFirst({
+        where: { audioFile: filename },
+      });
+      if (audio) {
+        await this.prisma.audio.delete({ where: { id: audio.id } });
+      }
+
+      // Remove from course thumbnail or videoFile
+      await this.prisma.course.updateMany({
+        where: {
+          OR: [
+            { thumbnail: filename },
+            { videoFile: filename },
+          ],
+        },
+        data: {
+          thumbnail: null,
+          videoFile: null,
+        },
+      });
+
+      // Remove from courseVideos array (if it's an array field)
+      const coursesWithFile = await this.prisma.course.findMany({
+        where: {
+          courseVideos: { has: filename },
+        },
+      });
+      for (const course of coursesWithFile) {
+        const updatedVideos = (course.courseVideos as string[] || []).filter(v => v !== filename);
+        await this.prisma.course.update({
+          where: { id: course.id },
+          data: { courseVideos: updatedVideos },
+        });
+      }
+    } else {
+      // Check if file is used in database
+      const video = await this.prisma.video.findFirst({
+        where: { videoFile: filename },
+      });
+
+      if (video) {
+        throw new BadRequestException('Cannot delete file: it is assigned to a video');
+      }
+
+      const audio = await this.prisma.audio.findFirst({
+        where: { audioFile: filename },
+      });
+
+      if (audio) {
+        throw new BadRequestException('Cannot delete file: it is assigned to an audio');
+      }
+
+      // Check if used in course thumbnail or videoFile
+      const course = await this.prisma.course.findFirst({
+        where: {
+          OR: [
+            { thumbnail: filename },
+            { videoFile: filename },
+            { courseVideos: { has: filename } },
+          ],
+        },
+      });
+
+      if (course) {
+        throw new BadRequestException('Cannot delete file: it is used in a course');
+      }
     }
 
-    const audio = await this.prisma.audio.findFirst({
-      where: { audioFile: filename },
-    });
-
-    if (audio) {
-      throw new BadRequestException('Cannot delete file: it is assigned to an audio');
-    }
-
-    // Check if used in course thumbnail or videoFile
-    const course = await this.prisma.course.findFirst({
-      where: {
-        OR: [
-          { thumbnail: filename },
-          { videoFile: filename },
-          { courseVideos: { has: filename } },
-        ],
-      },
-    });
-
-    if (course) {
-      throw new BadRequestException('Cannot delete file: it is used in a course');
-    }
-
+    // Delete file from disk
     fs.unlinkSync(filePath);
   }
 
   async assignFileToCourse(
     filename: string,
     assignDto: AssignFileToCourseDto,
+    forceReassign: boolean = false,
   ): Promise<{ video?: any; audio?: any }> {
     const uploadsDir = this.getUploadsDirectory();
     const filePath = join(uploadsDir, filename);
@@ -209,7 +258,28 @@ export class UploadCenterService {
       });
 
       if (existingVideo) {
-        throw new BadRequestException('File is already assigned to a video');
+        if (forceReassign) {
+          // Update existing video
+          const video = await this.prisma.video.update({
+            where: { id: existingVideo.id },
+            data: {
+              title: assignDto.title || existingVideo.title,
+              description: assignDto.description !== undefined ? assignDto.description : existingVideo.description,
+              courseId: assignDto.courseId,
+            },
+            include: {
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          });
+          return { video };
+        } else {
+          throw new BadRequestException('File is already assigned to a video. Use forceReassign to change assignment.');
+        }
       }
 
       // Count existing videos in course
@@ -244,7 +314,28 @@ export class UploadCenterService {
       });
 
       if (existingAudio) {
-        throw new BadRequestException('File is already assigned to an audio');
+        if (forceReassign) {
+          // Update existing audio
+          const audio = await this.prisma.audio.update({
+            where: { id: existingAudio.id },
+            data: {
+              title: assignDto.title || existingAudio.title,
+              description: assignDto.description !== undefined ? assignDto.description : existingAudio.description,
+              courseId: assignDto.courseId,
+            },
+            include: {
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          });
+          return { audio };
+        } else {
+          throw new BadRequestException('File is already assigned to an audio. Use forceReassign to change assignment.');
+        }
       }
 
       // Count existing audios in course
