@@ -112,11 +112,18 @@ const CourseDetail: React.FC = () => {
               {course.videoFile && (
                 <div className="w-full">
                   <video
-                    className="w-full h-auto max-h-[600px] bg-black [&::-webkit-media-controls-panel]:direction-rtl"
-                    style={{ direction: 'rtl' }}
+                    className="w-full h-auto max-h-[600px] bg-black object-contain"
+                    style={{ 
+                      direction: 'ltr',
+                      pointerEvents: 'auto',
+                      touchAction: 'manipulation'
+                    }}
                     controls
                     controlsList="nodownload"
                     preload="metadata"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
                   >
                     <source
                       src={`${API_ORIGIN}/api/courses/${id}/intro-video/stream`}

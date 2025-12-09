@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { videosService, coursesService, API_ORIGIN } from '../services/api';
 import { Video, Course, VideoStreamInfo } from '../types';
@@ -11,6 +11,7 @@ const VideoPlayer: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   const [videoInfo, setVideoInfo] = useState<VideoStreamInfo | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
@@ -189,16 +190,32 @@ const VideoPlayer: React.FC = () => {
           {/* Video Player */}
           <div className="lg:col-span-3">
             <div className="bg-[#0a0a0a] border border-white/10 rounded-lg shadow-lg overflow-hidden">
-              <div className="aspect-video bg-black">
+              <div className="aspect-video bg-black relative overflow-hidden">
                 {videoUrl && (
                   <video
+                    ref={videoRef}
                     key={videoId} // Force re-render when video changes
                     controls
                     controlsList="nodownload"
-                    className="w-full h-full [&::-webkit-media-controls-panel]:direction-rtl"
-                    style={{ direction: 'rtl' }}
+                    className="w-full h-full object-contain"
+                    style={{ 
+                      direction: 'ltr',
+                      pointerEvents: 'auto',
+                      zIndex: 1,
+                      touchAction: 'manipulation'
+                    }}
                     poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
                     onEnded={hasNext ? goToNextVideo : undefined}
+                    onClick={(e) => {
+                      // Allow click events to propagate to video controls
+                      e.stopPropagation();
+                    }}
+                    onPlay={() => {
+                      console.log('Video playing');
+                    }}
+                    onPause={() => {
+                      console.log('Video paused');
+                    }}
                     onError={(e) => {
                       const videoElement = e.target as HTMLVideoElement;
                       const error = videoElement.error;
