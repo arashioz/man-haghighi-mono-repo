@@ -30,11 +30,29 @@ log_error() {
 
 # Check database connection (simple check, no waiting)
 check_database() {
-    if npx prisma db execute --stdin <<EOF 2>/dev/null >/dev/null; then
+    # Try to execute a simple query
+    OUTPUT=$(npx prisma db execute --stdin <<EOF 2>&1
 SELECT 1;
 EOF
+)
+    EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 0 ]; then
         return 0
     fi
+    
+    # Show error for debugging
+    if echo "$OUTPUT" | grep -qi "P1001\|Can't reach\|ECONNREFUSED"; then
+        log_error "Database connection failed: Cannot reach database server"
+        log_info "Error details: $(echo "$OUTPUT" | head -3)"
+    elif echo "$OUTPUT" | grep -qi "P1000\|Authentication failed"; then
+        log_error "Database connection failed: Authentication error"
+        log_info "Check DATABASE_URL credentials"
+    else
+        log_error "Database connection failed"
+        log_info "Error: $(echo "$OUTPUT" | head -3)"
+    fi
+    
     return 1
 }
 
@@ -85,8 +103,8 @@ apply_migrations() {
                     if [ $retry -lt $max_retries ]; then
                         log_info "Retrying... ($retry/$max_retries)"
                         sleep 2
-                        continue
-                    fi
+                continue
+            fi
                 else
                     # For other migrations, mark as rolled-back and continue
                     log_warning "Skipping failed migration: $FAILED_MIGRATION"
