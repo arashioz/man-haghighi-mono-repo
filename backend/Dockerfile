@@ -1,20 +1,3 @@
-# Stage 1: Build
-FROM node:18-alpine3.19 AS builder
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-COPY prisma ./prisma/
-
-# Install dependencies
-RUN npm ci --legacy-peer-deps
-
-# Copy source code
-COPY . .
-
-# Generate Prisma Client and build
-RUN npx prisma generate && npm run build
-
 # Stage 2: Production
 FROM node:18-alpine3.19
 WORKDIR /app
@@ -25,15 +8,15 @@ RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
-RUN npm ci --only=production --legacy-peer-deps
+# Install all dependencies (including dev for ts-node)
+RUN npm ci --legacy-peer-deps
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 
-# Copy scripts (for manual migration execution)
+# Copy scripts
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
