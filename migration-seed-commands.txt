@@ -37,3 +37,32 @@ docker exec haghighi_backend sh -c "cd /app && npx prisma migrate resolve --appl
 # بعد از resolve، دوباره migration را اجرا کنید:
 docker exec haghighi_backend sh -c "cd /app && npx prisma migrate deploy"
 
+# ========================================
+# پاک کردن همه Migration‌ها و ساخت مجدد
+# ========================================
+
+# روش 1: استفاده از اسکریپت (پیشنهادی)
+./reset-migrations.sh
+
+# روش 2: اسکریپت ساده
+./reset-migrations-simple.sh
+
+# روش 3: دستورات دستی (یکجا)
+docker exec haghighi_backend sh -c "cd /app && psql \$DATABASE_URL -c 'DROP TABLE IF EXISTS \"_prisma_migrations\" CASCADE;'" && \
+docker exec haghighi_backend sh -c "cd /app && rm -rf prisma/migrations/*/" && \
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate dev --name init"
+
+# یا به صورت جداگانه:
+
+# 1. پاک کردن جدول migration از دیتابیس
+docker exec haghighi_backend sh -c "cd /app && psql \$DATABASE_URL -c 'DROP TABLE IF EXISTS \"_prisma_migrations\" CASCADE;'"
+
+# 2. پاک کردن فولدرهای migration
+docker exec haghighi_backend sh -c "cd /app && rm -rf prisma/migrations/*/"
+
+# 3. ساخت migration جدید
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate dev --name init"
+
+# 4. اعمال migration
+docker exec haghighi_backend sh -c "cd /app && npx prisma migrate deploy"
+
