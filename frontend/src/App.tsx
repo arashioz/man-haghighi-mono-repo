@@ -19,6 +19,7 @@ import CourseDetail from './pages/CourseDetail';
 import VideoPlayer from './pages/VideoPlayer';
 import AudioPlayer from './pages/AudioPlayer';
 import VideoPodcastDetail from './pages/VideoPodcastDetail';
+import WorkshopDetail from './pages/WorkshopDetail';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Route path="/courses/:id" element={<CourseDetail />} />
               <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />
               <Route path="/courses/:courseId/audios/:audioId" element={<AudioPlayer />} />
+              <Route path="/workshops/:id" element={<WorkshopDetail />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<UserDashboard />} />
