@@ -1004,8 +1004,11 @@ const HomeV2: React.FC<HomeV2Props> = ({
             >
               {/* Header */}
               <div className="mb-10 flex flex-wrap items-center justify-between gap-2.5 md:flex-row md:gap-5">
-                <motion.h3 variants={fadeUp} className="text-lg font-medium tracking-tighter text-white text-right">
-                  پادکست Engine Transformation
+                <motion.h3
+                  variants={fadeUp}
+                  className="text-lg font-medium tracking-tighter text-white text-right"
+                >
+                  پادکست‌ها
                 </motion.h3>
                 <motion.a
                   variants={fadeUp}
@@ -1016,8 +1019,11 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   }}
                   className="group flex gap-2 items-center font-medium opacity-60 hover:opacity-100 duration-500 w-auto"
                 >
-                  <span>کاوش اپیزودها</span>
-                  <svg viewBox="0 0 20 20" className="h-5 w-5 fill-current duration-500 group-hover:translate-x-1 rotate-0">
+                  <span>همه اپیزودها</span>
+                  <svg
+                    viewBox="0 0 20 20"
+                    className="h-5 w-5 fill-current duration-500 group-hover:translate-x-1 rotate-0"
+                  >
                     <title>Carat</title>
                     <path d="M10.9724 10.0006L6.84766 5.87577L8.02616 4.69727L13.3295 10.0006L8.02616 15.3038L6.84766 14.1253L10.9724 10.0006Z" />
                   </svg>

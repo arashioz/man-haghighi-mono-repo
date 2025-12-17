@@ -324,3 +324,4 @@ const WorkshopDetail: React.FC = () => {
 
 export default WorkshopDetail;
 
+
