@@ -887,85 +887,62 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        {/* Large Gallery Section */}
-        <section className="border-t border-white/10 py-12 sm:py-16">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {galleryImages.slice(0, 6).map((image, index) => (
-              <motion.div
-                key={image || `gallery-fallback-${index}`}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.2 }}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className="group relative h-96 overflow-hidden rounded-[36px] border border-white/10 cursor-pointer"
-              >
-                <img 
-                  src={image} 
-                  alt={`gallery-${index + 1}`} 
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = curatedAssets.gallery[index % curatedAssets.gallery.length] || curatedAssets.gallery[0];
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute bottom-6 right-6 text-sm uppercase tracking-wider text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-semibold">
-                  گالری {index + 1}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </section>
-
-        {/* Slider Background Section */}
-        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
-          {/* Background Slider Images */}
-          <div className="absolute inset-0">
-            {galleryImages.slice(0, 3).map((img, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 0.15 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, delay: idx * 0.3 }}
-                className={`absolute ${idx === 0 ? 'top-0 left-0 w-1/3' : idx === 1 ? 'top-0 left-1/3 w-1/3' : 'top-0 right-0 w-1/3'} h-full`}
-                style={{
-                  backgroundImage: `url(${img})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'blur(60px)',
-                }}
-              />
-            ))}
+        {/* 3D Globe Section - replaces gallery */}
+        <section className="relative border-t border-white/10 py-20 sm:py-28 overflow-hidden">
+          {/* Soft background glows */}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl" />
+            <div className="absolute -right-32 bottom-0 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
           </div>
 
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] items-center">
+            {/* Text side */}
             <motion.div
               variants={stagger}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.3 }}
-              className="text-center"
+              className="space-y-6 text-right"
             >
               <motion.p
                 variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
               >
-                گالری
+                شبکه جهانی من حقیقی
               </motion.p>
               <motion.h2
                 variants={fadeUp}
-                className="text-4xl font-bold sm:text-5xl lg:text-6xl mb-8 text-right"
+                className="text-4xl font-bold sm:text-5xl lg:text-6xl"
               >
-                تجربه بصری استثنایی
+                یک کره، هزار داستان تحول
               </motion.h2>
               <motion.p
                 variants={fadeUp}
-                className="max-w-3xl mx-auto text-lg text-white/80 leading-relaxed text-right"
+                className="text-base leading-relaxed text-white/80"
               >
-                مجموعه تصاویری از لحظات تأثیرگذار و انرژی‌بخش که مسیر تحول را به تصویر می‌کشند.
+                این کره چرخان نمایی واقعی و نمادین از جامعه جهانی من حقیقی است؛ افرادی از شهرها و
+                کشور‌های مختلف که تصمیم گرفته‌اند نسخه دوم زندگی‌شان را بسازند. هر نقطه، یک انتخاب
+                تازه برای رشد و آگاهی است.
               </motion.p>
+            </motion.div>
+
+            {/* 3D globe */}
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.4 }}
+              className="flex items-center justify-center"
+            >
+              <div className="relative h-72 w-72 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
+                {/* Outer ring / glow */}
+                <div className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.15)]" />
+
+                <div className="absolute inset-4">
+                  {/* اینجا کامپوننت کره سه‌بعدی که قبلاً ساختیم را قرار بده */}
+                  {/* مثلا: <Globe ... /> اگر در بالای فایل ایمپورت کرده‌ای */}
+                </div>
+              </div>
             </motion.div>
           </div>
         </section>
