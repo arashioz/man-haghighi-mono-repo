@@ -51,13 +51,13 @@ const Contact: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl" data-version2="true">
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden min-h-[70vh]">
         <div className="absolute inset-0">
           <img src={assets.hero} alt="تماس با ما" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-[#0a0a0a]" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-14 sm:px-8 sm:pb-16 sm:pt-20">
+        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-18 sm:px-8 sm:pb-20 sm:pt-24">
           <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
             <motion.p
               variants={fadeUp}
@@ -88,6 +88,26 @@ const Contact: React.FC = () => {
               </button>
             </motion.div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Wide banner gallery */}
+      <section className="border-t border-white/10 bg-[#050505] py-10">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4 text-right">
+            لحظه‌ها
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[28px] overflow-hidden border border-white/10 bg-white/5">
+              <img src={assets.gallery[0]} alt="بنر ۱" className="w-full h-64 sm:h-72 object-cover" />
+            </div>
+            <div className="rounded-[28px] overflow-hidden border border-white/10 bg-white/5">
+              <img src={assets.gallery[1]} alt="بنر ۲" className="w-full h-64 sm:h-72 object-cover" />
+            </div>
+          </div>
+          <div className="mt-4 rounded-[28px] overflow-hidden border border-white/10 bg-white/5">
+            <img src={assets.gallery[2]} alt="بنر ۳" className="w-full h-64 sm:h-80 object-cover" />
+          </div>
         </div>
       </section>
 
@@ -191,7 +211,7 @@ const Contact: React.FC = () => {
                 <div className="mt-6 grid grid-cols-2 gap-3">
                   {assets.gallery.slice(0, 4).map((src) => (
                     <div key={src} className="relative overflow-hidden rounded-2xl border border-white/10">
-                      <img src={src} alt="گالری" className="h-32 w-full object-cover" />
+                      <img src={src} alt="گالری" className="h-48 w-full object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     </div>
                   ))}
