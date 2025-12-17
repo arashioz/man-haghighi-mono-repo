@@ -48,6 +48,16 @@ export class CreatePodcastDto {
   @IsBoolean()
   published?: boolean;
 
+  @ApiProperty({ example: true, required: false, description: 'Allow comments for this podcast' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value === 'true' || value === '1';
+    return undefined;
+  })
+  @IsBoolean()
+  allowComments?: boolean;
+
   @ApiProperty({ example: '2024-01-01T00:00:00.000Z' })
   @IsOptional()
   @Transform(({ value }) => {
@@ -102,6 +112,16 @@ export class UpdatePodcastDto {
   })
   @IsBoolean()
   published?: boolean;
+
+  @ApiProperty({ example: true, required: false, description: 'Allow comments for this podcast' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value === 'true' || value === '1';
+    return undefined;
+  })
+  @IsBoolean()
+  allowComments?: boolean;
 
   @ApiProperty({ example: '2024-01-02T00:00:00.000Z' })
   @IsOptional()

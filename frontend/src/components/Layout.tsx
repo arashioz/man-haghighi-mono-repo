@@ -24,6 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
     { label: 'مقالات', path: '/articles' },
     { label: 'پادکست‌ها', path: '/podcasts' },
     { label: 'دوره‌ها', path: '/courses' },
+    { label: 'تماس با ما', path: '/contact' },
   ];
 
   const handleLogout = () => {

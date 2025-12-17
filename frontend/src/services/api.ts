@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop } from '../types';
+import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop, Comment } from '../types';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
 const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
@@ -153,6 +153,40 @@ export const articlesService = {
 export const podcastsService = {
   getPublished: async (): Promise<Podcast[]> => {
     const response = await api.get('/podcasts/published');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<Podcast> => {
+    const response = await api.get(`/podcasts/${id}`);
+    return response.data;
+  },
+};
+
+export const commentsService = {
+  getArticleComments: async (articleId: string): Promise<Comment[]> => {
+    const response = await api.get(`/comments/articles/${articleId}`);
+    return response.data;
+  },
+  createArticleComment: async (articleId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+    const response = await api.post(`/comments/articles/${articleId}`, data);
+    return response.data;
+  },
+
+  getPodcastComments: async (podcastId: string): Promise<Comment[]> => {
+    const response = await api.get(`/comments/podcasts/${podcastId}`);
+    return response.data;
+  },
+  createPodcastComment: async (podcastId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+    const response = await api.post(`/comments/podcasts/${podcastId}`, data);
+    return response.data;
+  },
+
+  getCourseComments: async (courseId: string): Promise<Comment[]> => {
+    const response = await api.get(`/comments/courses/${courseId}`);
+    return response.data;
+  },
+  createCourseComment: async (courseId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+    const response = await api.post(`/comments/courses/${courseId}`, data);
     return response.data;
   },
 };

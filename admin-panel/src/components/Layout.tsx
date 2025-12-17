@@ -106,6 +106,7 @@ const getMenuItems = (userRole: string) => {
       { text: 'پادکست‌ها', icon: <PodcastsIcon />, path: '/podcasts' },
       { text: 'دوره‌ها', icon: <SchoolIcon />, path: '/courses' },
       { text: 'ویدیو پادکست‌ها', icon: <VideoLibraryIcon />, path: '/video-podcasts' },
+      { text: 'نظرات', icon: <ArticleIcon />, path: '/comments' },
       { text: 'مرکز آپلود', icon: <UploadCenterIcon />, path: '/upload-center' },
       { text: 'لاگ‌ها', icon: <LogsIcon />, path: '/logs' },
       { text: 'تنظیمات', icon: <SettingsIcon />, path: '/settings' },

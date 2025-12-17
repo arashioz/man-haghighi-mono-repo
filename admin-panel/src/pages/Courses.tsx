@@ -1907,31 +1907,32 @@ const Courses: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       {audio.audioFile ? (
-                        <AudioPlayerComponent 
-                          audioUrl={audio.audioFile.startsWith('http') 
-                            ? audio.audioFile 
-                            : `${API_ORIGIN}/uploads/${audio.audioFile}`} 
+                        <AudioPlayerComponent
+                          audioUrl={
+                            audio.audioFile.startsWith('http')
+                              ? audio.audioFile
+                              : `${API_ORIGIN}/uploads/${audio.audioFile}`
+                          }
                         />
                       ) : (
                         <span className="text-xs text-gray-500">فایل صوتی بارگذاری نشده است.</span>
                       )}
                     </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleSaveAudioChanges(audio)}
-                          className="px-3 py-1 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
-                        >
-                          ذخیره تغییرات
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAudio(audio.id)}
-                          className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          حذف
-                        </button>
-                      </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAudioChanges(audio)}
+                        className="px-3 py-1 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        ذخیره تغییرات
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAudio(audio.id)}
+                        className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        حذف
+                      </button>
                     </div>
                   </div>
                 ))}
