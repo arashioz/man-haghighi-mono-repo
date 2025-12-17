@@ -516,7 +516,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   <motion.p
                     key={`desc-${currentSlide}`}
                     variants={fadeUp}
-                    className="mt-6 max-w-3xl text-lg text-white/70 sm:text-xl text-right"
+                    className="mt-6 max-w-3xl text-sm text-white/70 sm:text-base text-right"
                   >
                     {heroDescription}
                   </motion.p>
@@ -528,13 +528,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 onClick={handlePrimaryCta}
                 className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
               >
-                شروع موتور
+                عضویت در من حقیقی
               </button>
               <button
                 onClick={() => navigate('/about')}
                 className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
               >
-                ملاقات با مربی
+                داستان فراز قورچیان
               </button>
             </motion.div>
           </motion.div>
@@ -865,8 +865,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
 
           {videoPodcasts.length > 0 ? (
-            <div className="mt-8 overflow-x-auto pb-4">
-              <div className="flex gap-4 min-w-max">
+            <div className="relative mt-8">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent" />
+              <div className="flex gap-4 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory hide-scrollbar">
                 {videoPodcasts.map((video) => {
                   const thumb = getImageUrl(video.thumbnail) ?? curatedAssets.videoPoster;
                   const source = video.streamUrl || video.videoFile || '';
@@ -875,8 +877,8 @@ const HomeV2: React.FC<HomeV2Props> = ({
                     <motion.div
                       key={video.id}
                       variants={fadeUp}
-                      whileHover={{ y: -6, scale: 1.01 }}
-                      className="w-[260px] sm:w-[280px] rounded-3xl border border-white/10 bg-white/5 overflow-hidden shadow-lg cursor-pointer"
+                      whileHover={{ y: -4, scale: 1.01 }}
+                      className="snap-start w-[300px] sm:w-[320px] shrink-0 rounded-[32px] border border-white/10 bg-white/5 overflow-hidden shadow-lg cursor-pointer"
                       onClick={() => handleVideoPodcastClick(video.id)}
                     >
                       <div className="relative aspect-[9/16] overflow-hidden">
@@ -896,21 +898,21 @@ const HomeV2: React.FC<HomeV2Props> = ({
                             className="absolute inset-0 h-full w-full object-cover"
                           />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                        <div className="absolute bottom-3 left-3 right-3">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
+                        <div className="absolute bottom-4 left-4 right-4 space-y-2">
                           <span className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">
-                            ویدیوپادکست
+                            Video Podcast
                           </span>
-                          <h3 className="mt-2 text-base font-bold text-white leading-snug line-clamp-2">
+                          <h3 className="text-lg font-bold text-white leading-snug line-clamp-2">
                             {video.title}
                           </h3>
+                          {video.description && (
+                            <p className="text-xs text-white/75 line-clamp-2">
+                              {video.description}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      {video.description && (
-                        <div className="p-4 border-t border-white/10 bg-black/30 text-sm text-white/70 line-clamp-3">
-                          {video.description}
-                        </div>
-                      )}
                     </motion.div>
                   );
                 })}
@@ -1618,7 +1620,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   variants={fadeUp}
                   className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
                 >
-                  ملاقات با مربی
+                  داستان فراز قورچیان
                 </motion.p>
                 <motion.h2 
                   variants={fadeUp} 
@@ -1969,7 +1971,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   onClick={handlePrimaryCta}
                   className="rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-black transition hover:bg-white/90"
                 >
-                  شروع موتور
+                  عضویت در من حقیقی
                 </button>
                 <button
                   onClick={() => navigate('/courses')}
