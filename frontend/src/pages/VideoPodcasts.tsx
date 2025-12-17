@@ -4,12 +4,15 @@ import { videoPodcastsService } from '../services/api';
 import { VideoPodcast } from '../types';
 import { getImageUrl, getImageUrlWithFallback } from '../utils/imageUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
+import VideoPodcastModal from '../components/VideoPodcastModal';
 
 const VideoPodcasts: React.FC = () => {
   const navigate = useNavigate();
   const [videoPodcasts, setVideoPodcasts] = useState<VideoPodcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedVideoPodcast, setSelectedVideoPodcast] = useState<VideoPodcast | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchVideoPodcasts = async () => {
@@ -83,7 +86,10 @@ const VideoPodcasts: React.FC = () => {
               return (
                 <div
                   key={videoPodcast.id}
-                  onClick={() => navigate(`/video-podcasts/${videoPodcast.id}`)}
+                  onClick={() => {
+                    setSelectedVideoPodcast(videoPodcast);
+                    setIsModalOpen(true);
+                  }}
                   className="bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer hover:shadow-xl transition-shadow"
                 >
                   <div className="relative aspect-video bg-black">
@@ -138,6 +144,16 @@ const VideoPodcasts: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Video Podcast Modal */}
+      <VideoPodcastModal
+        videoPodcast={selectedVideoPodcast}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedVideoPodcast(null);
+        }}
+      />
     </div>
   );
 };

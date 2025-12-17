@@ -10,6 +10,7 @@ import {
   Post,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
@@ -20,7 +21,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { Response } from 'express';
@@ -42,7 +43,10 @@ export class VideoPodcastsController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileInterceptor('video', {
+    FileFieldsInterceptor([
+      { name: 'video', maxCount: 1 },
+      { name: 'thumbnail', maxCount: 1 },
+    ], {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -55,14 +59,17 @@ export class VideoPodcastsController {
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
-          cb(null, `video-podcast-${uniqueSuffix}${ext}`);
+          const prefix = file.fieldname === 'thumbnail' ? 'video-podcast-thumbnail' : 'video-podcast';
+          cb(null, `${prefix}-${uniqueSuffix}${ext}`);
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('video/')) {
+        if (file.fieldname === 'video' && file.mimetype.startsWith('video/')) {
+          cb(null, true);
+        } else if (file.fieldname === 'thumbnail' && file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException('Only video files are allowed (mp4, mov, webm, avi, mkv, etc.)'), false);
+          cb(new BadRequestException(`Invalid file type for ${file.fieldname}`), false);
         }
       },
       limits: {
@@ -74,8 +81,11 @@ export class VideoPodcastsController {
   @ApiResponse({ status: 201, description: 'Video podcast created successfully' })
   async create(
     @Body() createVideoPodcastDto: CreateVideoPodcastDto,
-    @UploadedFile() video?: Express.Multer.File,
+    @UploadedFiles() files: { video?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
   ) {
+    const video = files?.video?.[0];
+    const thumbnail = files?.thumbnail?.[0];
+
     if (!video) {
       throw new BadRequestException('Video file upload is required. External URLs are not allowed.');
     }
@@ -85,7 +95,7 @@ export class VideoPodcastsController {
       throw new BadRequestException('External URLs are not allowed. Please upload the video file directly.');
     }
 
-    return this.videoPodcastsService.create(createVideoPodcastDto, video);
+    return this.videoPodcastsService.create(createVideoPodcastDto, video, thumbnail);
   }
 
   @Get()
@@ -239,7 +249,10 @@ export class VideoPodcastsController {
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FileInterceptor('video', {
+    FileFieldsInterceptor([
+      { name: 'video', maxCount: 1 },
+      { name: 'thumbnail', maxCount: 1 },
+    ], {
       storage: diskStorage({
         destination: (req, file, cb) => {
           const uploadPath = process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
@@ -252,14 +265,17 @@ export class VideoPodcastsController {
         filename: (req, file, cb) => {
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
-          cb(null, `video-podcast-${uniqueSuffix}${ext}`);
+          const prefix = file.fieldname === 'thumbnail' ? 'video-podcast-thumbnail' : 'video-podcast';
+          cb(null, `${prefix}-${uniqueSuffix}${ext}`);
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('video/')) {
+        if (file.fieldname === 'video' && file.mimetype.startsWith('video/')) {
+          cb(null, true);
+        } else if (file.fieldname === 'thumbnail' && file.mimetype.match(/\/(jpg|jpeg|png|gif|webp)$/)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException('Only video files are allowed (mp4, mov, webm, avi, mkv, etc.)'), false);
+          cb(new BadRequestException(`Invalid file type for ${file.fieldname}`), false);
         }
       },
       limits: {
@@ -272,9 +288,11 @@ export class VideoPodcastsController {
   async update(
     @Param('id') id: string,
     @Body() updateVideoPodcastDto: UpdateVideoPodcastDto,
-    @UploadedFile() video?: Express.Multer.File,
+    @UploadedFiles() files: { video?: Express.Multer.File[], thumbnail?: Express.Multer.File[] },
   ) {
-    return this.videoPodcastsService.update(id, updateVideoPodcastDto, video);
+    const video = files?.video?.[0];
+    const thumbnail = files?.thumbnail?.[0];
+    return this.videoPodcastsService.update(id, updateVideoPodcastDto, video, thumbnail);
   }
 
   @Delete(':id')

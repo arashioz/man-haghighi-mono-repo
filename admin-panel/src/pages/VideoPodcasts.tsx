@@ -72,6 +72,7 @@ const VideoPodcasts: React.FC = () => {
     publishedAt: '',
   });
   const [newVideoFile, setNewVideoFile] = useState<File | null>(null);
+  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVideoPodcast, setEditingVideoPodcast] = useState<VideoPodcast | null>(null);
@@ -85,6 +86,7 @@ const VideoPodcasts: React.FC = () => {
     publishedAt: '',
   });
   const [editVideoFile, setEditVideoFile] = useState<File | null>(null);
+  const [editThumbnailFile, setEditThumbnailFile] = useState<File | null>(null);
   const [isEditSaving, setIsEditSaving] = useState(false);
   const [editUploadProgress, setEditUploadProgress] = useState(0);
   const [editCurrentFile, setEditCurrentFile] = useState('');
@@ -121,6 +123,7 @@ const VideoPodcasts: React.FC = () => {
       publishedAt: '',
     });
     setNewVideoFile(null);
+    setNewThumbnailFile(null);
   };
 
   const openEditModal = (videoPodcast: VideoPodcast) => {
@@ -138,6 +141,7 @@ const VideoPodcasts: React.FC = () => {
       publishedAt: toDatetimeLocalValue(videoPodcast.publishedAt),
     });
     setEditVideoFile(null);
+    setEditThumbnailFile(null);
     setEditUploadProgress(0);
     setEditCurrentFile('');
     setEditError('');
@@ -157,6 +161,7 @@ const VideoPodcasts: React.FC = () => {
       publishedAt: '',
     });
     setEditVideoFile(null);
+    setEditThumbnailFile(null);
     setIsEditSaving(false);
     setEditUploadProgress(0);
     setEditCurrentFile('');
@@ -184,8 +189,8 @@ const VideoPodcasts: React.FC = () => {
         formData.append('description', newVideoPodcast.description);
       }
 
-      if (newVideoPodcast.thumbnail) {
-        formData.append('thumbnail', newVideoPodcast.thumbnail);
+      if (newThumbnailFile) {
+        formData.append('thumbnail', newThumbnailFile);
       }
 
       if (newVideoPodcast.duration) {
@@ -286,8 +291,8 @@ const VideoPodcasts: React.FC = () => {
         formData.append('description', editVideoPodcast.description);
       }
 
-      if (typeof editVideoPodcast.thumbnail === 'string') {
-        formData.append('thumbnail', editVideoPodcast.thumbnail);
+      if (editThumbnailFile) {
+        formData.append('thumbnail', editThumbnailFile);
       }
 
       if (editVideoPodcast.duration) {
@@ -554,14 +559,21 @@ const VideoPodcasts: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">تصویر بندانگشتی (لینک)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">تصویر بندانگشتی</label>
             <input
-              type="url"
-              value={newVideoPodcast.thumbnail}
-              onChange={(e) => setNewVideoPodcast({ ...newVideoPodcast, thumbnail: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="https://example.com/thumbnail.jpg"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setNewThumbnailFile(file);
+              }}
+              className="w-full text-sm"
             />
+            {newThumbnailFile && (
+              <p className="mt-1 text-xs text-green-600">
+                فایل انتخاب شده: {newThumbnailFile.name}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">فایل ویدیو</label>
@@ -691,15 +703,27 @@ const VideoPodcasts: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">تصویر بندانگشتی (لینک)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">تصویر بندانگشتی</label>
             <input
-              type="url"
-              value={editVideoPodcast.thumbnail}
-              onChange={(e) => setEditVideoPodcast({ ...editVideoPodcast, thumbnail: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="https://example.com/thumbnail.jpg"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setEditThumbnailFile(file);
+              }}
+              className="w-full text-sm"
               disabled={isEditSaving}
             />
+            {editThumbnailFile && (
+              <p className="mt-1 text-xs text-green-600">
+                فایل انتخاب شده: {editThumbnailFile.name}
+              </p>
+            )}
+            {editingVideoPodcast?.thumbnail && !editThumbnailFile && (
+              <p className="mt-1 text-xs text-gray-500">
+                تصویر فعلی: {editingVideoPodcast.thumbnail}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">فایل ویدیو</label>
