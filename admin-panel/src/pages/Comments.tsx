@@ -91,7 +91,7 @@ const Comments: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6">
-      <PageHeader title="نظرات" subtitle="مدیریت، انتشار و ویرایش نظرات کاربران" />
+      <PageHeader title="نظرات" description="مدیریت، انتشار و ویرایش نظرات کاربران" />
 
       {/* Filters */}
       <div className="mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
