@@ -925,47 +925,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
           )}
         </section>
 
-        <section className="border-t border-white/10 py-12 sm:py-16">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            className="space-y-6"
-          >
-            <motion.p
-              variants={fadeUp}
-              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
-            >
-              بیانیه قدرت
-            </motion.p>
-            <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
-              مانیفست Engine Transformation V2
-            </motion.h2>
-            <motion.p variants={fadeUp} className="max-w-4xl text-lg text-white/70 text-right">
-              Engine Transformation برای تجربه یک برتری واقعی خلق شده است؛ تغییری که همزمان سینمایی، عمیق و عملی باشد.
-              این Manifesto از انرژی رویدادهای Tony Robbins الهام گرفته تا ذهن، احساس و اقدام را هم‌راستا کند.
-            </motion.p>
-          </motion.div>
-          <motion.div
-            className="mt-10 grid gap-4 md:grid-cols-2"
-            variants={stagger}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-          >
-            {transformationLines.map((line) => (
-              <motion.div
-                key={line}
-                variants={fadeUp}
-                className="rounded-3xl border border-white/5 bg-gradient-to-r from-white/5 via-transparent to-transparent p-6 text-base leading-relaxed text-white/80"
-              >
-                {line}
-              </motion.div>
-            ))}
-          </motion.div>
-        </section>
-
         {/* Robbins equals results */}
         <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images */}
@@ -1165,25 +1124,35 @@ const HomeV2: React.FC<HomeV2Props> = ({
               viewport={{ once: true, amount: 0.3 }}
               className="relative overflow-hidden rounded-[40px] border border-white/10 bg-white/5"
             >
-              {missionImage ? (
+              <div className="relative h-[500px] sm:h-[600px] lg:h-[700px] w-full">
                 <img
-                  src={missionImage}
-                  alt="Mission placeholder"
-                  className="h-full w-full object-cover"
+                  src="/assets/faraz.jpg"
+                  alt="فراز قورچیان"
+                  className="h-full w-full object-cover scale-110"
+                  style={{ filter: 'blur(20px)' }}
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = curatedAssets.missionImage;
                   }}
                 />
-              ) : (
-                <div className="h-[420px] w-full bg-gradient-to-br from-[#1a1a1a] to-black" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
-              <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/20 bg-black/30 p-6 backdrop-blur">
-                <p className="text-xs uppercase tracking-[0.5em] text-white/60">تصویر جایگزین</p>
-                <p className="mt-3 text-lg text-white/80">
-                  فضای تصویری سینمایی برای پرتره‌ها یا ویدیوهای رویداد؛ جایی که انرژی مربی، نور طلایی و احساس جمعیت
-                  ثبت می‌شود.
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src="/assets/faraz.jpg"
+                    alt="فراز قورچیان"
+                    className="h-[70%] w-auto max-w-[80%] object-contain rounded-2xl shadow-2xl"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = curatedAssets.missionImage;
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/20 bg-black/50 p-6 backdrop-blur-md">
+                <p className="text-xs uppercase tracking-[0.5em] text-yellow-400">فراز قورچیان</p>
+                <p className="mt-3 text-base leading-relaxed text-white/90 text-right">
+                  فراز قورچیان به عنوان محقق، مدرس و سخنران در حوزه خودآگاهی، توسعه فردی و معنا فعالیت می‌کند. 
+                  با مدیریت و راهبری تیم من حقیقی، مسیر رشد مخاطبان را با راهبردهای آموزشی و تجربه‌های عملی همراهی می‌کند.
                 </p>
               </div>
             </motion.div>
