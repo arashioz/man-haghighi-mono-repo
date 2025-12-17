@@ -151,7 +151,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
       .map((slide) => getImageUrl(slide.image))
       .filter((image): image is string => Boolean(image));
 
-    return Array.from(new Set([...sources, ...curatedAssets.gallery])).slice(0, 4);
+    return Array.from(new Set([...sources, ...curatedAssets.gallery])).slice(0, 9);
   }, [sliders]);
 
   const missionImage = curatedAssets.missionImage ?? galleryImages[0];
@@ -189,10 +189,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
     ];
   }, [articles]);
 
-  const highlightedVideo = videoPodcasts[0] ?? null;
-  const videoPoster = highlightedVideo?.thumbnail 
-    ? (getImageUrl(highlightedVideo.thumbnail) ?? curatedAssets.videoPoster)
-    : curatedAssets.videoPoster;
   const primaryWorkshop = workshops[0] ?? null;
 
   const featuredArticles = useMemo(() => {
@@ -396,14 +392,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
       return;
     }
     navigate('/workshops');
-  };
-
-  const handleVideoCta = () => {
-    if (highlightedVideo) {
-      navigate(`/video-podcasts/${highlightedVideo.id}`);
-      return;
-    }
-    navigate('/video-podcasts');
   };
 
   const [selectedVideoPodcast, setSelectedVideoPodcast] = useState<VideoPodcast | null>(null);
@@ -796,138 +784,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
           )}
         </section>
 
-        {/* Robbins equals results */}
-        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
-          {/* Background Images */}
-          <div className="absolute inset-0">
-            {curatedAssets.gallery.slice(0, 2).map((img, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 0.15 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, delay: idx * 0.3 }}
-                className={`absolute ${idx === 0 ? 'top-0 left-0 w-1/2' : 'top-0 right-0 w-1/2'} h-full`}
-                style={{
-                  backgroundImage: `url(${img})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'blur(60px)',
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              className="text-center"
-            >
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl lg:text-6xl mb-8 text-right">
-                Engine Transformation برابر است با نتایج
-              </motion.h2>
-              <motion.p variants={fadeUp} className="max-w-4xl mx-auto text-xl text-white/80 leading-relaxed mb-12 text-right">
-                به بیش از ۱۰۰ میلیون نفر در سراسر جهان بپیوندید که با ابزارهای Engine Transformation به دستاوردهای خارق‌العاده رسیده‌اند. 
-                داستان‌های آن‌ها تصویری از آنچه برای تو هم ممکن است را ترسیم می‌کند. یک مطالعه از آزمایشگاه ژنتیک Snyder دانشگاه استنفورد 
-                مزایای پایدار برای شرکت‌کنندگان رویدادها را نشان داده است از جمله:
-              </motion.p>
-
-              {/* Statistics Grid */}
-              <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4 mb-12">
-                <motion.div
-                  variants={fadeUp}
-                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.2, type: 'spring' }}
-                    className="text-5xl font-black text-yellow-400 mb-4"
-                  >
-                    300%
-                  </motion.div>
-                  <p className="text-sm text-white/70 uppercase tracking-wider">
-                    افزایش در عملکرد شناختی
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  variants={fadeUp}
-                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.3, type: 'spring' }}
-                    className="text-5xl font-black text-yellow-400 mb-4"
-                  >
-                    139%
-                  </motion.div>
-                  <p className="text-sm text-white/70 uppercase tracking-wider">
-                    افزایش در بیوشیمی عملکرد
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  variants={fadeUp}
-                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4, type: 'spring' }}
-                    className="text-5xl font-black text-yellow-400 mb-4"
-                  >
-                    100M+
-                  </motion.div>
-                  <p className="text-sm text-white/70 uppercase tracking-wider">
-                    نفر که به نتایج خارق‌العاده رسیده‌اند
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  variants={fadeUp}
-                  className="rounded-3xl border border-white/20 bg-white/5 backdrop-blur-sm p-8 text-center"
-                >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.5, type: 'spring' }}
-                    className="text-5xl font-black text-yellow-400 mb-4"
-                  >
-                    ∞
-                  </motion.div>
-                  <p className="text-sm text-white/70 uppercase tracking-wider">
-                    پتانسیل تحول پایدار
-                  </p>
-                </motion.div>
-              </div>
-
-              <motion.div variants={fadeUp} className="flex flex-wrap justify-center gap-4">
-                <button
-                  onClick={() => navigate('/workshops')}
-                  className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
-                >
-                  بیشتر بدانید
-                </button>
-                <button
-                  onClick={() => navigate('/courses')}
-                  className="rounded-full border border-white/30 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
-                >
-                  کاوش برنامه‌ها
-                </button>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
         {/* About · Mission - Enhanced with Background */}
         <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
           {/* Background Images */}
@@ -1031,113 +887,86 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
+        {/* Large Gallery Section */}
         <section className="border-t border-white/10 py-12 sm:py-16">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              className="space-y-5"
-            >
-              <motion.p
-                variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
-              >
-                بلوک ویدیو / تصویر
-              </motion.p>
-              <motion.h2 variants={fadeUp} className="text-4xl font-bold sm:text-5xl text-right">
-                انرژی جمعیت را حس کن · فریاد را بشنو · دوباره تصمیم بگیر
-              </motion.h2>
-              <motion.p variants={fadeUp} className="text-base leading-relaxed text-white/70 text-right">
-                این بلوک برای ویدیو یا تصویر سینمایی طراحی شده است تا مخاطب انرژی سالن، نورهای طلایی و لحظه تصمیم
-                دوباره را حس کند؛ همان لحظه‌ای که نسخه دوم زندگی‌اش را می‌بیند.
-              </motion.p>
-              <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
-                <button
-                  onClick={handleVideoCta}
-                  className="rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black transition hover:bg-white/90"
-                >
-                  پخش فیلم
-                </button>
-                <button
-                  onClick={() => navigate('/video-podcasts')}
-                  className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
-                >
-                  کتابخانه
-                </button>
-              </motion.div>
-            </motion.div>
-            <motion.div
-              variants={fadeUp}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              className="relative overflow-hidden rounded-[36px] border border-white/10 bg-[#0a0a0a]"
-            >
-              {videoPoster ? (
-                <img
-                  src={videoPoster}
-                  alt={highlightedVideo?.title ?? 'Video placeholder'}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = curatedAssets.videoPoster;
-                  }}
-                />
-              ) : (
-                <div className="h-[360px] w-full bg-[radial-gradient(circle,_rgba(250,204,21,0.2),_transparent_70%)]" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center">
-                <span className="text-xs uppercase tracking-[0.6em] text-white/70">
-                  جایگزین برای ویدیو سینمایی
-                </span>
-                <button
-                  onClick={handleVideoCta}
-                  className="rounded-full bg-white/15 px-6 py-2 text-sm font-semibold uppercase tracking-widest text-white backdrop-blur hover:bg-white/25"
-                >
-                  تماشای پیش‌نمایش
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="border-t border-white/10 py-12 sm:py-16">
-          <div className="mb-10 flex flex-col gap-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
-              گالری
-            </p>
-            <h2 className="text-4xl font-bold sm:text-5xl text-right">گالری غوطه‌وری</h2>
-            <p className="max-w-3xl text-base text-white/70 text-right">
-              تصاویری با کنتراست بالا، نور دراماتیک و انرژی انسانی از آرشیو Engine Transformation؛ به‌سادگی با گالری
-              اختصاصی شما جایگزین می‌شود.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {galleryImages.map((image, index) => (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {galleryImages.slice(0, 6).map((image, index) => (
               <motion.div
                 key={image || `gallery-fallback-${index}`}
                 variants={fadeUp}
-                whileHover={{ y: -4, scale: 1.05 }}
-                className="group relative h-64 overflow-hidden rounded-[30px] border border-white/10 cursor-pointer"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.2 }}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="group relative h-96 overflow-hidden rounded-[36px] border border-white/10 cursor-pointer"
               >
                 <img 
                   src={image} 
-                  alt={`gallery-${index}`} 
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  alt={`gallery-${index + 1}`} 
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = curatedAssets.gallery[index % curatedAssets.gallery.length] || curatedAssets.gallery[0];
                   }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30 opacity-0 transition group-hover:opacity-100" />
-                <div className="absolute bottom-4 right-4 text-xs uppercase tracking-[0.4em] text-white/70 opacity-0 group-hover:opacity-100 transition">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute bottom-6 right-6 text-sm uppercase tracking-wider text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-semibold">
                   گالری {index + 1}
                 </div>
               </motion.div>
             ))}
+          </div>
+        </section>
+
+        {/* Slider Background Section */}
+        <section className="relative border-t border-white/10 py-24 sm:py-32 overflow-hidden">
+          {/* Background Slider Images */}
+          <div className="absolute inset-0">
+            {galleryImages.slice(0, 3).map((img, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 0.15 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.5, delay: idx * 0.3 }}
+                className={`absolute ${idx === 0 ? 'top-0 left-0 w-1/3' : idx === 1 ? 'top-0 left-1/3 w-1/3' : 'top-0 right-0 w-1/3'} h-full`}
+                style={{
+                  backgroundImage: `url(${img})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(60px)',
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              className="text-center"
+            >
+              <motion.p
+                variants={fadeUp}
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+              >
+                گالری
+              </motion.p>
+              <motion.h2
+                variants={fadeUp}
+                className="text-4xl font-bold sm:text-5xl lg:text-6xl mb-8 text-right"
+              >
+                تجربه بصری استثنایی
+              </motion.h2>
+              <motion.p
+                variants={fadeUp}
+                className="max-w-3xl mx-auto text-lg text-white/80 leading-relaxed text-right"
+              >
+                مجموعه تصاویری از لحظات تأثیرگذار و انرژی‌بخش که مسیر تحول را به تصویر می‌کشند.
+              </motion.p>
+            </motion.div>
           </div>
         </section>
 
