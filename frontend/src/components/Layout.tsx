@@ -55,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ children, darkTheme = false }) => {
   const shouldUseDarkTheme = darkTheme || isVersion2 || isCoursesPage;
 
   return (
-    <div className={`min-h-screen ${shouldUseDarkTheme ? 'bg-[#040404]' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen ${shouldUseDarkTheme ? (isCoursesPage ? 'bg-[#0a0a0a]' : 'bg-[#040404]') : 'bg-gray-50'}`}>
       {/* Navigation - Always glass/black */}
       <nav className={`sticky top-0 z-50 backdrop-blur-md ${shouldUseDarkTheme ? 'rounded-b-2xl mt-2' : 'mx-0'} bg-black border border-white/10`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
