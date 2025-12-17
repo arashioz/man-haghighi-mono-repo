@@ -11,6 +11,8 @@ import {
 } from '../../types';
 import { getImageUrl, getImageUrlWithFallback } from '../../utils/imageUtils';
 import { API_ORIGIN } from '../../services/api';
+import VideoPodcastModal from '../VideoPodcastModal';
+import VideoPodcastCard from '../VideoPodcastCard';
 
 type HomeV2Props = {
   sliders: Slider[];
@@ -404,8 +406,17 @@ const HomeV2: React.FC<HomeV2Props> = ({
     navigate('/video-podcasts');
   };
 
-  const handleVideoPodcastClick = (id: string) => {
-    navigate(`/video-podcasts/${id}`);
+  const [selectedVideoPodcast, setSelectedVideoPodcast] = useState<VideoPodcast | null>(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  const handleVideoPodcastClick = (video: VideoPodcast) => {
+    setSelectedVideoPodcast(video);
+    setIsVideoModalOpen(true);
+  };
+
+  const handleCloseVideoModal = () => {
+    setIsVideoModalOpen(false);
+    setSelectedVideoPodcast(null);
   };
 
   return (
@@ -492,7 +503,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 : sliders[currentSlide] || sliders[0];
               const heroTitle = currentSlider?.title || 'Engine Transformation 2.0';
               const heroSubtitle = currentSlider?.description || 'برای جهش سینمایی و برتری طلایی طراحی شده است';
-              const heroDescription = currentSlider?.description || 'ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار: تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این Engine مخصوص توست برای تجربه یک برتری واقعی، برای ساختن نسخه بهتر از خودت، ایجاد تغییر، ایجاد تحول و ساخت آینده‌ای که مدت‌ها منتظرش بودی.';
+              const heroDescription = currentSlider?.description || 'ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار: تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این موتور تحول، مخصوص توست تا برتری واقعی را تجربه کنی، نسخه بهتر از خودت را بسازی، تغییر و تحول را ایجاد کنی و آینده‌ای را خلق کنی که سال‌ها در انتظارش بودی.';
               
               return (
                 <>
@@ -740,108 +751,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        {/* Master every area of your life - Video Section */}
-        <section className="relative border-t border-white/10 py-16 sm:py-20 overflow-hidden">
-          {/* Background Images with Parallax */}
-          <div className="absolute inset-0">
-            {curatedAssets.mentorImages.slice(0, 2).map((img, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 0.2 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5 }}
-                className={`absolute inset-0 ${idx === 0 ? 'left-0 w-1/2' : 'right-0 w-1/2'}`}
-                style={{
-                  backgroundImage: `url(${img})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'blur(60px)',
-                }}
-              />
-            ))}
-          </div>
-
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-8">
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.3 }}
-              className="grid lg:grid-cols-2 gap-8 items-center"
-            >
-              <motion.div variants={fadeUp} className="space-y-6">
-                <motion.p
-                  variants={fadeUp}
-                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
-                >
-                  سیستم تحول
-                </motion.p>
-                <motion.h2 variants={fadeUp} className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight text-right">
-                  تسلط بر تمام جنبه‌های زندگی
-                </motion.h2>
-                <motion.p variants={fadeUp} className="text-xl text-white/80 leading-relaxed text-right">
-                  فاصله بین جایی که هستی و جایی که می‌خواهی باشی را با سیستم اثبات‌شده علمی Engine Transformation ببند.
-                </motion.p>
-                <motion.p variants={fadeUp} className="text-lg text-white/70 leading-relaxed text-right">
-                  این سیستم برای تحول در تمام جنبه‌های زندگی طراحی شده است: ذهن، ثروت، سلامت، روابط، 
-                  کسب‌وکار و رهبری. هر بخش با دقت مهندسی شده تا تو را به سمت نسخه بهتر از خودت هدایت کند.
-                </motion.p>
-                <motion.div variants={fadeUp} className="flex flex-wrap gap-4 pt-4">
-                  <button
-                    onClick={() => navigate('/courses')}
-                    className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
-                  >
-                    شروع کنید
-                  </button>
-                  <button
-                    onClick={() => navigate('/about')}
-                    className="rounded-full border border-white/30 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
-                  >
-                    درباره سیستم
-                  </button>
-                </motion.div>
-              </motion.div>
-
-              <motion.div
-                variants={fadeUp}
-                className="relative rounded-[40px] overflow-hidden border border-white/20 shadow-2xl"
-              >
-                {highlightedVideo?.streamUrl || highlightedVideo?.videoFile ? (
-                  <video
-                    className="w-full h-auto [&::-webkit-media-controls-panel]:direction-rtl"
-                    style={{ direction: 'rtl' }}
-                    src={highlightedVideo.streamUrl || highlightedVideo.videoFile || undefined}
-                    poster={videoPoster}
-                    controls
-                    controlsList="nodownload"
-                    autoPlay={false}
-                    playsInline
-                  />
-                ) : (
-                  <div className="relative aspect-video bg-gradient-to-br from-[#1a1a1a] to-black flex items-center justify-center">
-                    <img
-                      src={videoPoster}
-                      alt="Video placeholder"
-                      className="w-full h-full object-cover opacity-50"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button
-                        onClick={handleVideoCta}
-                        className="rounded-full bg-white/20 backdrop-blur p-6 hover:bg-white/30 transition-colors"
-                      >
-                        <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
         {/* Video Podcasts Carousel */}
         <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -850,10 +759,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 ویدیوپادکست‌ها
               </p>
               <h2 className="text-3xl sm:text-4xl font-black leading-tight text-right">
-                تماشای عمیق، تجربه افقی
+                ویدیوپادکست‌های ما
               </h2>
               <p className="text-sm sm:text-base text-white/70 max-w-2xl text-right">
-                آخرین ویدیوپادکست‌های بارگذاری‌شده را اینجا ببینید؛ افقی ورق بزنید و مستقیماً وارد صفحه هر ویدیو شوید.
+                آخرین ویدیوپادکست‌های بارگذاری‌شده را اینجا ببینید؛ روی هر کدام کلیک کنید تا در پاپ‌آپ پخش شود.
               </p>
             </div>
             <button
@@ -869,53 +778,15 @@ const HomeV2: React.FC<HomeV2Props> = ({
               <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[#0a0a0a] to-transparent" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#0a0a0a] to-transparent" />
               <div className="flex gap-4 overflow-x-auto pb-4 scroll-smooth snap-x snap-mandatory hide-scrollbar">
-                {videoPodcasts.map((video) => {
-                  const thumb = getImageUrl(video.thumbnail) ?? curatedAssets.videoPoster;
-                  const source = video.streamUrl || video.videoFile || '';
-
-                  return (
-                    <motion.div
-                      key={video.id}
-                      variants={fadeUp}
-                      whileHover={{ y: -4, scale: 1.01 }}
-                      className="snap-start w-[300px] sm:w-[320px] shrink-0 rounded-[32px] border border-white/10 bg-white/5 overflow-hidden shadow-lg cursor-pointer"
-                      onClick={() => handleVideoPodcastClick(video.id)}
-                    >
-                      <div className="relative aspect-[9/16] overflow-hidden">
-                        {source ? (
-                          <video
-                            className="absolute inset-0 h-full w-full object-cover"
-                            src={source}
-                            poster={thumb}
-                            playsInline
-                            muted
-                            loop
-                          />
-                        ) : (
-                          <img
-                            src={thumb}
-                            alt={video.title}
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
-                        <div className="absolute bottom-4 left-4 right-4 space-y-2">
-                          <span className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">
-                            Video Podcast
-                          </span>
-                          <h3 className="text-lg font-bold text-white leading-snug line-clamp-2">
-                            {video.title}
-                          </h3>
-                          {video.description && (
-                            <p className="text-xs text-white/75 line-clamp-2">
-                              {video.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {videoPodcasts.map((video) => (
+                  <VideoPodcastCard
+                    key={video.id}
+                    video={video}
+                    curatedAssets={curatedAssets}
+                    onClick={handleVideoPodcastClick}
+                    variants={fadeUp}
+                  />
+                ))}
               </div>
             </div>
           ) : (
@@ -1953,6 +1824,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </motion.div>
         </section>
       </main>
+
+      {/* Video Podcast Modal */}
+      <VideoPodcastModal
+        videoPodcast={selectedVideoPodcast}
+        isOpen={isVideoModalOpen}
+        onClose={handleCloseVideoModal}
+      />
     </div>
   );
 };

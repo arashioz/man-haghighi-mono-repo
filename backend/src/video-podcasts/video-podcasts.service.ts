@@ -125,7 +125,7 @@ export class VideoPodcastsService {
     return null;
   }
 
-  async create(createDto: CreateVideoPodcastDto, video?: Express.Multer.File) {
+  async create(createDto: CreateVideoPodcastDto, video?: Express.Multer.File, thumbnail?: Express.Multer.File) {
     const data: any = { ...createDto };
 
     if (video) {
@@ -142,6 +142,10 @@ export class VideoPodcastsService {
           }
         }
       }
+    }
+
+    if (thumbnail) {
+      data.thumbnail = thumbnail.filename;
     }
 
     if (!data.videoFile) {
@@ -220,7 +224,7 @@ export class VideoPodcastsService {
     return videoPodcast;
   }
 
-  async update(id: string, updateDto: UpdateVideoPodcastDto, video?: Express.Multer.File) {
+  async update(id: string, updateDto: UpdateVideoPodcastDto, video?: Express.Multer.File, thumbnail?: Express.Multer.File) {
     const existing = await this.findOneRaw(id);
 
     const data: any = { ...updateDto };
@@ -241,6 +245,14 @@ export class VideoPodcastsService {
       }
     }
 
+    if (thumbnail) {
+      data.thumbnail = thumbnail.filename;
+      // Remove old thumbnail file if it exists
+      if (existing.thumbnail) {
+        this.removeFileIfLocal(existing.thumbnail);
+      }
+    }
+
     if (typeof data.published === 'boolean') {
       if (data.published && !data.publishedAt) {
         data.publishedAt = new Date().toISOString();
@@ -257,6 +269,10 @@ export class VideoPodcastsService {
 
     if (video && existing.videoFile !== updated.videoFile) {
       this.removeFileIfLocal(existing.videoFile);
+    }
+
+    if (thumbnail && existing.thumbnail !== updated.thumbnail) {
+      this.removeFileIfLocal(existing.thumbnail);
     }
 
     if (video) {
@@ -287,6 +303,9 @@ export class VideoPodcastsService {
     });
 
     this.removeFileIfLocal(existing.videoFile);
+    if (existing.thumbnail) {
+      this.removeFileIfLocal(existing.thumbnail);
+    }
 
     return this.processVideoPodcast(deleted);
   }
