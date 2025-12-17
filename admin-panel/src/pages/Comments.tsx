@@ -5,6 +5,23 @@ import EmptyState from '../components/EmptyState';
 import { api } from '../services/api';
 import { Comment } from '../types';
 
+const CommentIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="h-12 w-12"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7.5 8.25h9m-9 3h5.25M21 12a9 9 0 11-18 0 9 9 0 0118 0Zm-3.75 4.874a3.001 3.001 0 00-2.02.424L12 18l-3.23-1.7a3 3 0 00-2.02-.425"
+    />
+  </svg>
+);
+
 type Filters = {
   targetType?: 'ARTICLE' | 'PODCAST' | 'COURSE';
   isPublished?: boolean;
@@ -147,7 +164,11 @@ const Comments: React.FC = () => {
       ) : error ? (
         <div className="text-red-500 text-sm">{error}</div>
       ) : comments.length === 0 ? (
-        <EmptyState title="نظری ثبت نشده" />
+        <EmptyState
+          icon={<CommentIcon />}
+          title="نظری ثبت نشده"
+          description="هنوز نظری ثبت نشده است."
+        />
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
