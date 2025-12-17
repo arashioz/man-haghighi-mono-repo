@@ -143,13 +143,15 @@ const Courses: React.FC = () => {
                     onClick={() => navigate(`/courses/${course.id}`)}
                     className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
                   >
-                    <div className="relative h-56 overflow-hidden">
-                      <img
-                        src={courseImage}
-                        alt={course.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                    <div className="relative h-64 overflow-hidden bg-black/40 border-b border-white/10 transition-shadow duration-500 group-hover:shadow-[0_22px_60px_-28px_rgba(250,204,21,0.4)]">
+                      <div className="absolute inset-0 flex items-center justify-center p-4 transition-transform duration-700 group-hover:-translate-y-1">
+                        <img
+                          src={courseImage}
+                          alt={course.title}
+                          className="max-h-full max-w-full object-contain transition-transform duration-700 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/75 via-black/45 to-transparent" />
                       <div className="absolute top-4 right-4">
                         <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
                           دوره
@@ -157,7 +159,7 @@ const Courses: React.FC = () => {
                       </div>
                       {course.price > 0 && (
                         <div className="absolute bottom-4 left-4">
-                          <span className="px-3 py-1 bg-black/60 backdrop-blur rounded-full text-xs font-semibold text-white">
+                          <span className="px-3 py-1 bg-black/70 backdrop-blur rounded-full text-xs font-semibold text-white">
                             {typeof course.price === 'number' ? course.price.toLocaleString() : course.price} تومان
                           </span>
                         </div>

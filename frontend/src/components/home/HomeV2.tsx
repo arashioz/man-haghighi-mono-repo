@@ -404,6 +404,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
     navigate('/video-podcasts');
   };
 
+  const handleVideoPodcastClick = (id: string) => {
+    navigate(`/video-podcasts/${id}`);
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
       {/* Hero Slider Section */}
@@ -836,6 +840,87 @@ const HomeV2: React.FC<HomeV2Props> = ({
               </motion.div>
             </motion.div>
           </div>
+        </section>
+
+        {/* Video Podcasts Carousel */}
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
+                ویدیوپادکست‌ها
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-black leading-tight text-right">
+                تماشای عمیق، تجربه افقی
+              </h2>
+              <p className="text-sm sm:text-base text-white/70 max-w-2xl text-right">
+                آخرین ویدیوپادکست‌های بارگذاری‌شده را اینجا ببینید؛ افقی ورق بزنید و مستقیماً وارد صفحه هر ویدیو شوید.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/video-podcasts')}
+              className="self-end rounded-full border border-white/30 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+            >
+              همه ویدیوپادکست‌ها
+            </button>
+          </div>
+
+          {videoPodcasts.length > 0 ? (
+            <div className="mt-8 overflow-x-auto pb-4">
+              <div className="flex gap-4 min-w-max">
+                {videoPodcasts.map((video) => {
+                  const thumb = getImageUrl(video.thumbnail) ?? curatedAssets.videoPoster;
+                  const source = video.streamUrl || video.videoFile || '';
+
+                  return (
+                    <motion.div
+                      key={video.id}
+                      variants={fadeUp}
+                      whileHover={{ y: -6, scale: 1.01 }}
+                      className="w-[260px] sm:w-[280px] rounded-3xl border border-white/10 bg-white/5 overflow-hidden shadow-lg cursor-pointer"
+                      onClick={() => handleVideoPodcastClick(video.id)}
+                    >
+                      <div className="relative aspect-[9/16] overflow-hidden">
+                        {source ? (
+                          <video
+                            className="absolute inset-0 h-full w-full object-cover"
+                            src={source}
+                            poster={thumb}
+                            playsInline
+                            muted
+                            loop
+                          />
+                        ) : (
+                          <img
+                            src={thumb}
+                            alt={video.title}
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <span className="text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                            ویدیوپادکست
+                          </span>
+                          <h3 className="mt-2 text-base font-bold text-white leading-snug line-clamp-2">
+                            {video.title}
+                          </h3>
+                        </div>
+                      </div>
+                      {video.description && (
+                        <div className="p-4 border-t border-white/10 bg-black/30 text-sm text-white/70 line-clamp-3">
+                          {video.description}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70 text-sm text-right">
+              هنوز ویدیوپادکست فعالی ثبت نشده است.
+            </div>
+          )}
         </section>
 
         <section className="border-t border-white/10 py-12 sm:py-16">

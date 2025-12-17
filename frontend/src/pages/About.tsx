@@ -150,18 +150,25 @@ const About: React.FC = () => {
               viewport={{ once: true, amount: 0.25 }}
               className="space-y-6"
             >
+              {/* Immersive gallery collage */}
               <motion.div
                 variants={fadeUp}
-                className="relative overflow-hidden rounded-[40px] border border-white/10 bg-white/5"
+                className="relative overflow-hidden rounded-[44px] border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/5"
               >
-                <div className="grid grid-cols-2 gap-3 p-4">
+                <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60" />
+                <div className="grid grid-cols-2 gap-3 p-4 sm:p-5">
                   {assets.gallery.map((src, idx) => (
                     <div
                       key={src}
-                      className={`relative overflow-hidden rounded-2xl border border-white/10 ${idx === 0 ? 'col-span-2' : ''}`}
+                      className={`relative overflow-hidden rounded-3xl border border-white/15 ${idx === 0 ? 'col-span-2 row-span-2' : ''}`}
+                      style={{ minHeight: idx === 0 ? 260 : 140 }}
                     >
-                      <img src={src} alt="گالری" className={`${idx === 0 ? 'h-44' : 'h-28'} w-full object-cover`} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <img
+                        src={src}
+                        alt="گالری"
+                        className="h-full w-full object-cover transition duration-700 ease-out hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                     </div>
                   ))}
                 </div>
