@@ -86,6 +86,7 @@ export interface Article {
   categoryId?: string;
   tags?: string[];
   published: boolean;
+  allowComments?: boolean;
   viewCount: number;
   readingTime?: number;
   publishedAt?: string;
@@ -102,6 +103,7 @@ export interface Podcast {
   streamUrl?: string | null;
   duration?: number;
   published: boolean;
+  allowComments?: boolean;
   publishedAt?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -134,6 +136,7 @@ export interface Course {
   courseVideoFiles?: string[];
   published: boolean;
   showOnHomepage?: boolean;
+  allowComments?: boolean;
   createdAt: string;
   updatedAt: string;
   videos?: Video[];
@@ -141,6 +144,25 @@ export interface Course {
   _count?: {
     enrollments: number;
   };
+}
+
+export type CommentTargetType = 'ARTICLE' | 'PODCAST' | 'COURSE';
+
+export interface Comment {
+  id: string;
+  targetType: CommentTargetType;
+  targetId: string;
+  authorName: string;
+  authorPhone?: string | null;
+  content: string;
+  isPublished: boolean;
+  publishedAt?: string | null;
+  publishedById?: string | null;
+  editedContent?: string | null;
+  editedAt?: string | null;
+  editedById?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Video {
