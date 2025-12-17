@@ -38,55 +38,112 @@ const Courses: React.FC = () => {
 
   useEffect(() => {
     const fetchCourses = async () => {
+      // Timeout fallback - if request takes more than 30 seconds, show error
+      let isCompleted = false;
+      let timeoutId: NodeJS.Timeout | null = null;
+      
       try {
         setLoading(true);
         setError(null);
         
+        timeoutId = setTimeout(() => {
+          if (!isCompleted) {
+            console.warn('Request timeout - taking too long');
+            setError('درخواست بیش از حد انتظار طول کشید. لطفاً صفحه را رفرش کنید.');
+            setLoading(false);
+          }
+        }, 30000);
+        
+        console.log('Fetching courses...');
         const response: any = await coursesService.getPublished();
+        isCompleted = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        console.log('Courses response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Is array:', Array.isArray(response));
         
         // Handle different response formats
+        // coursesService.getPublished() should return response.data which is the array
         let coursesArray: Course[] = [];
+        
+        // First check if response is directly an array
         if (Array.isArray(response)) {
           coursesArray = response;
-        } else if (response && typeof response === 'object') {
+          console.log('Response is array, length:', coursesArray.length);
+        } 
+        // If response is an object, check common properties
+        else if (response && typeof response === 'object') {
           if (Array.isArray(response.data)) {
             coursesArray = response.data;
+            console.log('Found courses in response.data, length:', coursesArray.length);
           } else if (Array.isArray(response.courses)) {
             coursesArray = response.courses;
+            console.log('Found courses in response.courses, length:', coursesArray.length);
           } else {
-            coursesArray = [];
+            // Try to find any array property
+            const keys = Object.keys(response);
+            console.log('Response keys:', keys);
+            for (const key of keys) {
+              if (Array.isArray(response[key])) {
+                coursesArray = response[key];
+                console.log(`Found array in key "${key}", length:`, coursesArray.length);
+                break;
+              }
+            }
           }
         }
         
+        // Ensure we have a valid array
+        if (!Array.isArray(coursesArray)) {
+          console.warn('Courses is not an array, setting to empty array. Response:', response);
+          coursesArray = [];
+        }
+        
+        console.log('Final courses array length:', coursesArray.length);
+        console.log('First course:', coursesArray[0]);
         setCourses(coursesArray);
       } catch (err: any) {
+        isCompleted = true;
+        if (timeoutId) clearTimeout(timeoutId);
         console.error('Error fetching courses:', err);
-        setError(err.response?.data?.message || err.message || 'خطا در دریافت دوره‌ها');
+        console.error('Error details:', {
+          message: err.message,
+          response: err.response,
+          data: err.response?.data,
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+        });
+        
+        // More detailed error message
+        let errorMessage = 'خطا در دریافت دوره‌ها';
+        if (err.response?.status === 404) {
+          errorMessage = 'آدرس API یافت نشد. لطفاً با پشتیبانی تماس بگیرید.';
+        } else if (err.response?.status === 500) {
+          errorMessage = 'خطای سرور. لطفاً بعداً تلاش کنید.';
+        } else if (err.message === 'Network Error' || err.code === 'ECONNABORTED') {
+          errorMessage = 'خطا در اتصال به سرور. لطفاً اتصال اینترنت خود را بررسی کنید.';
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
+        
+        setError(errorMessage);
         setCourses([]);
       } finally {
         setLoading(false);
+        console.log('Loading finished');
       }
     };
 
     fetchCourses();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white/60 text-sm">در حال بارگذاری دوره‌ها...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
       {/* Hero Section */}
-      <section className="relative overflow-hidden border-b border-white/10">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-[#0a0a0a]" />
+      <section className="relative overflow-hidden border-b border-white/10 bg-[#0a0a0a]">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-transparent" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <motion.div
             initial="hidden"
@@ -118,9 +175,23 @@ const Courses: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <main className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+      <main className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 bg-[#0a0a0a]">
         <section className="border-t border-white/10 py-12 sm:py-16">
-          {error ? (
+          {/* Debug Info - Remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-4 bg-white/5 rounded-lg text-xs text-white/60 font-mono">
+              <div>Loading: {loading ? 'true' : 'false'}</div>
+              <div>Error: {error || 'none'}</div>
+              <div>Courses count: {courses.length}</div>
+            </div>
+          )}
+          
+          {loading ? (
+            <div className="text-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+              <p className="text-white/60 text-sm">در حال بارگذاری دوره‌ها...</p>
+            </div>
+          ) : error ? (
             <div className="text-center py-16">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4">
                 <svg
@@ -171,7 +242,7 @@ const Courses: React.FC = () => {
                     variants={fadeUp}
                     whileHover={{ y: -8, scale: 1.02 }}
                     onClick={() => navigate(`/courses/${course.id}`)}
-                    className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                    className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-black/40 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
                   >
                     {/* Image Section */}
                     <div className="relative h-56 overflow-hidden bg-black/40">
@@ -275,7 +346,7 @@ const Courses: React.FC = () => {
               })}
             </motion.div>
           ) : (
-            <div className="text-center py-20 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
+            <div className="text-center py-20 border border-white/10 rounded-[32px] bg-black/40 backdrop-blur-sm">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 mb-6">
                 <svg
                   className="w-10 h-10 text-white/40"
