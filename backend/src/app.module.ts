@@ -23,6 +23,7 @@ import { UploadCenterModule } from './upload-center/upload-center.module';
 import { LogsModule } from './logs/logs.module';
 import { AdminModule } from './admin/admin.module';
 import { SettingsModule } from './settings/settings.module';
+import { CommentsModule } from './comments/comments.module';
 import { HealthController } from './health/health.controller';
 import { AppController } from './app.controller';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -70,6 +71,7 @@ import { validateEnv } from './config/env.validation';
     WorkshopsModule,
     UploadsModule,
     UploadCenterModule,
+    CommentsModule,
   ],
   providers: [
     {

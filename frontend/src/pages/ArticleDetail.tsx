@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { articlesService } from '../services/api';
 import { Article } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
+import { CommentsSection } from '../components/comments/CommentsSection';
 
 const ArticleDetail: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -63,9 +64,9 @@ const ArticleDetail: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#040404] py-8">
+    <div className="min-h-screen bg-[#0a0a0a] py-8" dir="rtl" data-version2="true">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <article className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <article className="rounded-[32px] border border-white/10 bg-white/5 backdrop-blur overflow-hidden">
           {article.featuredImage && (
             <img
               src={getImageUrl(article.featuredImage)!}
@@ -74,20 +75,27 @@ const ArticleDetail: React.FC = () => {
             />
           )}
           <div className="p-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 text-right">
               {article.title}
             </h1>
             {article.publishedAt && (
-              <p className="text-gray-500 mb-6">
+              <p className="text-white/60 mb-6 text-right">
                 منتشر شده در {new Date(article.publishedAt).toLocaleDateString('fa-IR')}
               </p>
             )}
             <div
-              className="prose prose-lg max-w-none"
+              className="prose prose-invert prose-lg max-w-none"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
           </div>
         </article>
+
+        <CommentsSection
+          targetType="ARTICLE"
+          targetId={article.id}
+          allowComments={article.allowComments !== false}
+          title="نظرات مقاله"
+        />
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { coursesService, API_ORIGIN, audiosService } from '../services/api';
 import { Course } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
+import { CommentsSection } from '../components/comments/CommentsSection';
 
 // Audio Player Component
 const AudioPlayerComponent: React.FC<{ audioId: string }> = ({ audioId }) => {
@@ -770,6 +771,13 @@ const CourseDetail: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <CommentsSection
+          targetType="COURSE"
+          targetId={course.id}
+          allowComments={course.allowComments !== false}
+          title="نظرات دوره"
+        />
       </div>
       
       <style>{`

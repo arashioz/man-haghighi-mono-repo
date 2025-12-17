@@ -5,8 +5,10 @@ import { AudioPlayerProvider } from './contexts/AudioPlayerContext';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import About from './pages/About';
+import Contact from './pages/Contact';
 import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
+import PodcastDetail from './pages/PodcastDetail';
 import VideoPodcasts from './pages/VideoPodcasts';
 import Courses from './pages/Courses';
 import Login from './pages/Login';
@@ -27,9 +29,11 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/articles/:slug" element={<ArticleDetail />} />
               <Route path="/podcasts" element={<Podcasts />} />
+              <Route path="/podcasts/:id" element={<PodcastDetail />} />
               <Route path="/video-podcasts" element={<VideoPodcasts />} />
               <Route path="/video-podcasts/:id" element={<VideoPodcastDetail />} />
               <Route path="/courses" element={<Courses />} />

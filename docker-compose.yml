@@ -4,9 +4,7 @@ services:
     image: postgres:15-alpine
     container_name: haghighi_postgres
     env_file: .env
-    # Remove public port exposure - only accessible via internal network
-    # ports:
-    #   - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

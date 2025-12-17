@@ -68,6 +68,17 @@ export class CreateCourseDto {
   @IsOptional()
   @IsBoolean()
   showOnHomepage?: boolean;
+
+  @ApiProperty({ example: true, required: false, description: 'Allow comments for this course' })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return value;
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowComments?: boolean;
 }
 
 export class UpdateCourseDto {
@@ -133,6 +144,17 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsBoolean()
   showOnHomepage?: boolean;
+
+  @ApiProperty({ example: true, required: false, description: 'Allow comments for this course' })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return value;
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowComments?: boolean;
 }
 
 export class EnrollCourseDto {

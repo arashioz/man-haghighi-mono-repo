@@ -15,6 +15,7 @@ import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
 import Courses from './pages/Courses';
 import VideoPodcasts from './pages/VideoPodcasts';
+import Comments from './pages/Comments';
 import Logs from './pages/Logs';
 import UploadCenter from './pages/UploadCenter';
 import Settings from './pages/Settings';
@@ -49,6 +50,7 @@ function App() {
                     <Route path="/podcasts" element={<Podcasts />} />
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/video-podcasts" element={<VideoPodcasts />} />
+                    <Route path="/comments" element={<Comments />} />
                     <Route path="/upload-center" element={<UploadCenter />} />
                     <Route path="/logs" element={<Logs />} />
                     <Route path="/settings" element={<Settings />} />

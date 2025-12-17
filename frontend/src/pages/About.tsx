@@ -1,104 +1,267 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { motion, type Variants } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.75 } },
+} satisfies Variants;
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+} satisfies Variants;
 
 const About: React.FC = () => {
+  const navigate = useNavigate();
+
+  const assets = useMemo(
+    () => ({
+      hero: '/assets/seminar-photo/DSC_0514.jpg',
+      faraz: '/assets/faraz.jpg',
+      gallery: [
+        '/assets/sliders/Header-Site-1.jpg',
+        '/assets/seminar-photo/IMG_4674.JPG',
+        '/assets/seminar-photo/IMG_4676.JPG',
+        '/assets/seminar-photo/DSC00117.jpg',
+      ],
+    }),
+    [],
+  );
+
+  const focusAreas = [
+    {
+      title: 'خودشناسی و ناخودآگاه',
+      desc: 'شناخت لایه‌های عمیق ذهن، بازنویسی الگوها و ساختن یک مسیر روشن برای رشد.',
+    },
+    {
+      title: 'روابط عاطفی',
+      desc: 'ارتباط سالم، مرزهای درست و مهارت‌هایی برای ساختن رابطه‌های امن و بالغ.',
+    },
+    {
+      title: 'روابط مالی',
+      desc: 'تغییر نگاه به پول، تصمیم‌گیری هوشمندانه و ساختن مسیر پایدار مالی.',
+    },
+    {
+      title: 'معنا و توسعه فردی',
+      desc: 'رشد درونی، هدف‌مندی و تبدیل شدن به نسخه‌ای که همیشه منتظرش بودی.',
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#040404] py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">بیوگرافی فراز قورچیان</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            موسس، مدیرعامل و راهبر گروه آموزشی من حقیقی
-          </p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl" data-version2="true">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={assets.hero} alt="درباره ما" className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-[#0a0a0a]" />
         </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Hero Section */}
-          <div className="relative h-96 bg-gradient-to-r from-indigo-600 to-purple-600">
-            <div className="absolute inset-0 bg-black/20"></div>
-            <div className="relative h-full flex items-center justify-center">
-              <div className="text-center text-white">
-                <img 
-                  src="/assets/faraz.jpg" 
-                  alt="فراز قورچیان" 
-                  className="w-32 h-32 rounded-full mx-auto mb-6 border-4 border-white shadow-lg"
-                />
-                <h2 className="text-4xl font-bold mb-4">فراز قورچیان</h2>
-                <p className="text-xl opacity-90">موسس و مدیرعامل گروه آموزشی من حقیقی</p>
-              </div>
-            </div>
+        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-14 sm:px-8 sm:pb-16 sm:pt-20">
+          <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
+            <motion.p
+              variants={fadeUp}
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+            >
+              درباره ما
+            </motion.p>
+            <motion.h1 variants={fadeUp} className="text-4xl font-black sm:text-5xl lg:text-6xl text-right">
+              موسسه آموزشی  من حقیقی
+            </motion.h1>
+            <motion.p variants={fadeUp} className="max-w-3xl text-lg text-white/80 text-right">
+              هشت سال فعالیت مستمر در مسیر آموزش معنا، رشد و توسعه فردی؛ با همراهی مخاطبانی از ایران و جهان.
+            </motion.p>
+
+            <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
+              <button
+                onClick={() => navigate('/contact')}
+                className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+              >
+                ارتباط با ما
+              </button>
+              <button
+                onClick={() => navigate('/courses')}
+                className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+              >
+                دوره‌ها و برنامه‌ها
+              </button>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-8">
+        {/* Story */}
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.25 }}
+              className="space-y-6"
+            >
+              <motion.h2 variants={fadeUp} className="text-3xl font-bold sm:text-4xl text-right">
+                داستان ما
+              </motion.h2>
+
+              <motion.div
+                variants={fadeUp}
+                className="rounded-[32px] border border-white/10 bg-white/5 p-7 backdrop-blur"
+              >
+                <p className="text-white/80 leading-relaxed text-right">
+                  موسسه آموزشی  من حقیقی به مدت هشت سال است که فعالیت‌های خود را در زمینه‌های آموزش معنا و رشد و
+                  توسعه‌ی فردی آغاز کرده است. این موسسه به مدیریت جناب آقای فراز قورچیان، با برگزاری موفقیت‌آمیز بیش از
+                  دو هزار کارگاه آموزشی در موضوعات خودشناسی، ناخودآگاه، روابط عاطفی و روابط مالی، میزبان مخاطبانی از نقاط
+                  مختلف ایران و جهان بوده است.
+                </p>
+                <p className="mt-5 text-white/80 leading-relaxed text-right">
+                  تا کنون بیش از دویست هزار نفر شرکت‌کننده از خدمات آموزشی این مجموعه بهره‌مند شده‌اند. دستیابی به نتایج
+                  شگفت‌انگیز و تغییرات مثبت چشمگیر در رشد و توسعه‌ی فردی و سلامت جسمی و روانی در شرکت‌کنندگان، از افتخارات
+                  کاری این مجموعه است.
+                </p>
+                <p className="mt-5 text-white/80 leading-relaxed text-right">
+                  مخاطبان من حقیقی با بهره‌گیری از دوره‌ها، کارگاه‌ها و تکنیک‌های منحصر‌به‌فرد، توانسته‌اند بر مشکلات روانی،
+                  جسمی، مالی و عاطفی خود فائق آیند و مسیر تازه‌ای برای زندگی‌شان بسازند.
+                </p>
+              </motion.div>
+
+              <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
+                  <p className="text-3xl font-black text-yellow-400">8+</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">سال فعالیت</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
+                  <p className="text-3xl font-black text-yellow-400">2000+</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">کارگاه آموزشی</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
+                  <p className="text-3xl font-black text-yellow-400">200K+</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">شرکت‌کننده</p>
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* Visual / founder */}
+            <motion.aside
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.25 }}
+              className="space-y-6"
+            >
+              <motion.div
+                variants={fadeUp}
+                className="relative overflow-hidden rounded-[40px] border border-white/10 bg-white/5"
+              >
+                <div className="grid grid-cols-2 gap-3 p-4">
+                  {assets.gallery.map((src, idx) => (
+                    <div
+                      key={src}
+                      className={`relative overflow-hidden rounded-2xl border border-white/10 ${idx === 0 ? 'col-span-2' : ''}`}
+                    >
+                      <img src={src} alt="گالری" className={`${idx === 0 ? 'h-44' : 'h-28'} w-full object-cover`} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={fadeUp}
+                className="rounded-[36px] border border-white/10 bg-white/5 p-7 backdrop-blur"
+              >
+                <div className="flex items-center gap-4">
+                  <img
+                    src={assets.faraz}
+                    alt="فراز قورچیان"
+                    className="h-16 w-16 rounded-2xl object-cover border border-white/20"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-yellow-400">فراز قورچیان</p>
+                    <p className="mt-2 text-white/70 text-sm">موسس، مدیرعامل و راهبر گروه آموزشی من حقیقی</p>
+                  </div>
+                </div>
+                <p className="mt-6 text-white/80 leading-relaxed text-right">
+                  فراز قورچیان به عنوان محقق، مدرس و سخنران در حوزه خودآگاهی، توسعه فردی و معنا فعالیت می‌کنند و با مدیریت
+                  و راهبری تیم من حقیقی، مسیر رشد مخاطبان را با راهبردهای آموزشی و تجربه‌های عملی همراهی می‌کنند.
+                </p>
+              </motion.div>
+            </motion.aside>
           </div>
+        </section>
 
-          {/* Content */}
-          <div className="p-8 lg:p-12">
-            {/* Introduction */}
-            <div className="mb-12">
-              <h3 className="text-3xl font-bold text-gray-900 mb-6">درباره فراز قورچیان</h3>
-              <div className="prose prose-lg max-w-none text-gray-600">
-                <p className="mb-6">
-                  فراز قورچیان موسس، مدیرعامل و راهبر گروه آموزشی من حقیقی می باشند. ایشان به عنوان محقق، مدرس و سخنران در حوزه خودآگاهی و توسعه فردی و معنا مشغول به فعالیت می باشند. همچنین به عنوان یک کارآفرین مدیریت و رهبری تیم کارکنان من حقیقی را برای رسیدن به اهداف، ماموریت و چشم انداز سازمان بر عهده دارند.
-                </p>
-                <p className="mb-6">
-                  برگزاری موفقیت آمیز بیش از دو هزار کارگاه آموزشی برای بیش از دویست هزار نفر در زمینه های مختلف خودشناسی، ناخودآگاه، روابط عاطفی و روابط مالی بخشی از فعالیت های درخشان ایشان در مدت هجده سال گذشته می باشد.
-                </p>
-              </div>
-            </div>
-
-            {/* Statistics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-              <div className="text-center p-6 bg-indigo-50 rounded-xl">
-                <div className="text-4xl font-bold text-indigo-600 mb-2">18+</div>
-                <div className="text-sm text-gray-600">سال تجربه</div>
-              </div>
-              <div className="text-center p-6 bg-indigo-50 rounded-xl">
-                <div className="text-4xl font-bold text-indigo-600 mb-2">300K+</div>
-                <div className="text-sm text-gray-600">دانشجو</div>
-              </div>
-              <div className="text-center p-6 bg-indigo-50 rounded-xl">
-                <div className="text-4xl font-bold text-indigo-600 mb-2">2,119</div>
-                <div className="text-sm text-gray-600">کارگاه برگزار شده</div>
-              </div>
-              <div className="text-center p-6 bg-indigo-50 rounded-xl">
-                <div className="text-4xl font-bold text-indigo-600 mb-2">193</div>
-                <div className="text-sm text-gray-600">محتوای آموزشی</div>
-              </div>
-            </div>
-
-            {/* Expertise Areas */}
-            <div className="mb-12">
-              <h3 className="text-3xl font-bold text-gray-900 mb-6">حوزه‌های تخصصی</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">خودشناسی و خودآگاهی</h4>
-                  <p className="text-gray-600">راهنمایی افراد در مسیر شناخت عمیق خود و کشف استعدادهای درونی</p>
-                </div>
-                <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">توسعه فردی</h4>
-                  <p className="text-gray-600">ارائه راهکارهای عملی برای رشد شخصی و دستیابی به اهداف</p>
-                </div>
-                <div className="p-6 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl">
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">روابط عاطفی</h4>
-                  <p className="text-gray-600">آموزش مهارت‌های ارتباطی و بهبود روابط بین فردی</p>
-                </div>
-                <div className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl">
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">روابط مالی</h4>
-                  <p className="text-gray-600">راهنمایی در مدیریت مالی شخصی و کسب ثروت</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Mission */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white">
-              <h3 className="text-3xl font-bold mb-4">ماموریت و چشم‌انداز</h3>
-              <p className="text-lg opacity-90 leading-relaxed">
-                هدف اصلی فراز قورچیان و تیم من حقیقی، ایجاد تحول در زندگی افراد از طریق آموزش‌های کاربردی و عملی است. 
-                ما معتقدیم که هر فردی قابلیت رشد و پیشرفت را دارد و با راهنمایی صحیح می‌تواند به بهترین نسخه خود تبدیل شود.
+        {/* Focus areas */}
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          <motion.div
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
+            className="space-y-8"
+          >
+            <motion.div variants={fadeUp} className="space-y-4">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">حوزه‌ها</p>
+              <h2 className="text-3xl font-bold sm:text-4xl text-right">آنچه در من حقیقی پیدا می‌کنید</h2>
+              <p className="max-w-3xl text-white/70 text-right">
+                کارگاه‌ها و دوره‌های ما حول هسته‌های کلیدی خودشناسی، ناخودآگاه، روابط و معنا طراحی شده‌اند—هم برای حضور
+                در سالن و هم برای همراهی آنلاین.
               </p>
+            </motion.div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {focusAreas.map((item) => (
+                <motion.div
+                  key={item.title}
+                  variants={fadeUp}
+                  className="rounded-[32px] border border-white/10 bg-[#0a0a0a] p-8 hover:border-yellow-500/30 transition-colors"
+                >
+                  <p className="text-xs uppercase tracking-[0.5em] text-yellow-400">محور آموزشی</p>
+                  <h3 className="mt-4 text-2xl font-bold text-right">{item.title}</h3>
+                  <p className="mt-4 text-white/70 leading-relaxed text-right">{item.desc}</p>
+                </motion.div>
+              ))}
             </div>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </section>
+
+        {/* Mission / CTA */}
+        <section className="border-t border-white/10 py-12 sm:py-16">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            className="relative overflow-hidden rounded-[40px] border border-white/10 bg-gradient-to-r from-black via-[#0b0b0b] to-black p-10"
+          >
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-yellow-500/20 to-transparent" />
+            <div className="relative space-y-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">هم‌مسیر شوید</p>
+              <h2 className="text-3xl font-bold sm:text-4xl text-right">
+                چه حضوری، چه آنلاین—شما هم بخشی از داستان ما هستید
+              </h2>
+              <p className="max-w-3xl text-white/70 text-right">
+                ما با برگزاری همایش‌ها و سمینارهای عمومی در مناسبت‌های مختلف، در مسیر آگاهی‌بخشی و سلامت جامعه ایرانی گام
+                برداشته‌ایم. اگر آماده تغییر و تحول هستید، با ما همراه شوید.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => navigate('/contact')}
+                  className="rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-black transition hover:bg-white/90"
+                >
+                  تماس با ما
+                </button>
+                <button
+                  onClick={() => navigate('/courses')}
+                  className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-[0.4em] text-white transition hover:border-white hover:bg-white/10"
+                >
+                  مشاهده دوره‌ها
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+      </main>
     </div>
   );
 };
