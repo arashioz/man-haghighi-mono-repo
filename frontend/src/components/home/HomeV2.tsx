@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, type Variants, useScroll, useTransform } from 'framer-motion';
-// @ts-expect-error: Module 'react-globe.gl' has no TypeScript definitions
 import Globe from 'react-globe.gl';
 import {
   Slider,
