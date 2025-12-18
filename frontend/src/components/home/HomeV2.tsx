@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, type Variants, useScroll, useTransform } from 'framer-motion';
+import Globe from 'react-globe.gl';
 import {
   Slider,
   Course,
@@ -266,6 +267,9 @@ const HomeV2: React.FC<HomeV2Props> = ({
   // Parallax refs for sections
   const podcastSectionRef = useRef<HTMLDivElement>(null);
   const mentorSectionRef = useRef<HTMLDivElement>(null);
+  const globeRef = useRef<any>(null);
+
+  const [cities, setCities] = useState<any[]>([]);
   
   const { scrollYProgress: podcastScrollProgress } = useScroll({
     target: podcastSectionRef,
@@ -284,6 +288,43 @@ const HomeV2: React.FC<HomeV2Props> = ({
   const mentorY1 = useTransform(mentorScrollProgress, [0, 1], ['0%', '30%']);
   const mentorY2 = useTransform(mentorScrollProgress, [0, 1], ['0%', '-30%']);
   const mentorOpacity = useTransform(mentorScrollProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
+
+  // Load world cities (similar to react-globe.gl example)
+  useEffect(() => {
+    fetch('//unpkg.com/world-atlas/cities-10m.json')
+      .then((res) => res.json())
+      .then((data) => {
+        // Example format adaptation: pick subset and map to lat/lng
+        const points =
+          data?.cities?.slice(0, 500).map((city: any) => ({
+            lat: city.lat,
+            lng: city.lng,
+            size: 0.2,
+            city: city.name,
+            country: city.country,
+          })) ?? [];
+        setCities(points);
+      })
+      .catch(() => {
+        // Fallback: a few manual points
+        setCities([
+          { lat: 35.6892, lng: 51.389, size: 0.3, city: 'Tehran', country: 'Iran' },
+          { lat: 34.0522, lng: -118.2437, size: 0.25, city: 'Los Angeles', country: 'USA' },
+          { lat: 51.5074, lng: -0.1278, size: 0.25, city: 'London', country: 'UK' },
+          { lat: 35.6762, lng: 139.6503, size: 0.25, city: 'Tokyo', country: 'Japan' },
+        ]);
+      });
+  }, []);
+
+  // Configure globe auto-rotation
+  useEffect(() => {
+    if (!globeRef.current) return;
+    const controls = globeRef.current.controls?.();
+    if (controls) {
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.8;
+    }
+  }, [globeRef]);
 
   // Audio player handlers
   const handlePlayPause = (podcast: Podcast) => {
@@ -939,8 +980,24 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 <div className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.15)]" />
 
                 <div className="absolute inset-4">
-                  {/* اینجا کامپوننت کره سه‌بعدی که قبلاً ساختیم را قرار بده */}
-                  {/* مثلا: <Globe ... /> اگر در بالای فایل ایمپورت کرده‌ای */}
+                  <Globe
+                    ref={globeRef}
+                    width={500}
+                    height={500}
+                    backgroundColor="rgba(0,0,0,0)"
+                    globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+                    bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
+                    showAtmosphere
+                    atmosphereColor="lightskyblue"
+                    atmosphereAltitude={0.15}
+                    pointsData={cities}
+                    pointLat={(d: any) => d.lat}
+                    pointLng={(d: any) => d.lng}
+                    pointAltitude={(d: any) => 0.01 + d.size * 0.02}
+                    pointColor={() => 'rgba(250,204,21,0.9)'}
+                    pointRadius={0.25}
+                    pointLabel={(d: any) => `${d.city}, ${d.country}`}
+                  />
                 </div>
               </div>
             </motion.div>
