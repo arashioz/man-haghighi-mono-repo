@@ -268,8 +268,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
   const podcastSectionRef = useRef<HTMLDivElement>(null);
   const mentorSectionRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
-
-  const [cities, setCities] = useState<any[]>([]);
+  const [places, setPlaces] = useState<any[]>([]);
   
   const { scrollYProgress: podcastScrollProgress } = useScroll({
     target: podcastSectionRef,
@@ -289,42 +288,53 @@ const HomeV2: React.FC<HomeV2Props> = ({
   const mentorY2 = useTransform(mentorScrollProgress, [0, 1], ['0%', '-30%']);
   const mentorOpacity = useTransform(mentorScrollProgress, [0, 0.5, 1], [0.3, 1, 0.3]);
 
-  // Load world cities (similar to react-globe.gl example)
+  // Load populated places for globe labels (similar to official react-globe.gl example)
   useEffect(() => {
-    fetch('//unpkg.com/world-atlas/cities-10m.json')
+    fetch(
+      '//unpkg.com/three-globe@2.36.0/example/datasets/ne_110m_populated_places_simple.geojson'
+    )
       .then((res) => res.json())
-      .then((data) => {
-        // Example format adaptation: pick subset and map to lat/lng
-        const points =
-          data?.cities?.slice(0, 500).map((city: any) => ({
-            lat: city.lat,
-            lng: city.lng,
-            size: 0.2,
-            city: city.name,
-            country: city.country,
-          })) ?? [];
-        setCities(points);
+      .then(({ features }) => {
+        setPlaces(features || []);
       })
       .catch(() => {
         // Fallback: a few manual points
-        setCities([
-          { lat: 35.6892, lng: 51.389, size: 0.3, city: 'Tehran', country: 'Iran' },
-          { lat: 34.0522, lng: -118.2437, size: 0.25, city: 'Los Angeles', country: 'USA' },
-          { lat: 51.5074, lng: -0.1278, size: 0.25, city: 'London', country: 'UK' },
-          { lat: 35.6762, lng: 139.6503, size: 0.25, city: 'Tokyo', country: 'Japan' },
+        setPlaces([
+          {
+            properties: {
+              name: 'Tehran',
+              latitude: 35.6892,
+              longitude: 51.389,
+              pop_max: 13532000,
+            },
+          },
+          {
+            properties: {
+              name: 'Los Angeles',
+              latitude: 34.0522,
+              longitude: -118.2437,
+              pop_max: 12750807,
+            },
+          },
+          {
+            properties: {
+              name: 'London',
+              latitude: 51.5074,
+              longitude: -0.1278,
+              pop_max: 9126366,
+            },
+          },
+          {
+            properties: {
+              name: 'Tokyo',
+              latitude: 35.6762,
+              longitude: 139.6503,
+              pop_max: 37435191,
+            },
+          },
         ]);
       });
   }, []);
-
-  // Configure globe auto-rotation
-  useEffect(() => {
-    if (!globeRef.current) return;
-    const controls = globeRef.current.controls?.();
-    if (controls) {
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.8;
-    }
-  }, [globeRef]);
 
   // Audio player handlers
   const handlePlayPause = (podcast: Podcast) => {
@@ -928,7 +938,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
         </section>
 
-        {/* 3D Globe Section - replaces gallery */}
+        {/* 3D Globe Section - full width */}
         <section className="relative border-t border-white/10 py-20 sm:py-28 overflow-hidden">
           {/* Soft background glows */}
           <div className="pointer-events-none absolute inset-0">
@@ -936,14 +946,14 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <div className="absolute -right-32 bottom-0 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
           </div>
 
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-8 grid gap-12 lg:grid-cols-[1.1fr_0.9fr] items-center">
-            {/* Text side */}
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-8 flex flex-col items-center gap-10">
+            {/* Text */}
             <motion.div
               variants={stagger}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.3 }}
-              className="space-y-6 text-right"
+              className="space-y-6 text-center md:text-right w-full"
             >
               <motion.p
                 variants={fadeUp}
@@ -959,7 +969,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               </motion.h2>
               <motion.p
                 variants={fadeUp}
-                className="text-base leading-relaxed text-white/80"
+                className="max-w-3xl mx-auto md:mx-0 text-base leading-relaxed text-white/80"
               >
                 این کره چرخان نمایی واقعی و نمادین از جامعه جهانی من حقیقی است؛ افرادی از شهرها و
                 کشور‌های مختلف که تصمیم گرفته‌اند نسخه دوم زندگی‌شان را بسازند. هر نقطه، یک انتخاب
@@ -967,38 +977,42 @@ const HomeV2: React.FC<HomeV2Props> = ({
               </motion.p>
             </motion.div>
 
-            {/* 3D globe */}
+            {/* 3D globe - full width */}
             <motion.div
               variants={fadeUp}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true, amount: 0.4 }}
-              className="flex items-center justify-center"
+              className="w-full"
             >
-              <div className="relative h-72 w-72 sm:h-80 sm:w-80 lg:h-96 lg:w-96">
+              <div className="relative w-full h-[380px] sm:h-[480px] lg:h-[620px]">
                 {/* Outer ring / glow */}
-                <div className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.15)]" />
+                <div className="pointer-events-none absolute inset-8 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
 
-                <div className="absolute inset-4">
-                  <Globe
-                    ref={globeRef}
-                    width={500}
-                    height={500}
-                    backgroundColor="rgba(0,0,0,0)"
-                    globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
-                    bumpImageUrl="//unpkg.com/three-globe/example/img/earth-topology.png"
-                    showAtmosphere
-                    atmosphereColor="lightskyblue"
-                    atmosphereAltitude={0.15}
-                    pointsData={cities}
-                    pointLat={(d: any) => d.lat}
-                    pointLng={(d: any) => d.lng}
-                    pointAltitude={(d: any) => 0.01 + d.size * 0.02}
-                    pointColor={() => 'rgba(250,204,21,0.9)'}
-                    pointRadius={0.25}
-                    pointLabel={(d: any) => `${d.city}, ${d.country}`}
-                  />
-                </div>
+                <Globe
+                  ref={globeRef}
+                  backgroundColor="rgba(0,0,0,0)"
+                  globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
+                  backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+                  showAtmosphere
+                  atmosphereColor="lightskyblue"
+                  atmosphereAltitude={0.18}
+                  labelsData={places}
+                  labelLat={(d: any) => d.properties?.latitude}
+                  labelLng={(d: any) => d.properties?.longitude}
+                  labelText={(d: any) => d.properties?.name}
+                  labelSize={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
+                  labelDotRadius={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
+                  labelColor={() => 'rgba(255,165,0,0.8)'}
+                  labelResolution={2}
+                  onGlobeReady={() => {
+                    const controls = globeRef.current?.controls?.();
+                    if (controls) {
+                      controls.autoRotate = true;
+                      controls.autoRotateSpeed = 0.8;
+                    }
+                  }}
+                />
               </div>
             </motion.div>
           </div>
