@@ -10,6 +10,8 @@ COPY package*.json ./
 RUN npm install
 
 # Copy source code
+# Note: Using COPY . . is necessary for Create React App which may need various config files
+# The .dockerignore file should exclude unnecessary files like node_modules, build, etc.
 COPY . .
 
 # Build argument for API URL

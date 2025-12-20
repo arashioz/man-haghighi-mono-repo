@@ -27,6 +27,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
+    "prisma:studio:auth": "node scripts/prisma-studio-auth.js",
     "migrate:run": "sh scripts/run-migrations.sh",
     "migrate:reset": "sh scripts/reset-and-migrate.sh",
     "prisma:seed": "npx ts-node prisma/seed.ts",

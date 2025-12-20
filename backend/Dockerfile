@@ -24,21 +24,24 @@ RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 COPY package*.json ./
 
 # Install all dependencies including devDependencies for seed script
-RUN npm install
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
-# Copy artifacts from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/tsconfig.seed.json ./tsconfig.seed.json
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
+# Copy artifacts from builder with correct ownership
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.seed.json ./tsconfig.seed.json
+COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
 
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
 
-RUN chown -R nestjs:nodejs /app/dist /app/prisma /app/node_modules
+# Fix ownership: use -L flag to follow symlinks in node_modules
+# This handles symlinked packages correctly and avoids permission errors
+RUN chown -RL nestjs:nodejs /app/node_modules && \
+    chown -R nestjs:nodejs /app/dist /app/prisma /app/package*.json
 
 USER nestjs
 
