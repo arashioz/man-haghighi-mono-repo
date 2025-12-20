@@ -12,6 +12,16 @@ echo "📦 Updating system packages..."
 sudo apt update
 sudo apt upgrade -y
 
+# Check if MySQL/MariaDB is installed
+if ! command -v mysql &> /dev/null && ! command -v mariadb &> /dev/null; then
+    echo "⚠️  MySQL/MariaDB is not installed. Installing MariaDB..."
+    echo "   You will be prompted to set a root password during installation."
+    sudo DEBIAN_FRONTEND=noninteractive apt install -y mariadb-server mariadb-client
+    sudo systemctl enable mariadb
+    sudo systemctl start mariadb
+    echo "✅ MariaDB installed and started"
+fi
+
 # Install required packages
 echo "📦 Installing Postfix, Dovecot, and MySQL support..."
 sudo DEBIAN_FRONTEND=noninteractive apt install -y \
@@ -42,10 +52,35 @@ sudo chown -R vmail:vmail /var/mail
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Ask for MySQL root password
-echo ""
-echo "⚠️  Please enter MySQL root password:"
-read -s MYSQL_ROOT_PASSWORD
+# Check if MySQL/MariaDB is running
+if ! sudo systemctl is-active --quiet mariadb && ! sudo systemctl is-active --quiet mysql; then
+    echo "⚠️  Starting MySQL/MariaDB service..."
+    if systemctl list-units --full -a | grep -q mariadb.service; then
+        sudo systemctl start mariadb
+    elif systemctl list-units --full -a | grep -q mysql.service; then
+        sudo systemctl start mysql
+    else
+        echo "❌ MySQL/MariaDB service not found. Please install it first."
+        exit 1
+    fi
+    sleep 2
+fi
+
+# Test MySQL connection
+echo "🔍 Testing MySQL connection..."
+MYSQL_ROOT_PASSWORD=""
+if mysql -u root -e "SELECT 1" &>/dev/null 2>&1; then
+    echo "✅ MySQL connection successful (no password required)"
+else
+    echo "⚠️  MySQL requires a password. Please enter MySQL root password:"
+    read -s MYSQL_ROOT_PASSWORD
+    # Test the password
+    if ! mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1" &>/dev/null 2>&1; then
+        echo "❌ Invalid MySQL root password"
+        exit 1
+    fi
+    echo "✅ MySQL connection successful"
+fi
 
 # Ask for mailuser password
 echo ""
@@ -54,11 +89,13 @@ read -s MAILUSER_PASSWORD
 
 # Create mail database
 echo "🗄️  Creating mail database..."
-mysql -u root -p"$MYSQL_ROOT_PASSWORD" < "$SCRIPT_DIR/create-mail-database.sql"
-
-# Update password in SQL file and recreate
-sed "s/CHANGE_THIS_PASSWORD/$MAILUSER_PASSWORD/g" "$SCRIPT_DIR/create-mail-database.sql" | \
-    mysql -u root -p"$MYSQL_ROOT_PASSWORD"
+if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+    sed "s/CHANGE_THIS_PASSWORD/$MAILUSER_PASSWORD/g" "$SCRIPT_DIR/create-mail-database.sql" | \
+        mysql -u root
+else
+    sed "s/CHANGE_THIS_PASSWORD/$MAILUSER_PASSWORD/g" "$SCRIPT_DIR/create-mail-database.sql" | \
+        mysql -u root -p"$MYSQL_ROOT_PASSWORD"
+fi
 
 # Copy Postfix MySQL config files
 echo "📝 Configuring Postfix MySQL files..."
