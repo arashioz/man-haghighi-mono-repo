@@ -985,7 +985,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               viewport={{ once: true, amount: 0.4 }}
               className="w-full"
             >
-              <div className="relative w-full h-[380px] sm:h-[480px] lg:h-[620px]">
+              <div className="relative w-full h-[550px] sm:h-[680px] lg:h-[850px]">
                 {/* Outer ring / glow */}
                 <div className="pointer-events-none absolute inset-8 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
 

@@ -1,10 +1,11 @@
-import { Controller, Get, Patch, Param, Body, Delete, UseGuards, Post, Req, Query } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Delete, UseGuards, Post, Req, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto, PaginationQueryDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto, PaginationQueryDto, ExportUsersQueryDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { Response } from 'express';
 
 @ApiTags('Users')
 @Controller('users')
@@ -198,6 +199,36 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'User unblocked successfully' })
   async unblockUser(@Param('id') id: string) {
     return this.usersService.unblockUser(id);
+  }
+
+  @Get('export/excel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export users to Excel with filters (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Excel file generated successfully', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {} } })
+  async exportUsers(@Query() filters: ExportUsersQueryDto, @Res() res: Response) {
+    const excelBuffer = await this.usersService.exportUsers(filters);
+    
+    // Generate filename with filters
+    const date = new Date().toISOString().split('T')[0];
+    let filename = `users_export_${date}`;
+    
+    if (filters.userType && filters.userType !== 'all') {
+      filename += `_${filters.userType}`;
+    }
+    if (filters.startDate || filters.endDate) {
+      filename += `_${filters.startDate || 'start'}_${filters.endDate || 'end'}`;
+    }
+    if (filters.role) {
+      filename += `_${filters.role}`;
+    }
+    
+    filename += '.xlsx';
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(excelBuffer);
   }
 
 }

@@ -205,3 +205,25 @@ export class PaginationQueryDto {
   @IsString()
   role?: string;
 }
+
+export class ExportUsersQueryDto {
+  @ApiProperty({ example: 'all', required: false, description: 'Filter by user type', enum: ['all', 'old', 'new'] })
+  @IsOptional()
+  @IsString()
+  userType?: 'all' | 'old' | 'new';
+
+  @ApiProperty({ example: '2024-01-01', required: false, description: 'Start date for date range filter (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @ApiProperty({ example: '2024-12-31', required: false, description: 'End date for date range filter (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+
+  @ApiProperty({ example: 'USER', required: false, description: 'Filter by role', enum: ['ADMIN', 'SALES_MANAGER', 'SALES_PERSON', 'USER'] })
+  @IsOptional()
+  @IsString()
+  role?: string;
+}
