@@ -99,6 +99,35 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   IRANPAYAMAK_PATTERN_CODE?: string;
+
+  // Payment Gateway Settings
+  @IsString()
+  @IsNotEmpty()
+  GATEWAY_TERMINAL_ID!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  GATEWAY_USERNAME!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  GATEWAY_PASSWORD!: string;
+
+  @IsString()
+  @IsOptional()
+  GATEWAY_MODE?: string = 'test'; // test or production
+
+  @IsString()
+  @IsOptional()
+  GATEWAY_CALLBACK_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  GATEWAY_AUTO_VERIFY?: string = 'true'; // 'true' or 'false'
+
+  @IsString()
+  @IsOptional()
+  GATEWAY_AUTO_SETTLE?: string = 'true'; // 'true' or 'false'
 }
 
 export function validateEnv(config: Record<string, unknown>) {
