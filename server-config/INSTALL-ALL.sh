@@ -36,7 +36,7 @@ fi
 # Step 3: Install Nginx
 echo ""
 echo "📦 Step 3: Installing Nginx..."
-"$SCRIPT_DIR/nginx/install-nginx.sh"
+"$SCRIPT_DIR/install-nginx.sh"
 
 # Step 4: Install Mail Server
 echo ""
