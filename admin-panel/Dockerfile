@@ -20,7 +20,7 @@ ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 
 # Production stage with nginx
-FROM nginx:alpine
+FROM nginx:1-alpine
 
 # Copy built files with correct ownership
 COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
