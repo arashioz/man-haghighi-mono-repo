@@ -2,7 +2,7 @@ import axios from 'axios';
 import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop, Comment } from '../types';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
-const DEFAULT_SERVER_API = 'http://185.231.112.84:8080/api';
+const DEFAULT_SERVER_API = 'https://api.manehaghighi.com/api';
 
 const normalizeUrl = (url: string) => url.replace(/\/$/, '');
 
