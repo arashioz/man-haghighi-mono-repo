@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { CreateUserDto, UpdateUserDto, PaginationQueryDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto, PaginationQueryDto, ExportUsersQueryDto } from './dto/user.dto';
 import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
 import { Prisma, UserRole } from '@prisma/client';
+import * as XLSX from 'xlsx';
 
 const baseUserSelect = {
   id: true,
@@ -812,5 +813,143 @@ export class UsersService {
       },
       select: baseUserSelect,
     });
+  }
+
+  async exportUsers(filters: ExportUsersQueryDto) {
+    const { userType, startDate, endDate, role } = filters;
+
+    // Build where clause
+    const where: Prisma.UserWhereInput = {};
+
+    // Filter by role
+    if (role) {
+      where.role = role as UserRole;
+    }
+
+    // Filter by user type (old/new)
+    if (userType === 'old') {
+      where.isOld = true;
+    } else if (userType === 'new') {
+      where.isOld = false;
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        // Add one day to include the entire end date
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
+    // Fetch all users matching the filters
+    const users = await this.prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        phone: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        isOld: true,
+        isBlocked: true,
+        education: true,
+        university: true,
+        job: true,
+        state: true,
+        gender: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            purchasedCourses: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Prepare data for Excel
+    const excelData = users.map((user, index) => ({
+      'ردیف': index + 1,
+      'شناسه': user.id,
+      'نام کاربری': user.username,
+      'نام': user.firstName || '',
+      'نام خانوادگی': user.lastName || '',
+      'ایمیل': user.email || '',
+      'موبایل': user.phone || '',
+      'نقش': this.getRoleLabel(user.role),
+      'وضعیت': user.isActive ? 'فعال' : 'غیرفعال',
+      'نوع کاربر': user.isOld ? 'قدیمی' : 'جدید',
+      'مسدود شده': user.isBlocked ? 'بله' : 'خیر',
+      'تحصیلات': user.education || '',
+      'دانشگاه': user.university || '',
+      'شغل': user.job || '',
+      'استان': user.state || '',
+      'جنسیت': user.gender || '',
+      'تعداد دوره‌ها': user._count.purchasedCourses,
+      'تاریخ ثبت‌نام': user.createdAt ? new Date(user.createdAt).toLocaleDateString('fa-IR') : '',
+      'تاریخ به‌روزرسانی': user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('fa-IR') : '',
+    }));
+
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Set column widths
+    const columnWidths = [
+      { wch: 5 },   // ردیف
+      { wch: 30 },  // شناسه
+      { wch: 20 },  // نام کاربری
+      { wch: 15 },  // نام
+      { wch: 20 },  // نام خانوادگی
+      { wch: 25 },  // ایمیل
+      { wch: 15 },  // موبایل
+      { wch: 15 },  // نقش
+      { wch: 10 },  // وضعیت
+      { wch: 10 },  // نوع کاربر
+      { wch: 10 },  // مسدود شده
+      { wch: 15 },  // تحصیلات
+      { wch: 20 },  // دانشگاه
+      { wch: 20 },  // شغل
+      { wch: 15 },  // استان
+      { wch: 10 },  // جنسیت
+      { wch: 12 },  // تعداد دوره‌ها
+      { wch: 15 },  // تاریخ ثبت‌نام
+      { wch: 15 },  // تاریخ به‌روزرسانی
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'کاربران');
+
+    // Generate Excel buffer
+    const excelBuffer = XLSX.write(workbook, { 
+      type: 'buffer', 
+      bookType: 'xlsx',
+      cellStyles: true,
+    });
+
+    return excelBuffer;
+  }
+
+  private getRoleLabel(role: UserRole): string {
+    const roleLabels: Record<UserRole, string> = {
+      ADMIN: 'مدیر',
+      SALES_MANAGER: 'مدیر فروش',
+      SALES_PERSON: 'فروشنده',
+      USER: 'کاربر',
+    };
+    return roleLabels[role] || role;
   }
 }

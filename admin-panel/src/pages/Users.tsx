@@ -62,6 +62,15 @@ const Users: React.FC = () => {
     selectedCourses: [] as string[],
   });
   const [editingUserCourses, setEditingUserCourses] = useState<string[]>([]);
+  
+  // Export filters
+  const [exportFilters, setExportFilters] = useState({
+    userType: 'all' as 'all' | 'old' | 'new',
+    startDate: '',
+    endDate: '',
+    role: 'USER',
+  });
+  const [exporting, setExporting] = useState(false);
 
   // Debounce search term
   useEffect(() => {
@@ -144,6 +153,42 @@ const Users: React.FC = () => {
 
     fetchUsers();
   }, [currentPage, itemsPerPage, debouncedSearchTerm, roleFilter]);
+
+  const handleExportUsers = async () => {
+    setExporting(true);
+    try {
+      const blob = await usersService.exportUsers(exportFilters);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Generate filename
+      const date = new Date().toISOString().split('T')[0];
+      let filename = `users_export_${date}`;
+      if (exportFilters.userType !== 'all') {
+        filename += `_${exportFilters.userType}`;
+      }
+      if (exportFilters.startDate || exportFilters.endDate) {
+        filename += `_${exportFilters.startDate || 'start'}_${exportFilters.endDate || 'end'}`;
+      }
+      if (exportFilters.role) {
+        filename += `_${exportFilters.role}`;
+      }
+      filename += '.xlsx';
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'خطا در دانلود فایل Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
@@ -556,7 +601,96 @@ const Users: React.FC = () => {
         )}
       </div>
 
-      {}
+      {/* Export Section */}
+      <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">خروجی Excel</h3>
+          <button
+            onClick={handleExportUsers}
+            disabled={exporting}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>در حال تولید...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>دانلود Excel</span>
+              </>
+            )}
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* User Type Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              نوع کاربر
+            </label>
+            <select
+              value={exportFilters.userType}
+              onChange={(e) => setExportFilters({...exportFilters, userType: e.target.value as 'all' | 'old' | 'new'})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="all">همه</option>
+              <option value="old">قدیمی</option>
+              <option value="new">جدید</option>
+            </select>
+          </div>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              از تاریخ
+            </label>
+            <input
+              type="date"
+              value={exportFilters.startDate}
+              onChange={(e) => setExportFilters({...exportFilters, startDate: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* End Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              تا تاریخ
+            </label>
+            <input
+              type="date"
+              value={exportFilters.endDate}
+              onChange={(e) => setExportFilters({...exportFilters, endDate: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Role Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              نقش
+            </label>
+            <select
+              value={exportFilters.role}
+              onChange={(e) => setExportFilters({...exportFilters, role: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="USER">کاربر</option>
+              <option value="ADMIN">مدیر</option>
+              <option value="SALES_MANAGER">مدیر فروش</option>
+              <option value="SALES_PERSON">فروشنده</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full divide-y divide-gray-200">

@@ -583,6 +583,44 @@ export class CoursesService {
   async enrollUser(enrollCourseDto: EnrollCourseDto) {
     const { userId, courseId } = enrollCourseDto;
 
+    // Check if already enrolled
+    const existingEnrollment = await this.prisma.courseEnrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
+
+    if (existingEnrollment) {
+      return existingEnrollment;
+    }
+
+    // Get course details
+    const course = await this.findOne(courseId);
+
+    if (!course.published) {
+      throw new BadRequestException('این دوره منتشر نشده است');
+    }
+
+    const coursePrice = Number(course.price);
+
+    // If course is paid, check if user has purchased it
+    if (coursePrice > 0) {
+      const paidInvoice = await this.prisma.invoice.findFirst({
+        where: {
+          userId,
+          courseId,
+          status: 'PAID',
+        },
+      });
+
+      if (!paidInvoice) {
+        throw new BadRequestException('برای ثبت‌نام در این دوره باید ابتدا آن را خریداری کنید');
+      }
+    }
+
     // Use upsert to handle race conditions - if enrollment exists, return it; otherwise create it
     const enrollment = await this.prisma.courseEnrollment.upsert({
       where: {
@@ -599,7 +637,6 @@ export class CoursesService {
     });
 
     // Create video access records (using createMany with skipDuplicates to handle duplicates gracefully)
-    const course = await this.findOne(courseId);
     if (course.videos && course.videos.length > 0) {
       const videoAccessData = course.videos.map(video => ({
         userId,

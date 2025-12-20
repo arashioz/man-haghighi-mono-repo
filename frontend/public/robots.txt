@@ -1,3 +1,21 @@
+# robots.txt for manehaghighi.com
 # https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
-Disallow:
+Allow: /
+
+# Sitemap
+Sitemap: https://manehaghighi.com/api/seo/sitemap.xml
+
+# Disallow admin and API endpoints
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /register
+
+# Allow static assets
+Allow: /assets/
+Allow: /uploads/
+Allow: /fonts/
+Allow: /images/

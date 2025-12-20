@@ -206,8 +206,27 @@ export const usersService = {
     return response.data;
   },
 
-  exportUsers: async (format: 'csv' | 'excel' = 'csv') => {
-    const response = await api.get(`/users/export?format=${format}`, {
+  exportUsers: async (filters?: {
+    userType?: 'all' | 'old' | 'new';
+    startDate?: string;
+    endDate?: string;
+    role?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.userType && filters.userType !== 'all') {
+      params.append('userType', filters.userType);
+    }
+    if (filters?.startDate) {
+      params.append('startDate', filters.startDate);
+    }
+    if (filters?.endDate) {
+      params.append('endDate', filters.endDate);
+    }
+    if (filters?.role) {
+      params.append('role', filters.role);
+    }
+
+    const response = await api.get(`/users/export/excel?${params.toString()}`, {
       responseType: 'blob'
     });
     return response.data;

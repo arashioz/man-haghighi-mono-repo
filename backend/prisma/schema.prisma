@@ -1,59 +1,63 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String?  @unique
-  phone     String?  @unique @map("user_phone")
-  username  String   @unique
-  password  String?  // Optional: only required for ADMIN users
-  otp       String?  // OTP code for regular users
-  otpExpiresAt DateTime? // OTP expiration time
-  firstName String?
-  lastName  String?
-  avatar    String?
-  role      UserRole @default(USER)
-  isActive  Boolean  @default(true)
-  isOld     Boolean  @default(false) // Flag for old imported users
-  mustChangePassword Boolean @default(false) // Force user to change password on next login
-  parentId  String?
-  isBlocked Boolean  @default(false) // Rate limit blocking
-  blockedUntil DateTime? // When the block expires
-  rateLimitViolations Int @default(0) // Count of rate limit violations
+  id                     String    @id @default(cuid())
+  email                  String?   @unique
+  phone                  String?   @unique @map("user_phone")
+  username               String    @unique
+  password               String? // Optional: only required for ADMIN users
+  otp                    String? // OTP code for regular users
+  otpExpiresAt           DateTime? // OTP expiration time
+  firstName              String?
+  lastName               String?
+  avatar                 String?
+  role                   UserRole  @default(USER)
+  isActive               Boolean   @default(true)
+  isOld                  Boolean   @default(false) // Flag for old imported users
+  mustChangePassword     Boolean   @default(false) // Force user to change password on next login
+  parentId               String?
+  isBlocked              Boolean   @default(false) // Rate limit blocking
+  blockedUntil           DateTime? // When the block expires
+  rateLimitViolations    Int       @default(0) // Count of rate limit violations
   lastRateLimitViolation DateTime? // Last violation time
-  education String?
-  university String?
-  job       String?
-  state     String?
-  gender    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  education              String?
+  university             String?
+  job                    String?
+  state                  String?
+  gender                 String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   // Relations
-  purchasedCourses CourseEnrollment[]
-  videoAccess      VideoAccess[]
-  audioAccess      AudioAccess[]
-  oldProducts      OldProduct[]
-  publishedComments Comment[] @relation("CommentPublishedBy")
-  editedComments    Comment[] @relation("CommentEditedBy")
-  parent           User?   @relation("UserHierarchy", fields: [parentId], references: [id])
-  children         User[]  @relation("UserHierarchy")
-  createdWorkshops Workshop[]
-  participants     WorkshopParticipant[]
+  purchasedCourses          CourseEnrollment[]
+  transactions              Transaction[]
+  videoAccess               VideoAccess[]
+  audioAccess               AudioAccess[]
+  oldProducts               OldProduct[]
+  publishedComments         Comment[]                   @relation("CommentPublishedBy")
+  editedComments            Comment[]                   @relation("CommentEditedBy")
+  parent                    User?                       @relation("UserHierarchy", fields: [parentId], references: [id])
+  children                  User[]                      @relation("UserHierarchy")
+  createdWorkshops          Workshop[]
+  participants              WorkshopParticipant[]
   salesPersonWorkshopAccess SalesPersonWorkshopAccess[]
   grantedWorkshopAccess     SalesPersonWorkshopAccess[] @relation("WorkshopAccessGranter")
-  managedTeams     SalesTeam[] @relation("SalesTeamManager")
-  teamMemberships  SalesTeamMember[] @relation("SalesTeamMember")
+  managedTeams              SalesTeam[]                 @relation("SalesTeamManager")
+  teamMemberships           SalesTeamMember[]           @relation("SalesTeamMember")
+  wallet                    Wallet?
+  invoices                  Invoice[]
+  createdPaymentLinks       PaymentLink[]               @relation("PaymentLinkCreator")
 
   @@map("users")
 }
@@ -63,8 +67,8 @@ model Slider {
   title       String
   description String?
   image       String
-  videoFile   String?  // ویدیو اسلایدر
-  link        String?  // لینک اسلایدر
+  videoFile   String? // ویدیو اسلایدر
+  link        String? // لینک اسلایدر
   order       Int      @default(0)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -74,139 +78,140 @@ model Slider {
 }
 
 model Article {
-  id          String      @id @default(cuid())
-  title       String
-  slug        String      @unique
-  content     String      // محتوای اصلی مقاله (HTML)
-  excerpt     String?     // خلاصه مقاله
-  featuredImage String?   // تصویر شاخص
-  
-  // SEO Fields
-  metaTitle       String?       // عنوان سئو (اگر خالی باشد از title استفاده می‌شود)
-  metaDescription String?       // توضیحات سئو
-  metaKeywords    String[]      // کلمات کلیدی
-  canonicalUrl    String?       // URL کانونیکال
-  focusKeyword    String?       // کلمه کلیدی اصلی
-  
-  // Open Graph
-  ogTitle         String?       // عنوان OG
-  ogDescription   String?       // توضیحات OG
-  ogImage         String?       // تصویر OG
-  ogType          String        @default("article")
-  
-  // Twitter Card
-  twitterCard     String        @default("summary_large_image")
-  twitterTitle    String?       // عنوان توییتر
-  twitterDescription String?    // توضیحات توییتر
-  twitterImage    String?       // تصویر توییتر
-  
-  // Schema.org
-  schemaType      String        @default("Article")
-  author          String?       // نویسنده
-  authorBio       String?       // بیوگرافی نویسنده
-  
-  // Content Settings
-  allowComments   Boolean       @default(true)
-  viewCount       Int           @default(0)
-  readingTime     Int?          // زمان مطالعه (دقیقه)
-  
-  // Categories and Tags
-  categoryId      String?
-  tags            String[]      // تگ‌ها
-  
-  // Related Content
-  relatedArticles String[]      // آیدی مقالات مرتبط
-  
-  // Publishing
-  published       Boolean       @default(false)
-  publishedAt     DateTime?
-  scheduledAt     DateTime?     // زمان‌بندی انتشار
-  
-  // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relations
-  category        ArticleCategory? @relation(fields: [categoryId], references: [id])
+  id            String  @id @default(cuid())
+  title         String
+  slug          String  @unique
+  content       String // محتوای اصلی مقاله (HTML)
+  excerpt       String? // خلاصه مقاله
+  featuredImage String? // تصویر شاخص
 
-  @@map("articles")
+  // SEO Fields
+  metaTitle       String? // عنوان سئو (اگر خالی باشد از title استفاده می‌شود)
+  metaDescription String? // توضیحات سئو
+  metaKeywords    String[] // کلمات کلیدی
+  canonicalUrl    String? // URL کانونیکال
+  focusKeyword    String? // کلمه کلیدی اصلی
+
+  // Open Graph
+  ogTitle       String? // عنوان OG
+  ogDescription String? // توضیحات OG
+  ogImage       String? // تصویر OG
+  ogType        String  @default("article")
+
+  // Twitter Card
+  twitterCard        String  @default("summary_large_image")
+  twitterTitle       String? // عنوان توییتر
+  twitterDescription String? // توضیحات توییتر
+  twitterImage       String? // تصویر توییتر
+
+  // Schema.org
+  schemaType String  @default("Article")
+  author     String? // نویسنده
+  authorBio  String? // بیوگرافی نویسنده
+
+  // Content Settings
+  allowComments Boolean @default(true)
+  viewCount     Int     @default(0)
+  readingTime   Int? // زمان مطالعه (دقیقه)
+
+  // Categories and Tags
+  categoryId String?
+  tags       String[] // تگ‌ها
+
+  // Related Content
+  relatedArticles String[] // آیدی مقالات مرتبط
+
+  // Publishing
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  scheduledAt DateTime? // زمان‌بندی انتشار
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  category ArticleCategory? @relation(fields: [categoryId], references: [id])
+
   @@index([slug])
   @@index([categoryId])
   @@index([published])
+  @@map("articles")
 }
 
 model ArticleCategory {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  seoTitle    String?
+  id             String   @id @default(cuid())
+  name           String   @unique
+  slug           String   @unique
+  description    String?
+  seoTitle       String?
   seoDescription String?
-  parentId    String?
-  order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // Relations
-  parent      ArticleCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    ArticleCategory[] @relation("CategoryHierarchy")
-  articles    Article[]
+  parentId       String?
+  order          Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  @@map("article_categories")
+  // Relations
+  parent   ArticleCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children ArticleCategory[] @relation("CategoryHierarchy")
+  articles Article[]
+
   @@index([slug])
+  @@map("article_categories")
 }
 
 model Podcast {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  audioFile   String
-  thumbnail   String?  // کاور پادکست
-  duration    Int?     // in seconds
-  allowComments Boolean @default(true)
-  published   Boolean  @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  audioFile     String
+  thumbnail     String? // کاور پادکست
+  duration      Int? // in seconds
+  allowComments Boolean   @default(true)
+  published     Boolean   @default(false)
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("podcasts")
 }
 
 model VideoPodcast {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   description String?
   videoFile   String
   thumbnail   String?
   duration    Int?
-  published   Boolean  @default(false)
+  published   Boolean   @default(false)
   publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("video_podcasts")
 }
 
 model Course {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  price       Decimal  @db.Decimal(15, 2)
-  thumbnail   String?
-  videoFile   String?  // ویدیو معرفی دوره
-  attachments String[] // فایل‌های ضمیمه (PDF, DOC, etc.)
-  courseVideos String[] // لیست ویدیوهای دوره (تا 20 ویدیو)
-  published   Boolean  @default(false)
-  showOnHomepage Boolean @default(true) // نمایش در صفحه اصلی سایت
-  allowComments Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  price          Decimal  @db.Decimal(15, 2)
+  thumbnail      String?
+  videoFile      String? // ویدیو معرفی دوره
+  attachments    String[] // فایل‌های ضمیمه (PDF, DOC, etc.)
+  courseVideos   String[] // لیست ویدیوهای دوره (تا 20 ویدیو)
+  published      Boolean  @default(false)
+  showOnHomepage Boolean  @default(true) // نمایش در صفحه اصلی سایت
+  allowComments  Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   videos      Video[]
   audios      Audio[]
   enrollments CourseEnrollment[]
+  invoices    Invoice[]
 
   @@map("courses")
 }
@@ -224,28 +229,28 @@ model Comment {
 
   authorName  String
   authorPhone String?
-  content     String           @db.Text
+  content     String  @db.Text
 
-  isPublished Boolean          @default(false)
-  publishedAt DateTime?
+  isPublished   Boolean   @default(false)
+  publishedAt   DateTime?
   publishedById String?
 
-  editedContent String?        @db.Text
+  editedContent String?   @db.Text
   editedAt      DateTime?
   editedById    String?
 
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  publishedBy User?            @relation("CommentPublishedBy", fields: [publishedById], references: [id])
-  editedBy    User?            @relation("CommentEditedBy", fields: [editedById], references: [id])
+  publishedBy User? @relation("CommentPublishedBy", fields: [publishedById], references: [id])
+  editedBy    User? @relation("CommentEditedBy", fields: [editedById], references: [id])
 
-  @@map("comments")
   @@index([targetType, targetId])
   @@index([targetType, targetId, isPublished])
   @@index([createdAt])
   @@index([isPublished])
+  @@map("comments")
 }
 
 model Video {
@@ -254,7 +259,7 @@ model Video {
   description String?
   videoFile   String
   thumbnail   String?
-  duration    Int?     // in seconds
+  duration    Int? // in seconds
   order       Int      @default(0)
   courseId    String
   published   Boolean  @default(false)
@@ -262,8 +267,8 @@ model Video {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  access      VideoAccess[]
+  course Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  access VideoAccess[]
 
   @@map("videos")
 }
@@ -274,7 +279,7 @@ model Audio {
   description String?
   audioFile   String   @map("audioFile")
   thumbnail   String?
-  duration    Int?     // in seconds
+  duration    Int? // in seconds
   order       Int      @default(0)
   courseId    String   @map("course_id")
   published   Boolean  @default(false)
@@ -282,21 +287,21 @@ model Audio {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  access      AudioAccess[]
+  course Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  access AudioAccess[]
 
   @@map("audios")
 }
 
 model CourseEnrollment {
-  id        String   @id @default(cuid())
-  userId    String
-  courseId  String
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
   enrolledAt DateTime @default(now())
 
   // Relations
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course    Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("course_enrollments")
@@ -308,8 +313,8 @@ model VideoAccess {
   videoId String
 
   // Relations
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video   Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([userId, videoId])
   @@map("video_access")
@@ -321,8 +326,8 @@ model AudioAccess {
   audioId String
 
   // Relations
-  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  audio   Audio @relation(fields: [audioId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audio Audio @relation(fields: [audioId], references: [id], onDelete: Cascade)
 
   @@unique([userId, audioId])
   @@map("audio_access")
@@ -332,7 +337,7 @@ model Workshop {
   id              String   @id @default(cuid())
   title           String
   description     String?
-  date            String   // Persian date as string (e.g., "1403/08/15 14:30")
+  date            String // Persian date as string (e.g., "1403/08/15 14:30")
   location        String?
   maxParticipants Int?
   price           Decimal  @db.Decimal(15, 2)
@@ -345,25 +350,25 @@ model Workshop {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  creator     User                  @relation(fields: [createdBy], references: [id])
-  participants WorkshopParticipant[]
+  creator           User                        @relation(fields: [createdBy], references: [id])
+  participants      WorkshopParticipant[]
   salesPersonAccess SalesPersonWorkshopAccess[]
 
   @@map("workshops")
 }
 
 model WorkshopParticipant {
-  id                String   @id @default(cuid())
-  workshopId        String
-  customerPhone     String
-  customerName      String
-  prepaymentAmount  Decimal  @db.Decimal(10, 2)
-  paymentStatus     PaymentStatus @default(PENDING)
-  paymentLink       String?
-  invitationCard    String?
-  createdBy         String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String        @id @default(cuid())
+  workshopId       String
+  customerPhone    String
+  customerName     String
+  prepaymentAmount Decimal       @db.Decimal(10, 2)
+  paymentStatus    PaymentStatus @default(PENDING)
+  paymentLink      String?
+  invitationCard   String?
+  createdBy        String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   // Relations
   workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
@@ -373,11 +378,11 @@ model WorkshopParticipant {
 }
 
 model SalesPersonWorkshopAccess {
-  id          String   @id @default(cuid())
+  id            String   @id @default(cuid())
   salesPersonId String
   workshopId    String
   isActive      Boolean  @default(true)
-  grantedBy     String   // مدیر فروشی که این دسترسی را داده
+  grantedBy     String // مدیر فروشی که این دسترسی را داده
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -392,26 +397,26 @@ model SalesPersonWorkshopAccess {
 
 model SalesTeam {
   id          String   @id @default(cuid())
-  name        String   // نام تیم فروش
-  managerId   String   // مدیر تیم فروش
-  description String?  // توضیحات تیم
+  name        String // نام تیم فروش
+  managerId   String // مدیر تیم فروش
+  description String? // توضیحات تیم
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  manager     User           @relation("SalesTeamManager", fields: [managerId], references: [id])
-  members     SalesTeamMember[]
+  manager User              @relation("SalesTeamManager", fields: [managerId], references: [id])
+  members SalesTeamMember[]
 
   @@map("sales_teams")
 }
 
 model SalesTeamMember {
-  id          String   @id @default(cuid())
-  teamId      String   // شناسه تیم فروش
+  id            String   @id @default(cuid())
+  teamId        String // شناسه تیم فروش
   salesPersonId String // شناسه فروشنده
-  joinedAt    DateTime @default(now())
-  isActive    Boolean  @default(true)
+  joinedAt      DateTime @default(now())
+  isActive      Boolean  @default(true)
 
   // Relations
   team        SalesTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -424,35 +429,35 @@ model SalesTeamMember {
 model OldProduct {
   id              String   @id @default(cuid())
   userId          String
-  productId       String   // Original product ID from old system (e.g., "PROD_1382")
+  productId       String // Original product ID from old system (e.g., "PROD_1382")
   productName     String
   productCategory String
   importedAt      DateTime @default(now())
-  
+
   // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, productId])
   @@map("old_products")
 }
 
 model Log {
   id          String   @id @default(cuid())
-  level       String   // LOG, ERROR, WARN, DEBUG, VERBOSE
+  level       String // LOG, ERROR, WARN, DEBUG, VERBOSE
   message     String   @db.Text
-  context     String?  // e.g., 'HTTP', 'HttpExceptionFilter', 'Bootstrap'
-  method      String?  // HTTP method (GET, POST, etc.)
-  url         String?  // Request URL
-  statusCode  Int?     // HTTP status code
-  duration    Int?     // Request duration in milliseconds
-  userId      String?  // User ID if authenticated
-  ip          String?  // Client IP address
-  userAgent   String?  // User agent string
+  context     String? // e.g., 'HTTP', 'HttpExceptionFilter', 'Bootstrap'
+  method      String? // HTTP method (GET, POST, etc.)
+  url         String? // Request URL
+  statusCode  Int? // HTTP status code
+  duration    Int? // Request duration in milliseconds
+  userId      String? // User ID if authenticated
+  ip          String? // Client IP address
+  userAgent   String? // User agent string
   errorStack  String?  @db.Text // Error stack trace if available
-  requestBody Json?    // Request body (sensitive data masked)
-  response    Json?    // Response data (sensitive data masked)
+  requestBody Json? // Request body (sensitive data masked)
+  response    Json? // Response data (sensitive data masked)
   createdAt   DateTime @default(now())
-  
+
   @@index([level])
   @@index([context])
   @@index([createdAt])
@@ -462,26 +467,34 @@ model Log {
 }
 
 model Settings {
-  id        String   @id @default("settings")
-  siteName  String?  @default("سایت")
-  siteDescription String? @db.Text
-  siteEmail String?
-  sitePhone String?
-  maintenanceMode Boolean @default(false)
-  maintenanceMessage String? @db.Text
-  smsEnabled Boolean @default(false)
-  smsProvider String?
-  smsApiKey String?
-  emailEnabled Boolean @default(false)
-  emailProvider String?
-  emailApiKey String?
-  backupEnabled Boolean @default(true)
-  backupFrequency String? @default("daily")
-  maxUploadSize Int? @default(104857600) // 100MB in bytes
-  allowedFileTypes String[] @default(["image/jpeg", "image/png", "image/gif", "video/mp4", "audio/mpeg"])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  id                 String   @id @default("settings")
+  siteName           String?  @default("سایت")
+  siteDescription    String?  @db.Text
+  siteEmail          String?
+  sitePhone          String?
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String?  @db.Text
+  smsEnabled         Boolean  @default(false)
+  smsProvider        String?
+  smsApiKey          String?
+  emailEnabled       Boolean  @default(false)
+  emailProvider      String?
+  emailApiKey        String?
+  backupEnabled      Boolean  @default(true)
+  backupFrequency    String?  @default("daily")
+  maxUploadSize      Int?     @default(104857600) // 100MB in bytes
+  allowedFileTypes   String[] @default(["image/jpeg", "image/png", "image/gif", "video/mp4", "audio/mpeg"])
+  // Gateway Settings
+  gatewayTerminalId  String?
+  gatewayUsername    String?
+  gatewayPassword    String?
+  gatewayMode        String?  @default("test") // test or production
+  gatewayCallbackUrl String?
+  gatewayAutoVerify  Boolean  @default(true)
+  gatewayAutoSettle  Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
   @@map("settings")
 }
 
@@ -496,4 +509,167 @@ enum PaymentStatus {
   PENDING
   PAID
   FAILED
+  CANCELLED
+}
+
+enum InvoiceType {
+  COURSE_PURCHASE
+  WALLET_CHARGE
+  PAYMENT_LINK
+}
+
+enum TransactionType {
+  PAYMENT
+  WALLET_CHARGE
+  WALLET_DEDUCTION
+  REFUND
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Decimal  @default(0) @db.Decimal(15, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  invoices     Invoice[]
+
+  @@map("wallets")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique // شماره فاکتور
+  userId        String
+  walletId      String?
+  type          InvoiceType
+  amount        Decimal       @db.Decimal(15, 2)
+  status        PaymentStatus @default(PENDING)
+
+  // Course purchase specific
+  courseId String?
+
+  // Payment link specific
+  paymentLinkId String?
+  customerName  String?
+  customerPhone String?
+  description   String?
+
+  // Payment gateway info
+  transactionId   String? // شناسه تراکنش درگاه
+  gatewayResponse Json? // پاسخ درگاه
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  paidAt    DateTime?
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet       Wallet?       @relation(fields: [walletId], references: [id])
+  course       Course?       @relation(fields: [courseId], references: [id])
+  paymentLink  PaymentLink?  @relation(fields: [paymentLinkId], references: [id])
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([type])
+  @@map("invoices")
+}
+
+model PaymentLink {
+  id            String    @id @default(cuid())
+  linkCode      String    @unique // کد یکتا برای لینک
+  createdById   String // کارشناس فروش که لینک را ساخته
+  amount        Decimal   @db.Decimal(15, 2)
+  customerName  String?
+  customerPhone String?
+  description   String?
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime? // تاریخ انقضا (اختیاری)
+
+  // Payment info
+  status PaymentStatus @default(PENDING)
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  creator      User          @relation("PaymentLinkCreator", fields: [createdById], references: [id])
+  invoices     Invoice[]
+  transactions Transaction[]
+
+  @@index([linkCode])
+  @@index([createdById])
+  @@index([status])
+  @@map("payment_links")
+}
+
+model Transaction {
+  id            String          @id @default(cuid())
+  walletId      String?
+  invoiceId     String?
+  userId        String
+  type          TransactionType
+  amount        Decimal         @db.Decimal(15, 2)
+  balanceBefore Decimal?        @db.Decimal(15, 2)
+  balanceAfter  Decimal?        @db.Decimal(15, 2)
+  description   String?
+
+  // Gateway fields (for payment transactions)
+  orderId         String? @unique // شماره سفارش درگاه
+  refId           String? // RefId از bpPayRequest
+  saleOrderId     String? // SaleOrderId از callback
+  saleReferenceId String? // شماره پیگیری از callback
+  cardHolderPan   String? // شماره کارت (ماسک شده)
+
+  // Gateway raw responses
+  bpPayRequestRaw  String?   @db.Text
+  bpPayRequestDate DateTime?
+  callbackRaw      Json? // داده‌های callback
+  callbackDate     DateTime?
+  verifyRaw        String?   @db.Text
+  verifyDate       DateTime?
+  settleRaw        String?   @db.Text
+  settleDate       DateTime?
+
+  // Status tracking
+  status       PaymentStatus @default(PENDING)
+  errorMessage String?       @db.Text
+
+  // Processing flags
+  walletCredited     Boolean   @default(false)
+  walletCreditDate   DateTime?
+  walletDeducted     Boolean   @default(false)
+  walletDeductDate   DateTime?
+  coursePurchased    Boolean   @default(false)
+  coursePurchaseDate DateTime?
+
+  // Payment link fields
+  paymentLinkId          String?
+  createdBySalesPersonId String?
+
+  metadata Json? // اطلاعات اضافی
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  wallet      Wallet?      @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentLink PaymentLink? @relation(fields: [paymentLinkId], references: [id])
+
+  @@index([walletId])
+  @@index([invoiceId])
+  @@index([userId])
+  @@index([orderId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
 }
