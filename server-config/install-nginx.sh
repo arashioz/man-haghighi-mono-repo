@@ -80,6 +80,19 @@ sudo cp "$SCRIPT_DIR/nginx/admin.conf" /etc/nginx/sites-available/admin.conf
 sudo cp "$SCRIPT_DIR/nginx/api.conf" /etc/nginx/sites-available/api.conf
 sudo cp "$SCRIPT_DIR/nginx/mail.conf" /etc/nginx/sites-available/mail.conf
 
+# Copy rate limiting configuration
+if [ -f "$SCRIPT_DIR/nginx/rate-limiting.conf" ]; then
+    echo "📝 Copying rate limiting configuration..."
+    sudo mkdir -p /etc/nginx/conf.d
+    sudo cp "$SCRIPT_DIR/nginx/rate-limiting.conf" /etc/nginx/conf.d/rate-limiting.conf
+    
+    # Check if nginx.conf includes conf.d directory
+    if ! grep -q "include.*conf.d.*\.conf" /etc/nginx/nginx.conf; then
+        echo "⚠️  Warning: nginx.conf doesn't include conf.d/*.conf"
+        echo "   You may need to add 'include /etc/nginx/conf.d/*.conf;' to the http block in /etc/nginx/nginx.conf"
+    fi
+fi
+
 # Create symbolic links
 echo "🔗 Creating symbolic links..."
 sudo ln -sf /etc/nginx/sites-available/frontend.conf /etc/nginx/sites-enabled/
