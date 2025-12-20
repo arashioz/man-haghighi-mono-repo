@@ -22,18 +22,17 @@ ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 
 # Production stage with nginx
-FROM nginx:1.25-alpine
+FROM nginx:alpine
 
-# Create nginx user (already exists, but ensure proper permissions)
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
-    chown -R nginx:nginx /var/cache/nginx && \
+# Copy built files with correct ownership
+COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
+
+# Ensure proper permissions for nginx directories
+RUN chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid
-
-# Copy built files
-COPY --from=builder /app/build /usr/share/nginx/html
+    chown nginx:nginx /var/run/nginx.pid
 
 # Fix permissions for assets
 RUN find /usr/share/nginx/html -type d -exec chmod 755 {} \; && \
