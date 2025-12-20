@@ -21,10 +21,15 @@ WORKDIR /app
 
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 
-COPY package*.json ./
+# Set ownership of /app before npm install to avoid chown issues
+RUN chown -R nestjs:nodejs /app
 
-# Install all dependencies including devDependencies for seed script
+COPY --chown=nestjs:nodejs package*.json ./
+
+# Install all dependencies as nestjs user to avoid permission issues
+USER nestjs
 RUN npm install --legacy-peer-deps && npm cache clean --force
+USER root
 
 # Copy artifacts from builder with correct ownership
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
@@ -37,11 +42,6 @@ COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
 RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
-
-# Fix ownership: use -L flag to follow symlinks in node_modules
-# This handles symlinked packages correctly and avoids permission errors
-RUN chown -RL nestjs:nodejs /app/node_modules && \
-    chown -R nestjs:nodejs /app/dist /app/prisma /app/package*.json
 
 USER nestjs
 
