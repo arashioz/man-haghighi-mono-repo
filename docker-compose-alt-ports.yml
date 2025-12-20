@@ -30,9 +30,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: haghighi_backend
+    # Environment variables are loaded from .env file
+    # Required Gateway variables: GATEWAY_TERMINAL_ID, GATEWAY_USERNAME, GATEWAY_PASSWORD
+    # Optional Gateway variables: GATEWAY_MODE, GATEWAY_CALLBACK_URL, GATEWAY_AUTO_VERIFY, GATEWAY_AUTO_SETTLE
     env_file: .env
     ports:
-      - "8080:3000"
+      - "127.0.0.1:8080:3000"
     volumes:
       - ./uploads:/app/uploads
       - ./moc-old-data:/app/moc-old-data
@@ -65,7 +68,7 @@ services:
         REACT_APP_API_URL: http://185.231.112.84:8080/api
     container_name: haghighi_frontend
     ports:
-      - "8081:80"
+      - "127.0.0.1:8081:80"
     networks:
       - frontend_network
     depends_on:
@@ -89,7 +92,7 @@ services:
         REACT_APP_API_URL: http://185.231.112.84:8080/api
     container_name: haghighi_admin
     ports:
-      - "8082:80"
+      - "127.0.0.1:8082:80"
     networks:
       - frontend_network
     depends_on:
