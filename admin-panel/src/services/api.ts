@@ -14,12 +14,25 @@ const getApiBaseUrl = () => {
 
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+    const isHttps = window.location.protocol === 'https:';
 
+    // If on localhost, use local API
     if (isLocalHost(hostname)) {
       if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
         return normalizeUrl(envUrl);
       }
       return DEFAULT_LOCAL_API;
+    }
+
+    // If page is loaded over HTTPS (production), ensure API URL uses HTTPS
+    if (isHttps) {
+      if (envUrl) {
+        // Replace http:// with https:// if needed
+        const url = normalizeUrl(envUrl);
+        return url.replace(/^http:\/\//, 'https://');
+      }
+      // Use HTTPS default for production
+      return DEFAULT_SERVER_API;
     }
   }
 
