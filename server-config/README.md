@@ -131,7 +131,11 @@ sudo ./firewall/configure-firewall.sh
    - `mail.manehaghighi.com` → YOUR_SERVER_IP
 
 2. **MX Record:**
-   - `manehaghighi.com` → `mail.manehaghighi.com` (Priority: 10)
+   - Type: MX
+   - Name: @ (یا manehaghighi.com)
+   - Value: mail.manehaghighi.com
+   - **Priority: 10** (عدد کمتر = اولویت بالاتر)
+   - TTL: 3600
 
 3. **SPF Record:**
    - TXT: `v=spf1 mx ip4:YOUR_SERVER_IP ~all`

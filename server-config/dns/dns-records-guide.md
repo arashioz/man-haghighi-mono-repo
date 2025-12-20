@@ -29,7 +29,9 @@ mail.manehaghighi.com.     A    185.231.112.84
 
 ## 2. MX Record (Mail Exchange)
 
-این record برای دریافت ایمیل‌ها ضروری است:
+این record برای دریافت ایمیل‌ها ضروری است و **حتماً باید Priority داشته باشد**.
+
+### تنظیمات MX Record:
 
 | Type | Name | Value | Priority | TTL |
 |------|------|-------|----------|-----|
@@ -39,6 +41,45 @@ mail.manehaghighi.com.     A    185.231.112.84
 ```
 manehaghighi.com.    MX    10    mail.manehaghighi.com.
 ```
+
+### توضیح Priority:
+
+- **Priority (اولویت)**: یک عدد بین 0 تا 65535
+- **عدد کمتر = اولویت بالاتر**: سرور با priority کمتر اول امتحان می‌شود
+- **مثال:**
+  - Priority 10 = سرور اصلی (اول امتحان می‌شود)
+  - Priority 20 = سرور backup (اگر سرور اصلی در دسترس نبود)
+  - Priority 30 = سرور backup دوم
+
+**برای یک سرور ساده:**
+- Priority را روی **10** بگذارید (عدد پایین = اولویت بالا)
+
+**اگر چند سرور mail دارید:**
+```
+manehaghighi.com.    MX    10    mail1.manehaghighi.com.
+manehaghighi.com.    MX    20    mail2.manehaghighi.com.
+```
+
+### نحوه اضافه کردن در پنل‌های مختلف:
+
+**cPanel:**
+1. Type: MX
+2. Name: @ (یا manehaghighi.com)
+3. Priority: 10
+4. Value: mail.manehaghighi.com
+
+**Cloudflare:**
+1. Type: MX
+2. Name: @
+3. Priority: 10
+4. Mail server: mail.manehaghighi.com
+
+**Namecheap:**
+1. Type: MX Record
+2. Host: @
+3. Value: mail.manehaghighi.com
+4. Priority: 10
+5. TTL: Automatic (یا 3600)
 
 ## 3. SPF Record (Sender Policy Framework)
 

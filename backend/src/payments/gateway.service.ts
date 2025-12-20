@@ -1,6 +1,5 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../common/prisma/prisma.service';
 import * as soap from 'soap';
 
 @Injectable()
@@ -11,29 +10,20 @@ export class GatewayService {
   private readonly siteUrl = 'https://manehaghighi.com';
 
   constructor(
-    private prisma: PrismaService,
     private configService: ConfigService,
   ) {}
 
-  private async getGatewaySettings() {
-    const settings = await this.prisma.settings.findUnique({
-      where: { id: 'settings' },
-    });
-
-    if (!settings) {
-      throw new BadRequestException('تنظیمات درگاه یافت نشد');
-    }
-
-    // Type assertion for gateway fields
-    const gatewaySettings = settings as any;
-
-    const terminalId = gatewaySettings.gatewayTerminalId;
-    const userName = gatewaySettings.gatewayUsername;
-    const userPassword = gatewaySettings.gatewayPassword;
-    const mode = gatewaySettings.gatewayMode || 'test';
+  private getGatewaySettings() {
+    const terminalId = this.configService.get<string>('GATEWAY_TERMINAL_ID');
+    const userName = this.configService.get<string>('GATEWAY_USERNAME');
+    const userPassword = this.configService.get<string>('GATEWAY_PASSWORD');
+    const mode = this.configService.get<string>('GATEWAY_MODE', 'test');
+    const callbackUrl = this.configService.get<string>('GATEWAY_CALLBACK_URL') || `${this.siteUrl}/api/payments/callback`;
+    const autoVerify = this.configService.get<string>('GATEWAY_AUTO_VERIFY', 'true') === 'true';
+    const autoSettle = this.configService.get<string>('GATEWAY_AUTO_SETTLE', 'true') === 'true';
 
     if (!terminalId || !userName || !userPassword) {
-      throw new BadRequestException('تنظیمات درگاه ناقص است. لطفاً TerminalID، UserName و UserPassword را وارد کنید.');
+      throw new BadRequestException('تنظیمات درگاه ناقص است. لطفاً GATEWAY_TERMINAL_ID، GATEWAY_USERNAME و GATEWAY_PASSWORD را در فایل .env تنظیم کنید.');
     }
 
     return {
@@ -41,15 +31,15 @@ export class GatewayService {
       userName,
       userPassword,
       mode,
-      callbackUrl: gatewaySettings.gatewayCallbackUrl || `${this.siteUrl}/api/payments/callback`,
-      autoVerify: gatewaySettings.gatewayAutoVerify ?? true,
-      autoSettle: gatewaySettings.gatewayAutoSettle ?? true,
+      callbackUrl,
+      autoVerify,
+      autoSettle,
     };
   }
 
   async createPaymentRequest(orderId: string, amount: number, description?: string) {
     try {
-      const gatewaySettings = await this.getGatewaySettings();
+      const gatewaySettings = this.getGatewaySettings();
       
       const localDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
       const localTime = new Date().toTimeString().slice(0, 8).replace(/:/g, '');
@@ -101,7 +91,7 @@ export class GatewayService {
 
   async verifyPayment(orderId: string, saleOrderId: string, saleReferenceId: string) {
     try {
-      const gatewaySettings = await this.getGatewaySettings();
+      const gatewaySettings = this.getGatewaySettings();
 
       const params = {
         terminalId: gatewaySettings.terminalId,
@@ -143,7 +133,7 @@ export class GatewayService {
 
   async settlePayment(orderId: string, saleOrderId: string, saleReferenceId: string) {
     try {
-      const gatewaySettings = await this.getGatewaySettings();
+      const gatewaySettings = this.getGatewaySettings();
 
       // For settle, orderId should be saleOrderId + '1'
       const settleOrderId = parseInt(saleOrderId + '1', 10);
@@ -186,7 +176,7 @@ export class GatewayService {
 
   async reversePayment(orderId: string, saleOrderId: string, saleReferenceId: string) {
     try {
-      const gatewaySettings = await this.getGatewaySettings();
+      const gatewaySettings = this.getGatewaySettings();
 
       // For reversal, orderId should be saleOrderId + '2'
       const reversalOrderId = parseInt(saleOrderId + '2', 10);
