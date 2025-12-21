@@ -45,13 +45,22 @@ async function bootstrap() {
     ];
   }
 
+  // Validate no wildcards
+  if (allowedOrigins.length > 0 && allowedOrigins.some(origin => origin.includes('*'))) {
+    throw new Error('CORS origins cannot contain wildcards. Use specific origins only.');
+  }
+
+  // In production, CORS origins must be configured
+  if (isProduction && allowedOrigins.length === 0) {
+    logger.error('❌ CORS_ORIGINS is required in production but not configured!');
+    logger.error('   Please set CORS_ORIGINS in your .env file');
+    throw new Error('CORS_ORIGINS is required in production environment');
+  }
+
   if (allowedOrigins.length === 0) {
     logger.warn('⚠️  No CORS origins configured. CORS will be disabled.');
   } else {
-    // Validate no wildcards
-    if (allowedOrigins.some(origin => origin.includes('*'))) {
-      throw new Error('CORS origins cannot contain wildcards. Use specific origins only.');
-    }
+    logger.log(`✅ CORS enabled for ${allowedOrigins.length} origin(s)`);
   }
 
   // Enable CORS first (before helmet)
