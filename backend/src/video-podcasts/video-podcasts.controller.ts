@@ -199,7 +199,8 @@ export class VideoPodcastsController {
         ? 'video/x-matroska'
         : 'video/mp4';
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS headers are handled globally in main.ts
+    // Only expose headers for video streaming
     res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
 
     if (range) {

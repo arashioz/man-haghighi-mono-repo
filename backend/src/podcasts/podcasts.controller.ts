@@ -150,7 +150,8 @@ export class PodcastsController {
       ext === 'm4a' ? 'audio/mp4' :
       'audio/mpeg';
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS headers are handled globally in main.ts
+    // Only expose headers for audio streaming
     res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
 
     if (!range) {
