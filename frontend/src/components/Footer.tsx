@@ -1,16 +1,26 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const CONTACT_PHONE_DISPLAY = '021-91690112';
 const CONTACT_PHONE_TEL = '+982191690112';
 
+const navigationItems = [
+  { label: 'خانه', path: '/' },
+  { label: 'درباره ما', path: '/about' },
+  { label: 'مقالات', path: '/articles' },
+  { label: 'پادکست‌ها', path: '/podcasts' },
+  { label: 'دوره‌ها', path: '/courses' },
+  { label: 'تماس با ما', path: '/contact' },
+];
+
 const Footer: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
-    <footer className="mt-auto rounded-t-3xl border-t border-white/10 bg-black/80 backdrop-blur-md">
+    <footer className="mt-auto rounded-t-3xl border-t border-white/10 bg-[#0a0a0a] backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col items-center gap-8">
           {/* Logo */}
           <button
             onClick={() => navigate('/')}
@@ -19,41 +29,47 @@ const Footer: React.FC = () => {
             <img 
               src="/assets/logo-mane-haghighi-asli-1 (1).png" 
               alt="لوگو حقیقی" 
-              className="h-12 w-auto object-contain"
+              className="h-20 w-auto object-contain"
             />
           </button>
 
-          {/* Phone and Sitemap */}
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            {/* Phone */}
-            <a
-              href={`tel:${CONTACT_PHONE_TEL}`}
-              className="flex items-center gap-2 text-white/80 hover:text-yellow-400 transition-colors text-sm"
-            >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+          {/* Navigation Menu */}
+          <nav className="flex flex-wrap items-center justify-center gap-3">
+            {navigationItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  location.pathname === item.path
+                    ? 'text-yellow-400 bg-yellow-400/20 border border-yellow-400/30'
+                    : 'text-white/60 hover:text-yellow-400 hover:bg-white/5 border border-transparent hover:border-white/10'
+                }`}
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
-                />
-              </svg>
-              <span>{CONTACT_PHONE_DISPLAY}</span>
-            </a>
+                {item.label}
+              </button>
+            ))}
+          </nav>
 
-            {/* Sitemap */}
-            <a
-              href="/sitemap"
-              className="text-white/60 hover:text-yellow-400 transition-colors text-xs uppercase tracking-wider"
+          {/* Phone */}
+          <a
+            href={`tel:${CONTACT_PHONE_TEL}`}
+            className="flex items-center gap-2 text-white/80 hover:text-yellow-400 transition-colors text-sm"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
             >
-              نقشه سایت
-            </a>
-          </div>
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
+              />
+            </svg>
+            <span>{CONTACT_PHONE_DISPLAY}</span>
+          </a>
 
           {/* Social Icons and Enamad */}
           <div className="flex items-center gap-4">
