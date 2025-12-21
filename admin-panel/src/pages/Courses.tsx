@@ -418,9 +418,8 @@ const Courses: React.FC = () => {
       };
 
       const token = localStorage.getItem('token');
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080/api';
-      
-      const response = await fetch(`${API_BASE_URL}/courses`, {
+      // Use the API service's base URL which handles HTTPS conversion
+      const response = await fetch(`${API_ORIGIN}/api/courses`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
