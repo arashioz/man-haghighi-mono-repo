@@ -70,6 +70,15 @@ const UsersManagement: React.FC = () => {
   });
   const [editingUserCourses, setEditingUserCourses] = useState<string[]>([]);
 
+  // Export filters and state
+  const [exportFilters, setExportFilters] = useState({
+    userType: 'all' as 'all' | 'old' | 'new',
+    startDate: '',
+    endDate: '',
+    role: '',
+  });
+  const [exporting, setExporting] = useState(false);
+
   const tabs = [
     { id: 'users' as TabType, label: 'کاربران', role: 'USER' },
     { id: 'sales-managers' as TabType, label: 'مدیران فروش', role: 'SALES_MANAGER' },
@@ -149,6 +158,15 @@ const UsersManagement: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, activeTab]);
 
+  // Update export filters role when tab changes
+  useEffect(() => {
+    const currentRole = tabs.find(t => t.id === activeTab)?.role || '';
+    setExportFilters(prev => ({
+      ...prev,
+      role: currentRole,
+    }));
+  }, [activeTab]);
+
   const handleDelete = async (id: string, userName: string) => {
     if (!window.confirm(`آیا از حذف "${userName}" اطمینان دارید؟\n\nاین عمل غیرقابل بازگشت است و تمام اطلاعات مربوط به این کاربر حذف خواهد شد.`)) {
       return;
@@ -170,6 +188,51 @@ const UsersManagement: React.FC = () => {
       });
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در حذف کاربر');
+    }
+  };
+
+  const handleExportUsers = async () => {
+    setExporting(true);
+    try {
+      // Get current tab role
+      const currentRole = tabs.find(t => t.id === activeTab)?.role || '';
+      
+      // Prepare filters with current role
+      const filters = {
+        ...exportFilters,
+        role: currentRole || exportFilters.role,
+      };
+      
+      const blob = await usersService.exportUsers(filters);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Generate filename
+      const date = new Date().toISOString().split('T')[0];
+      let filename = `users_export_${date}`;
+      if (filters.userType !== 'all') {
+        filename += `_${filters.userType}`;
+      }
+      if (filters.startDate || filters.endDate) {
+        filename += `_${filters.startDate || 'start'}_${filters.endDate || 'end'}`;
+      }
+      if (filters.role) {
+        filename += `_${filters.role}`;
+      }
+      filename += '.xlsx';
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'خطا در دانلود فایل Excel');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -493,6 +556,96 @@ const UsersManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Export Section */}
+      <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">خروجی Excel</h3>
+          <button
+            onClick={handleExportUsers}
+            disabled={exporting}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>در حال تولید...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>دانلود Excel</span>
+              </>
+            )}
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* User Type Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              نوع کاربر
+            </label>
+            <select
+              value={exportFilters.userType}
+              onChange={(e) => setExportFilters({...exportFilters, userType: e.target.value as 'all' | 'old' | 'new'})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="all">همه</option>
+              <option value="old">قدیمی</option>
+              <option value="new">جدید</option>
+            </select>
+          </div>
+
+          {/* Start Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              از تاریخ
+            </label>
+            <input
+              type="date"
+              value={exportFilters.startDate}
+              onChange={(e) => setExportFilters({...exportFilters, startDate: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* End Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              تا تاریخ
+            </label>
+            <input
+              type="date"
+              value={exportFilters.endDate}
+              onChange={(e) => setExportFilters({...exportFilters, endDate: e.target.value})}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Role Filter (read-only, shows current tab role) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              نقش (فعلی)
+            </label>
+            <input
+              type="text"
+              value={tabs.find(t => t.id === activeTab)?.label || 'همه'}
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
+            />
+          </div>
+        </div>
+        
+        <div className="mt-3 text-xs text-gray-500">
+          <p>💡 خروجی بر اساس تب فعلی ({tabs.find(t => t.id === activeTab)?.label}) و فیلترهای بالا تولید می‌شود.</p>
+        </div>
+      </div>
 
       {}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
