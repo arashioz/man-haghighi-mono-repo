@@ -183,8 +183,8 @@ export class VideosController {
                          ext === 'mov' ? 'video/quicktime' : 
                          ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
       
-      // Set CORS headers for video streaming
-      res.setHeader('Access-Control-Allow-Origin', '*');
+      // CORS headers are handled globally in main.ts
+      // Only expose headers for video streaming
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
       
       if (range) {
@@ -341,9 +341,8 @@ export class VideosController {
                          ext === 'mov' ? 'video/quicktime' : 
                          ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
       
-      // Set CORS headers for video streaming
-      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      // CORS headers are handled globally in main.ts
+      // Only expose headers for video streaming
       res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
       
       if (range) {
