@@ -65,7 +65,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://185.231.112.84:8080/api
+        REACT_APP_API_URL: https://api.manehaghighi.com/api
     container_name: haghighi_frontend
     ports:
       - "127.0.0.1:8081:80"
@@ -89,7 +89,7 @@ services:
       context: ./admin-panel
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://185.231.112.84:8080/api
+        REACT_APP_API_URL: https://api.manehaghighi.com/api
     container_name: haghighi_admin
     ports:
       - "127.0.0.1:8082:80"
