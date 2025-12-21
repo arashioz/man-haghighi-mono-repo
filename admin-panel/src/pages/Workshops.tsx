@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
 import PersianDatePicker from '../components/PersianDatePicker';
 import WorkshopTemplate from '../components/WorkshopTemplate';
-import { workshopsService, usersService } from '../services/api';
+import { workshopsService, usersService, API_ORIGIN } from '../services/api';
 import { Workshop, User } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
 import { truncateWords } from '../utils/text';
@@ -366,7 +366,7 @@ const Workshops: React.FC = () => {
                         <div className="flex-shrink-0 h-10 w-10">
                           {workshop.thumbnail ? (
                             <img
-                              src={workshop.thumbnail.startsWith('http') ? workshop.thumbnail : `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${workshop.thumbnail}`}
+                              src={workshop.thumbnail.startsWith('http') ? workshop.thumbnail : `${API_ORIGIN}/uploads/${workshop.thumbnail}`}
                               alt={workshop.title}
                               className="h-10 w-10 rounded-lg object-cover"
                               onError={(e) => {
@@ -750,7 +750,7 @@ const Workshops: React.FC = () => {
             {editingWorkshop?.thumbnail && !editingThumbnail && (
               <div className="mb-2">
                 <img
-                  src={editingWorkshop.thumbnail.startsWith('http') ? editingWorkshop.thumbnail : `${process.env.REACT_APP_API_URL || 'http://185.231.112.84:8080'}/uploads/${editingWorkshop.thumbnail}`}
+                  src={editingWorkshop.thumbnail.startsWith('http') ? editingWorkshop.thumbnail : `${API_ORIGIN}/uploads/${editingWorkshop.thumbnail}`}
                   alt={editingWorkshop.title}
                   className="h-20 w-20 rounded-lg object-cover border border-gray-300"
                 />
