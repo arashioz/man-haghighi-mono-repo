@@ -8,8 +8,8 @@ const Footer: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <footer className="border-t border-white/10 bg-black/50 backdrop-blur-sm mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <footer className="mt-auto rounded-t-3xl border-t border-white/10 bg-black/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Logo */}
           <button
@@ -47,25 +47,12 @@ const Footer: React.FC = () => {
             </a>
 
             {/* Sitemap */}
-            <button
-              onClick={() => navigate('/sitemap')}
-              className="flex items-center gap-2 text-white/80 hover:text-yellow-400 transition-colors text-sm"
+            <a
+              href="/sitemap"
+              className="text-white/60 hover:text-yellow-400 transition-colors text-xs uppercase tracking-wider"
             >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" 
-                />
-              </svg>
-              <span>نقشه سایت</span>
-            </button>
+              نقشه سایت
+            </a>
           </div>
 
           {/* Social Icons and Enamad */}
@@ -109,8 +96,8 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-6 pt-6 border-t border-white/10 text-center">
-          <p className="text-xs text-white/50">
+        <div className="mt-8 pt-6 border-t border-white/10 text-center">
+          <p className="text-xs text-white/40">
             © {new Date().getFullYear()} من حقیقی. تمامی حقوق محفوظ است.
           </p>
         </div>
