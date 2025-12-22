@@ -541,8 +541,8 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 ? (heroSlides[currentSlide] as any).data 
                 : sliders[currentSlide] || sliders[0];
               const heroTitle = currentSlider?.title || 'Engine Transformation 2.0';
-              const heroSubtitle = currentSlider?.description || 'برای جهش سینمایی و برتری طلایی طراحی شده است';
-              const heroDescription = currentSlider?.description || 'ما در جهانی تازه متولدشده زندگی می‌کنیم؛ جهانی که با سرعت نور در حال تکامل است. حقیقت غیرقابل‌انکار: تنها کسانی رشد می‌کنند که رشد کردن را انتخاب می‌کنند. این موتور تحول، مخصوص توست تا برتری واقعی را تجربه کنی، نسخه بهتر از خودت را بسازی، تغییر و تحول را ایجاد کنی و آینده‌ای را خلق کنی که سال‌ها در انتظارش بودی.';
+              const heroSubtitle = currentSlider?.description || 'مسیر رشد و یادگیری در من حقیقی';
+              const heroDescription = currentSlider?.description || 'برنامه‌ها و کارگاه‌های من حقیقی را اینجا دنبال کنید تا تازه‌ترین مسیرهای یادگیری و رشد را تجربه کنید.';
               
               return (
                 <>
@@ -947,75 +947,82 @@ const HomeV2: React.FC<HomeV2Props> = ({
           </div>
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-8 w-full">
-            <div className="flex flex-col lg:flex-row items-center lg:items-stretch gap-8 lg:gap-12 w-full">
-              {/* 3D globe - left side */}
-              <motion.div
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.4 }}
-                className="w-full lg:w-1/2 flex-shrink-0"
-              >
-                <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px]">
-                  {/* Outer ring / glow */}
-                  <div className="pointer-events-none absolute inset-8 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
+            <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-yellow-400/5 via-transparent to-purple-500/10" />
 
-                  <Globe
-                    ref={globeRef}
-                    backgroundColor="rgba(0,0,0,0)"
-                    globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
-                    backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
-                    showAtmosphere
-                    atmosphereColor="lightskyblue"
-                    atmosphereAltitude={0.18}
-                    labelsData={places}
-                    labelLat={(d: any) => d.properties?.latitude}
-                    labelLng={(d: any) => d.properties?.longitude}
-                    labelText={(d: any) => d.properties?.name}
-                    labelSize={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
-                    labelDotRadius={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
-                    labelColor={() => 'rgba(255,165,0,0.8)'}
-                    labelResolution={2}
-                    onGlobeReady={() => {
-                      const controls = globeRef.current?.controls?.();
-                      if (controls) {
-                        controls.autoRotate = true;
-                        controls.autoRotateSpeed = 0.8;
-                      }
-                    }}
-                  />
-                </div>
-              </motion.div>
+              <div className="relative flex flex-col lg:flex-row items-center lg:items-stretch gap-8 lg:gap-12 w-full p-6 sm:p-10">
+                {/* 3D globe - left side */}
+                <motion.div
+                  variants={fadeUp}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.4 }}
+                  className="w-full lg:w-1/2 flex-shrink-0"
+                >
+                  <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
+                    {/* Outer ring / glow */}
+                    <div className="pointer-events-none absolute inset-6 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
 
-              {/* Text - right side */}
-              <motion.div
-                variants={stagger}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, amount: 0.3 }}
-                className="space-y-6 text-center lg:text-right w-full lg:w-1/2 flex flex-col justify-center"
-              >
-                <motion.p
-                  variants={fadeUp}
-                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                    <Globe
+                      ref={globeRef}
+                      backgroundColor="rgba(0,0,0,0)"
+                      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
+                      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+                      showAtmosphere
+                      atmosphereColor="lightskyblue"
+                      atmosphereAltitude={0.18}
+                      labelsData={places}
+                      labelLat={(d: any) => d.properties?.latitude}
+                      labelLng={(d: any) => d.properties?.longitude}
+                      labelText={(d: any) => d.properties?.name}
+                      labelSize={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
+                      labelDotRadius={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
+                      labelColor={() => 'rgba(255,165,0,0.8)'}
+                      labelResolution={2}
+                      onGlobeReady={() => {
+                        const controls = globeRef.current?.controls?.();
+                        if (controls) {
+                        controls.enableZoom = false;
+                        controls.enableRotate = false;
+                        controls.enablePan = false;
+                          controls.autoRotate = true;
+                          controls.autoRotateSpeed = 0.8;
+                        }
+                      }}
+                    />
+                  </div>
+                </motion.div>
+
+                {/* Text - right side */}
+                <motion.div
+                  variants={stagger}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.3 }}
+                  className="relative z-10 space-y-6 text-right w-full lg:w-1/2 flex flex-col justify-center"
                 >
-                  شبکه جهانی من حقیقی
-                </motion.p>
-                <motion.h2
-                  variants={fadeUp}
-                  className="text-4xl font-bold sm:text-5xl lg:text-6xl"
-                >
-                  یک کره، هزار داستان تحول
-                </motion.h2>
-                <motion.p
-                  variants={fadeUp}
-                  className="text-base leading-relaxed text-white/80"
-                >
-                  این کره چرخان نمایی واقعی و نمادین از جامعه جهانی من حقیقی است؛ افرادی از شهرها و
-                  کشور‌های مختلف که تصمیم گرفته‌اند نسخه دوم زندگی‌شان را بسازند. هر نقطه، یک انتخاب
-                  تازه برای رشد و آگاهی است.
-                </motion.p>
-              </motion.div>
+                  <motion.p
+                    variants={fadeUp}
+                    className="inline-block rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                  >
+                    شبکه جهانی من حقیقی
+                  </motion.p>
+                  <motion.h2
+                    variants={fadeUp}
+                    className="text-4xl font-bold sm:text-5xl lg:text-6xl leading-tight"
+                  >
+                    یک کره، هزار داستان تحول
+                  </motion.h2>
+                  <motion.p
+                    variants={fadeUp}
+                    className="text-base leading-relaxed text-white/85"
+                  >
+                    این کره چرخان نمایی واقعی و نمادین از جامعه جهانی من حقیقی است؛ افرادی از شهرها و
+                    کشور‌های مختلف که تصمیم گرفته‌اند نسخه دوم زندگی‌شان را بسازند. هر نقطه، یک انتخاب
+                    تازه برای رشد و آگاهی است.
+                  </motion.p>
+                </motion.div>
+              </div>
             </div>
           </div>
         </section>
