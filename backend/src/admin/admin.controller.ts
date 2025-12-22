@@ -1,6 +1,6 @@
-import { Controller, Get, UseGuards, Res, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, UseGuards, Res, HttpException, HttpStatus, Query } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -60,6 +60,19 @@ export class AdminController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  @Get('backup/json')
+  @ApiOperation({ summary: 'Create JSON backup for selected entities (Admin only)' })
+  @ApiQuery({ name: 'entity', required: false, description: 'Comma separated list of entities (users,courses,videos,audios,podcasts,videoPodcasts,articles,comments,invoices,workshops). Default: all' })
+  @ApiResponse({ status: 200, description: 'JSON backup generated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid entities' })
+  async createJsonBackup(@Query('entity') entity: string | undefined, @Res() res: Response) {
+    const { data, filename } = await this.adminService.createJsonBackup(entity);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(JSON.stringify(data, null, 2));
   }
 }
 

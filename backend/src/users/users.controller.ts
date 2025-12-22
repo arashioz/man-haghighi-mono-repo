@@ -231,4 +231,21 @@ export class UsersController {
     res.send(excelBuffer);
   }
 
+  @Get('export/json')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export users with their courses and file links as JSON (Admin only)' })
+  @ApiResponse({ status: 200, description: 'JSON file generated successfully', content: { 'application/json': {} } })
+  async exportUsersJson(@Query() filters: ExportUsersQueryDto, @Res() res: Response) {
+    const data = await this.usersService.exportUsersWithCourses(filters);
+
+    const date = new Date().toISOString().split('T')[0];
+    let filename = `users_export_${date}.json`;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(JSON.stringify(data, null, 2));
+  }
+
 }
