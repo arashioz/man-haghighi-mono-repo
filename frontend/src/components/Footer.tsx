@@ -19,17 +19,17 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="mt-auto rounded-t-3xl border-t border-white/10 bg-[#0a0a0a] backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-10">
-        <div className="flex flex-col items-center gap-8">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-6">
+        <div className="flex flex-col items-center gap-6">
           {/* Logo */}
           <button
             onClick={() => navigate('/')}
             className="flex-shrink-0 flex items-center hover:opacity-80 transition-opacity"
           >
-            <img 
-              src="/assets/logo-mane-haghighi-asli-1 (1).png" 
-              alt="لوگو حقیقی" 
-              className="h-20 w-auto object-contain"
+            <img
+              src="/assets/logo-mane-haghighi-asli-1 (1).png"
+              alt="لوگو حقیقی"
+              className="h-14 w-auto object-contain"
             />
           </button>
 
@@ -112,7 +112,7 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 pt-6 border-t border-white/10 text-center">
+        <div className="mt-6 pt-4 border-t border-white/10 text-center">
           <p className="text-xs text-white/40">
             © {new Date().getFullYear()} من حقیقی. تمامی حقوق محفوظ است.
           </p>
