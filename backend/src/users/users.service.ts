@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
 import { Prisma, UserRole } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { UrlService } from '../common/services/url.service';
 
 const baseUserSelect = {
   id: true,
@@ -27,7 +28,10 @@ const baseUserSelect = {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly urlService: UrlService,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     const {
@@ -815,39 +819,97 @@ export class UsersService {
     });
   }
 
-  async exportUsers(filters: ExportUsersQueryDto) {
+  private buildUserExportWhere(filters: ExportUsersQueryDto): Prisma.UserWhereInput {
     const { userType, startDate, endDate, role } = filters;
-
-    // Build where clause
     const where: Prisma.UserWhereInput = {};
 
-    // Filter by role
     if (role) {
       where.role = role as UserRole;
     }
 
-    // Filter by user type (old/new)
     if (userType === 'old') {
       where.isOld = true;
     } else if (userType === 'new') {
       where.isOld = false;
     }
 
-    // Filter by date range
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) {
         where.createdAt.gte = new Date(startDate);
       }
       if (endDate) {
-        // Add one day to include the entire end date
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         where.createdAt.lte = end;
       }
     }
 
-    // Fetch all users matching the filters
+    return where;
+  }
+
+  async exportUsersWithCourses(filters: ExportUsersQueryDto) {
+    const where = this.buildUserExportWhere(filters);
+
+    const users = await this.prisma.user.findMany({
+      where,
+      include: {
+        purchasedCourses: {
+          include: {
+            course: {
+              include: {
+                videos: {
+                  orderBy: { order: 'asc' },
+                },
+                audios: {
+                  orderBy: { order: 'asc' },
+                },
+              },
+            },
+          },
+          orderBy: { enrolledAt: 'desc' },
+        },
+        videoAccess: {
+          select: { videoId: true },
+        },
+        audioAccess: {
+          select: { audioId: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return users.map((user) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isActive: user.isActive,
+      isOld: user.isOld,
+      isBlocked: user.isBlocked,
+      education: user.education,
+      university: user.university,
+      job: user.job,
+      state: user.state,
+      gender: user.gender,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      purchasedCourses: user.purchasedCourses.map((enrollment) => ({
+        id: enrollment.id,
+        enrolledAt: enrollment.enrolledAt,
+        course: this.urlService.processCourseData(enrollment.course),
+      })),
+      videoAccessIds: user.videoAccess.map((access) => access.videoId),
+      audioAccessIds: user.audioAccess.map((access) => access.audioId),
+    }));
+  }
+
+  async exportUsers(filters: ExportUsersQueryDto) {
+    const where = this.buildUserExportWhere(filters);
+
     const users = await this.prisma.user.findMany({
       where,
       select: {

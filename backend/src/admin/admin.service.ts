@@ -4,12 +4,31 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { UrlService } from '../common/services/url.service';
 
 const execAsync = promisify(exec);
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly urlService: UrlService,
+  ) {}
+
+  private readonly backupEntities = [
+    'users',
+    'courses',
+    'videos',
+    'audios',
+    'podcasts',
+    'videoPodcasts',
+    'articles',
+    'comments',
+    'invoices',
+    'workshops',
+  ] as const;
 
   async createDatabaseBackup(): Promise<string> {
     try {
@@ -66,6 +85,131 @@ export class AdminService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  private parseEntities(entityParam?: string) {
+    const raw = (entityParam || 'all').split(',').map(item => item.trim()).filter(Boolean);
+
+    if (raw.length === 0 || raw.includes('all')) {
+      return [...this.backupEntities];
+    }
+
+    const invalid = raw.filter(item => !this.backupEntities.includes(item as any));
+    if (invalid.length > 0) {
+      throw new HttpException(
+        `Invalid entities: ${invalid.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return raw as typeof this.backupEntities[number][];
+  }
+
+  async createJsonBackup(entityParam?: string): Promise<{ data: Record<string, any>; filename: string }> {
+    const entities = this.parseEntities(entityParam);
+    const data: Record<string, any> = {};
+
+    for (const entity of entities) {
+      switch (entity) {
+        case 'users': {
+          const users = await this.prisma.user.findMany({
+            include: {
+              purchasedCourses: {
+                include: {
+                  course: {
+                    include: {
+                      videos: { orderBy: { order: 'asc' } },
+                      audios: { orderBy: { order: 'asc' } },
+                    },
+                  },
+                },
+                orderBy: { enrolledAt: 'desc' },
+              },
+              videoAccess: true,
+              audioAccess: true,
+              wallet: true,
+              invoices: true,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          data.users = users.map((user) => {
+            const { password, ...rest } = user as any;
+            return {
+              ...rest,
+              purchasedCourses: user.purchasedCourses.map((enrollment) => ({
+                ...enrollment,
+                course: this.urlService.processCourseData(enrollment.course),
+              })),
+            };
+          });
+          break;
+        }
+        case 'courses': {
+          const courses = await this.prisma.course.findMany({
+            include: {
+              videos: { orderBy: { order: 'asc' } },
+              audios: { orderBy: { order: 'asc' } },
+              enrollments: true,
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          data.courses = courses.map((course) => this.urlService.processCourseData(course));
+          break;
+        }
+        case 'videos': {
+          const videos = await this.prisma.video.findMany({ orderBy: { createdAt: 'desc' } });
+          data.videos = videos.map((video) => ({
+            ...video,
+            videoFile: this.urlService.getFileUrl(video.videoFile),
+            thumbnail: this.urlService.getFileUrl(video.thumbnail),
+          }));
+          break;
+        }
+        case 'audios': {
+          const audios = await this.prisma.audio.findMany({ orderBy: { createdAt: 'desc' } });
+          data.audios = audios.map((audio) => ({
+            ...audio,
+            audioFile: this.urlService.getFileUrl(audio.audioFile),
+            thumbnail: this.urlService.getFileUrl(audio.thumbnail),
+          }));
+          break;
+        }
+        case 'podcasts': {
+          const podcasts = await this.prisma.podcast.findMany({ orderBy: { createdAt: 'desc' } });
+          data.podcasts = podcasts.map((podcast) => this.urlService.processPodcastData(podcast));
+          break;
+        }
+        case 'videoPodcasts': {
+          const videoPodcasts = await this.prisma.videoPodcast.findMany({ orderBy: { createdAt: 'desc' } });
+          data.videoPodcasts = videoPodcasts.map((vp) => this.urlService.processVideoPodcastData(vp));
+          break;
+        }
+        case 'articles': {
+          data.articles = await this.prisma.article.findMany({ orderBy: { createdAt: 'desc' } });
+          break;
+        }
+        case 'comments': {
+          data.comments = await this.prisma.comment.findMany({ orderBy: { createdAt: 'desc' } });
+          break;
+        }
+        case 'invoices': {
+          data.invoices = await this.prisma.invoice.findMany({ orderBy: { createdAt: 'desc' } });
+          break;
+        }
+        case 'workshops': {
+          data.workshops = await this.prisma.workshop.findMany({ orderBy: { createdAt: 'desc' } });
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `backup_${entities.join('_')}_${timestamp}.json`;
+
+    return { data, filename };
   }
 }
 
