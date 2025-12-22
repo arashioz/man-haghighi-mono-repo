@@ -7,6 +7,7 @@ import ProgressBar from '../components/ProgressBar';
 import { slidersService } from '../services/api';
 import { Slider } from '../types';
 import { truncateWords } from '../utils/text';
+import { getImageUrl } from '../utils/imageUtils';
 
 const Sliders: React.FC = () => {
   const [sliders, setSliders] = useState<Slider[]>([]);
@@ -17,6 +18,10 @@ const Sliders: React.FC = () => {
   const [editingSlider, setEditingSlider] = useState<Slider | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [editFiles, setEditFiles] = useState<{ image: File | null; video: File | null }>({
+    image: null,
+    video: null,
+  });
   const [newSlider, setNewSlider] = useState({
     title: '',
     description: '',
@@ -25,6 +30,16 @@ const Sliders: React.FC = () => {
     image: null as File | null,
     video: null as File | null,
   });
+
+  const getFileName = (path?: string | null) => {
+    if (!path) return '';
+    try {
+      const url = new URL(path);
+      return url.pathname.split('/').pop() || path;
+    } catch {
+      return path.split('/').pop() || path;
+    }
+  };
 
   useEffect(() => {
     const fetchSliders = async () => {
@@ -100,6 +115,8 @@ const Sliders: React.FC = () => {
   const handleEditSlider = (slider: Slider) => {
     setEditingSlider(slider);
     setIsEditModalOpen(true);
+    setEditFiles({ image: null, video: null });
+    setUploadProgress(0);
   };
 
   const handleUpdateSlider = async (e: React.FormEvent) => {
@@ -111,14 +128,40 @@ const Sliders: React.FC = () => {
     setError('');
     
     try {
-      const updateData: any = {
-        title: editingSlider.title,
-        description: editingSlider.description,
-        order: editingSlider.order,
-        isActive: editingSlider.isActive,
-      };
+      const shouldUseFormData = Boolean(editFiles.image || editFiles.video);
+      let updatedSlider: Slider;
 
-      const updatedSlider = await slidersService.update(editingSlider.id, updateData);
+      if (shouldUseFormData) {
+        const formData = new FormData();
+        formData.append('title', editingSlider.title || '');
+        formData.append('description', editingSlider.description || '');
+        formData.append('order', (editingSlider.order ?? 0).toString());
+        formData.append('isActive', editingSlider.isActive.toString());
+
+        if (editFiles.image) {
+          formData.append('image', editFiles.image);
+        }
+
+        if (editFiles.video) {
+          formData.append('video', editFiles.video);
+        }
+
+        updatedSlider = await slidersService.updateWithFiles(editingSlider.id, formData, (progressEvent) => {
+          if (progressEvent.lengthComputable) {
+            const progress = (progressEvent.loaded / progressEvent.total) * 100;
+            setUploadProgress(progress);
+          }
+        });
+      } else {
+        const updateData: any = {
+          title: editingSlider.title,
+          description: editingSlider.description,
+          order: editingSlider.order,
+          isActive: editingSlider.isActive,
+        };
+
+        updatedSlider = await slidersService.update(editingSlider.id, updateData);
+      }
       
       setSliders(sliders.map(slider => 
         slider.id === editingSlider.id ? updatedSlider : slider
@@ -126,6 +169,7 @@ const Sliders: React.FC = () => {
       
       setIsEditModalOpen(false);
       setEditingSlider(null);
+      setEditFiles({ image: null, video: null });
     } catch (err: any) {
       let errorMessage = 'خطا در ویرایش اسلایدر';
       if (err.response?.data?.message) {
@@ -401,6 +445,8 @@ const Sliders: React.FC = () => {
         onClose={() => {
           setIsEditModalOpen(false);
           setEditingSlider(null);
+          setEditFiles({ image: null, video: null });
+          setUploadProgress(0);
         }}
         title="ویرایش اسلایدر"
       >
@@ -449,6 +495,82 @@ const Sliders: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {editingSlider?.image && (
+              <div>
+                <p className="text-sm text-gray-600 mb-2">تصویر فعلی</p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <img
+                    src={getImageUrl(editingSlider.image) || editingSlider.image || ''}
+                    alt={editingSlider.title}
+                    className="w-full h-40 object-cover"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                  <span className="break-all">{getFileName(editingSlider.image)}</span>
+                  <a
+                    href={getImageUrl(editingSlider.image) || editingSlider.image || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    مشاهده فایل
+                  </a>
+                </div>
+              </div>
+            )}
+            {editingSlider?.videoFile && (
+              <div>
+                <p className="text-sm text-gray-600 mb-2">ویدیوی فعلی</p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <video
+                    controls
+                    className="w-full h-40 object-cover"
+                    src={getImageUrl(editingSlider.videoFile) || editingSlider.videoFile || ''}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
+                  <span className="break-all">{getFileName(editingSlider.videoFile)}</span>
+                  <a
+                    href={getImageUrl(editingSlider.videoFile) || editingSlider.videoFile || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    مشاهده فایل
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              تصویر جدید (در صورت نیاز به تعویض)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setEditFiles(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {editFiles.image && (
+              <p className="text-xs text-gray-500 mt-1">فایل انتخاب‌شده: {editFiles.image.name}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ویدیوی جدید (اختیاری)
+            </label>
+            <input
+              type="file"
+              accept="video/*"
+              onChange={(e) => setEditFiles(prev => ({ ...prev, video: e.target.files?.[0] || null }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {editFiles.video && (
+              <p className="text-xs text-gray-500 mt-1">فایل انتخاب‌شده: {editFiles.video.name}</p>
+            )}
           </div>
           <div className="flex items-center">
             <input

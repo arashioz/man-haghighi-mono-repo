@@ -58,8 +58,53 @@ model User {
   wallet                    Wallet?
   invoices                  Invoice[]
   createdPaymentLinks       PaymentLink[]               @relation("PaymentLinkCreator")
+  messagesReceived          UserMessage[]
+  messagesSent              Message[]                   @relation("MessagesSent")
 
   @@map("users")
+}
+
+model Message {
+  id              String         @id @default(cuid())
+  title           String
+  body            String         @db.Text
+  sendSms         Boolean        @default(false)
+  sendInApp       Boolean        @default(true)
+  status          MessageStatus  @default(PENDING)
+  totalRecipients Int            @default(0)
+  inAppSentCount  Int            @default(0)
+  smsSentCount    Int            @default(0)
+  smsFailedCount  Int            @default(0)
+  sentById        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  sentBy       User?         @relation("MessagesSent", fields: [sentById], references: [id])
+  userMessages UserMessage[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model UserMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  messageId   String
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  deliveredAt DateTime?
+  smsStatus   String?
+  smsError    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([createdAt])
+  @@map("user_messages")
 }
 
 model Slider {
@@ -516,6 +561,12 @@ enum InvoiceType {
   COURSE_PURCHASE
   WALLET_CHARGE
   PAYMENT_LINK
+}
+
+enum MessageStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 enum TransactionType {

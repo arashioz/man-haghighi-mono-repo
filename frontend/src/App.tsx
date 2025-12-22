@@ -20,6 +20,7 @@ import VideoPlayer from './pages/VideoPlayer';
 import AudioPlayer from './pages/AudioPlayer';
 import VideoPodcastDetail from './pages/VideoPodcastDetail';
 import WorkshopDetail from './pages/WorkshopDetail';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<UserDashboard />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>
         </Router>

@@ -28,6 +28,7 @@ import { SeoModule } from './seo/seo.module';
 import { PaymentsModule } from './payments/payments.module';
 import { HealthController } from './health/health.controller';
 import { AppController } from './app.controller';
+import { MessagesModule } from './messages/messages.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -76,6 +77,7 @@ import { validateEnv } from './config/env.validation';
     CommentsModule,
     SeoModule,
     PaymentsModule,
+    MessagesModule,
   ],
   providers: [
     {

@@ -69,8 +69,7 @@ const Contact: React.FC = () => {
               در مسیر رشد و معنا، کنار شما هستیم
             </motion.h1>
             <motion.p variants={fadeUp} className="max-w-3xl text-lg text-white/80 text-right">
-              برای ارتباط با کارشناسان حرفه‌ای آموزش‌دیده توسط استاد فراز قورچیان، از طریق راه‌های ارتباطی زیر با ما
-              در تماس باشید.
+              برای ارتباط با کارشناسان حرفه‌ای من حقیقی، از طریق راه‌های ارتباطی زیر با ما در تماس باشید.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
@@ -84,7 +83,7 @@ const Contact: React.FC = () => {
                 onClick={() => navigate('/about')}
                 className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
               >
-                فراز قورچیان · درباره موسس
+                آشنایی با من حقیقی
               </button>
             </motion.div>
           </motion.div>
