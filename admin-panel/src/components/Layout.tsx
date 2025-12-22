@@ -78,6 +78,12 @@ const UploadCenterIcon = () => (
   </svg>
 );
 
+const MessageIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-2 8H5a2 2 0 01-2-2V7a2 2 0 012-2h14a2 2 0 012 2v7a2 2 0 01-2 2z" />
+  </svg>
+);
+
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -107,6 +113,7 @@ const getMenuItems = (userRole: string) => {
       { text: 'دوره‌ها', icon: <SchoolIcon />, path: '/courses' },
       { text: 'ویدیو پادکست‌ها', icon: <VideoLibraryIcon />, path: '/video-podcasts' },
       { text: 'نظرات', icon: <ArticleIcon />, path: '/comments' },
+      { text: 'پیام‌ها', icon: <MessageIcon />, path: '/messages' },
       { text: 'مرکز آپلود', icon: <UploadCenterIcon />, path: '/upload-center' },
       { text: 'لاگ‌ها', icon: <LogsIcon />, path: '/logs' },
       { text: 'تنظیمات', icon: <SettingsIcon />, path: '/settings' },

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { coursesService, videosService, audiosService, workshopsService, authService } from '../services/api';
-import { Course, Video, Audio, Workshop } from '../types';
+import { coursesService, videosService, audiosService, workshopsService, authService, messagesService } from '../services/api';
+import { Course, Video, Audio, Workshop, UserMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 const UserDashboard: React.FC = () => {
@@ -9,9 +9,10 @@ const UserDashboard: React.FC = () => {
   const [myVideos, setMyVideos] = useState<Video[]>([]);
   const [myAudios, setMyAudios] = useState<Audio[]>([]);
   const [myWorkshops, setMyWorkshops] = useState<Workshop[]>([]);
+  const [inboxMessages, setInboxMessages] = useState<UserMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages'>('courses');
   const navigate = useNavigate();
   const { user, loading: authLoading, updateProfile: saveProfile } = useAuth();
   const [profileForm, setProfileForm] = useState({
@@ -36,6 +37,7 @@ const UserDashboard: React.FC = () => {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -51,21 +53,25 @@ const UserDashboard: React.FC = () => {
   }, [user, authLoading, navigate]);
 
   const fetchUserData = async () => {
+    setMessagesLoading(true);
     try {
-      const [coursesData, videosData, audiosData, workshopsData] = await Promise.all([
+      const [coursesData, videosData, audiosData, workshopsData, messagesData] = await Promise.all([
         coursesService.getMyCourses(),
         videosService.getMyVideos(),
         audiosService.getMyAudios(),
         workshopsService.getMyWorkshops(),
+        messagesService.getMyMessages(),
       ]);
       setMyCourses(coursesData);
       setMyVideos(videosData);
       setMyAudios(audiosData);
       setMyWorkshops(workshopsData);
+      setInboxMessages(messagesData || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت اطلاعات کاربر');
     } finally {
       setLoading(false);
+      setMessagesLoading(false);
     }
   };
 
@@ -204,9 +210,22 @@ const UserDashboard: React.FC = () => {
     'gender',
   ];
   const isProfileIncomplete = !!user && profileFieldsToComplete.some((field) => !(user as any)?.[field]);
+  const unreadMessages = inboxMessages.filter((msg) => !msg.isRead).length;
 
   const handleVideoClick = (videoId: string, courseId: string) => {
     navigate(`/courses/${courseId}/videos/${videoId}`);
+  };
+
+  const handleMarkMessageRead = async (userMessageId: string) => {
+    try {
+      const updated = await messagesService.markAsRead(userMessageId);
+      setInboxMessages((prev) =>
+        prev.map((msg) => (msg.id === userMessageId ? { ...msg, ...updated } : msg))
+      );
+    } catch (err) {
+      // Keep UX simple; log the error without breaking the page
+      console.error('Failed to mark message as read', err);
+    }
   };
 
   // Show loading while auth is checking or data is loading
@@ -553,6 +572,7 @@ const UserDashboard: React.FC = () => {
           <div className="border-b border-gray-200 overflow-x-auto">
             <nav className="-mb-px flex space-x-4 sm:space-x-8 space-x-reverse min-w-max sm:min-w-0">
               {[
+                { id: 'messages', name: 'پیام‌ها', icon: '✉️', count: unreadMessages },
                 { id: 'courses', name: 'دوره‌های من', icon: '📚', count: myCourses.length },
                 { id: 'workshops', name: 'کارگاه‌های من', icon: '🎓', count: myWorkshops.length },
                 { id: 'videos', name: 'ویدیوهای من', icon: '🎥', count: myVideos.length },
@@ -584,6 +604,81 @@ const UserDashboard: React.FC = () => {
 
         {/* Content */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          {activeTab === 'messages' && (
+            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">صندوق پیام‌ها</h2>
+                  <p className="text-gray-600 text-sm">پیام‌های ارسالی توسط تیم ما برای شما</p>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <span className="px-3 py-1 rounded-full text-sm bg-indigo-50 text-indigo-700">
+                    پیام‌های جدید: {unreadMessages}
+                  </span>
+                </div>
+              </div>
+
+              {messagesLoading ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-3"></div>
+                    <p className="text-gray-600">در حال دریافت پیام‌ها...</p>
+                  </div>
+                </div>
+              ) : inboxMessages.length > 0 ? (
+                <div className="space-y-3 overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                  {inboxMessages.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`border rounded-lg p-4 transition-all ${
+                        item.isRead ? 'border-gray-100 bg-white' : 'border-indigo-100 bg-indigo-50'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                        <div className="flex items-center space-x-3 space-x-reverse">
+                          <span
+                            className={`w-2 h-2 rounded-full ${
+                              item.isRead ? 'bg-gray-300' : 'bg-indigo-500'
+                            }`}
+                          ></span>
+                          <h3 className="font-semibold text-gray-900">{item.message.title}</h3>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {new Date(item.message.createdAt).toLocaleString('fa-IR')}
+                        </p>
+                      </div>
+                      <p className="text-gray-700 text-sm leading-relaxed mb-3">{item.message.body}</p>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          {item.message.sendSms && <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">ارسال پیامک</span>}
+                          {item.message.sendInApp && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">ارسال درون پنل</span>}
+                        </div>
+                        {!item.isRead && (
+                          <button
+                            onClick={() => handleMarkMessageRead(item.id)}
+                            className="text-indigo-600 hover:text-indigo-700 font-medium"
+                          >
+                            علامت‌گذاری به عنوان خوانده شده
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-center py-8 sm:py-12">
+                  <div>
+                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl sm:text-4xl">✉️</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">پیامی ندارید</h3>
+                    <p className="text-gray-600">به محض ارسال پیام جدید از سمت ما، اینجا نمایش داده می‌شود.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'courses' && (
             <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">

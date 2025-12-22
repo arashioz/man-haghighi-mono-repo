@@ -21,6 +21,8 @@ import UploadCenter from './pages/UploadCenter';
 import Settings from './pages/Settings';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import Messages from './pages/Messages';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -51,9 +53,11 @@ function App() {
                     <Route path="/courses" element={<Courses />} />
                     <Route path="/video-podcasts" element={<VideoPodcasts />} />
                     <Route path="/comments" element={<Comments />} />
+                    <Route path="/messages" element={<Messages />} />
                     <Route path="/upload-center" element={<UploadCenter />} />
                     <Route path="/logs" element={<Logs />} />
                     <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

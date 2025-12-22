@@ -248,6 +248,17 @@ export const usersService = {
 
 };
 
+export const messagesService = {
+  broadcast: async (data: { title: string; body: string; sendSms?: boolean; sendInApp?: boolean }) => {
+    const response = await api.post('/messages/broadcast', data);
+    return response.data;
+  },
+  list: async () => {
+    const response = await api.get('/messages');
+    return response.data;
+  },
+};
+
 export const slidersService = {
   getAll: async (): Promise<Slider[]> => {
     const response = await api.get('/sliders');
@@ -281,6 +292,16 @@ export const slidersService = {
 
   update: async (id: string, data: Partial<Slider>): Promise<Slider> => {
     const response = await api.patch(`/sliders/${id}`, data);
+    return response.data;
+  },
+
+  updateWithFiles: async (id: string, formData: FormData, onProgress?: (progressEvent: any) => void): Promise<Slider> => {
+    const response = await api.patch(`/sliders/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: onProgress,
+    });
     return response.data;
   },
 

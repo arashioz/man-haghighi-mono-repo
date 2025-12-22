@@ -110,6 +110,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
+    // Ensure CORS headers are always set, even on errors
+    const origin = request.headers.origin;
+    const corsOriginsEnv = process.env.CORS_ORIGINS || '';
+    const allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+      response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    }
+
     response.status(status).json(responseBody);
   }
 }

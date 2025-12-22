@@ -19,6 +19,37 @@ export interface User {
   updatedAt: string;
 }
 
+export type MessageStatus = 'PENDING' | 'SENT' | 'FAILED';
+
+export interface Message {
+  id: string;
+  title: string;
+  body: string;
+  sendSms: boolean;
+  sendInApp: boolean;
+  status: MessageStatus;
+  totalRecipients: number;
+  inAppSentCount: number;
+  smsSentCount: number;
+  smsFailedCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserMessage {
+  id: string;
+  userId: string;
+  messageId: string;
+  isRead: boolean;
+  readAt?: string | null;
+  deliveredAt?: string | null;
+  smsStatus?: string | null;
+  smsError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  message: Message;
+}
+
 export interface Slider {
   id: string;
   title: string;

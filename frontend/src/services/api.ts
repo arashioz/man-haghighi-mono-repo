@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop, Comment } from '../types';
+import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop, Comment, UserMessage } from '../types';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
 const DEFAULT_SERVER_API = 'https://api.manehaghighi.com/api';
@@ -305,5 +305,16 @@ export const workshopsService = {
     customerName: string;
   }): Promise<void> => {
     await api.post(`/workshops/${workshopId}/participants`, participantData);
+  },
+};
+
+export const messagesService = {
+  getMyMessages: async (): Promise<UserMessage[]> => {
+    const response = await api.get('/messages/my');
+    return response.data;
+  },
+  markAsRead: async (userMessageId: string): Promise<UserMessage> => {
+    const response = await api.patch(`/messages/my/${userMessageId}/read`);
+    return response.data;
   },
 };

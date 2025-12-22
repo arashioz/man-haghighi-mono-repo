@@ -161,6 +161,80 @@ export class SmsService {
     }
   }
 
+  async sendTextMessage(phoneNumber: string, text: string): Promise<boolean> {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
+    if (!this.apiKey || !this.lineNumber) {
+      if (isDevelopment) {
+        this.logger.warn(`SMS service not configured. Message for ${phoneNumber}: ${text}`);
+        return true;
+      }
+      throw new Error('SMS service is not configured');
+    }
+
+    try {
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+      const sanitizedText = (text || '').toString().trim().slice(0, 640); // limit length for SMS gateways
+
+      if (!sanitizedText) {
+        throw new Error('پیامک خالی ارسال نمی‌شود');
+      }
+
+      const requestBody = {
+        from: this.lineNumber,
+        to: [formattedPhone],
+        text: sanitizedText,
+        isFlash: false,
+      };
+
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'Api-Key': this.apiKey,
+      };
+
+      this.logger.log(`Sending text SMS`, {
+        to: formattedPhone,
+        textPreview: sanitizedText.slice(0, 60),
+      });
+
+      const response = await fetch(`${this.apiUrl}/sms/send`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        this.logger.error('SMS text send failed', {
+          status: response.status,
+          body: responseText,
+          recipient: formattedPhone,
+        });
+
+        if (isDevelopment) {
+          this.logger.warn(`Allowing SMS text in development for ${formattedPhone}: ${sanitizedText}`);
+          return true;
+        }
+
+        throw new Error(`SMS API error (${response.status}): ${responseText || 'unknown'}`);
+      }
+
+      return true;
+    } catch (error) {
+      this.logger.error(`Error sending text SMS to ${phoneNumber}`, {
+        error: error?.message || error,
+      });
+
+      if (isDevelopment) {
+        return true;
+      }
+
+      throw error;
+    }
+  }
+
   private formatPhoneNumber(phone: string): string {
     try {
       let cleaned = phone.replace(/\D/g, '');

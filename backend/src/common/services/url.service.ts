@@ -41,9 +41,9 @@ export class UrlService {
       return null;
     }
     
-    // External URLs are not allowed - return null instead
+    // If a full URL is already stored (e.g. migrated data), return as-is
     if (filePath.startsWith('http://') || filePath.startsWith('https://')){
-      return null;
+      return filePath;
     }
     
     if (filePath.startsWith('/uploads/')) {
