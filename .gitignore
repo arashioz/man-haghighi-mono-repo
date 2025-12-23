@@ -50,3 +50,6 @@ uploads/*
 .cache/
 temp/
 tmp/
+
+# Local large data
+moc-old-data/last_data_on_db.json
