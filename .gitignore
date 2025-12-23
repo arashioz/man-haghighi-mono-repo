@@ -53,3 +53,4 @@ tmp/
 
 # Local large data
 moc-old-data/last_data_on_db.json
+moc-old-data/users_with_courses_2025-12-23.json
