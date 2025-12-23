@@ -106,6 +106,9 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersect / union;
 }
 
+type CourseIndex = Awaited<ReturnType<typeof loadCourses>>;
+type CourseIndexEntry = CourseIndex[number];
+
 async function loadCourses() {
   const courses = await prisma.course.findMany({
     select: { id: true, title: true },
@@ -169,7 +172,7 @@ function aggregateUsers(rows: RawRow[]): Map<string, AggregatedUser> {
   return map;
 }
 
-function matchCourse(rawTitle: string, courseIndex: ReturnType<typeof loadCourses>[number][]): MatchedCourse {
+function matchCourse(rawTitle: string, courseIndex: CourseIndex): MatchedCourse {
   const normalized = normalizeTitle(rawTitle);
   const rawTokens = tokens(normalized);
   let best: MatchedCourse = { rawTitle, score: 0 };
