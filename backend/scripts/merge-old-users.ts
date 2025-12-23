@@ -226,12 +226,12 @@ async function ensureUserAndCourses(
       if (!already) {
         if (APPLY_CHANGES) {
           try {
-            await prisma.courseEnrollment.create({
-              data: {
-                userId: existing.id,
-                courseId,
-              },
-            });
+        await prisma.courseEnrollment.create({
+          data: {
+            userId: existing.id,
+            courseId,
+          },
+        });
           } catch (error: any) {
             if (error.code === 'P2002') {
               console.log(`⚠️  Course enrollment already exists, skipping: user ${existing.id} -> course ${courseId}`);
@@ -250,27 +250,27 @@ async function ensureUserAndCourses(
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   if (APPLY_CHANGES) {
     try {
-      await prisma.user.create({
-        data: {
-          phone: agg.phone,
-          email: agg.email,
-          username: agg.username || agg.phone || agg.email || undefined,
-          firstName: agg.firstName || agg.username || 'کاربر',
-          lastName: agg.lastName || '',
-          role: UserRole.USER,
-          isActive: true,
-          isOld: true,
-          password: hashedPassword,
-          mustChangePassword: true,
-          otp: null,
-          otpExpiresAt: null,
-          purchasedCourses: {
-            create: courseIds.map((courseId) => ({
-              course: { connect: { id: courseId } },
-            })),
-          },
+    await prisma.user.create({
+      data: {
+        phone: agg.phone,
+        email: agg.email,
+        username: agg.username || agg.phone || agg.email || undefined,
+        firstName: agg.firstName || agg.username || 'کاربر',
+        lastName: agg.lastName || '',
+        role: UserRole.USER,
+        isActive: true,
+        isOld: true,
+        password: hashedPassword,
+        mustChangePassword: true,
+        otp: null,
+        otpExpiresAt: null,
+        purchasedCourses: {
+          create: courseIds.map((courseId) => ({
+            course: { connect: { id: courseId } },
+          })),
         },
-      });
+      },
+    });
     } catch (error: any) {
       // If user already exists (unique constraint violation), skip creation
       if (error.code === 'P2002') {
