@@ -223,15 +223,15 @@ async function ensureUserAndCourses(
           userId_courseId: { userId: existing.id, courseId },
         },
       });
-      if (!already && APPLY_CHANGES) {
-        await prisma.courseEnrollment.create({
-          data: {
-            userId: existing.id,
-            courseId,
-          },
-        });
-        added++;
-      } else if (!already) {
+      if (!already) {
+        if (APPLY_CHANGES) {
+          await prisma.courseEnrollment.create({
+            data: {
+              userId: existing.id,
+              courseId,
+            },
+          });
+        }
         added++;
       }
     }
