@@ -75,39 +75,41 @@ export class UsersService {
       }
     }
 
-    // Generate username from firstName + lastName
-    let username = '';
+    // Build desired username from provided names, falling back to phone/email
+    let desiredUsername = '';
     if (firstName && lastName) {
-      username = `${firstName.trim()} ${lastName.trim()}`.trim();
+      desiredUsername = `${firstName.trim()} ${lastName.trim()}`.trim();
     } else if (firstName) {
-      username = firstName.trim();
+      desiredUsername = firstName.trim();
     } else if (lastName) {
-      username = lastName.trim();
+      desiredUsername = lastName.trim();
     } else {
-      // Fallback: use phone or email if names are not provided
-      username = normalizedPhone || normalizedEmail || 'User';
+      desiredUsername = normalizedPhone || normalizedEmail || 'User';
     }
 
-    // Check for unique username (in case of duplicates, add a number)
-    let finalUsername = username;
-    let usernameCounter = 1;
-    while (true) {
-      const existingUsername = await this.prisma.user.findFirst({
-        where: {
-          username: {
-            equals: finalUsername,
-            mode: Prisma.QueryMode.insensitive,
+    const findUniqueUsername = async (candidate: string, excludeUserId?: string) => {
+      let final = candidate;
+      let counter = 1;
+
+      while (true) {
+        const existingUsername = await this.prisma.user.findFirst({
+          where: {
+            username: {
+              equals: final,
+              mode: Prisma.QueryMode.insensitive,
+            },
+            ...(excludeUserId ? { NOT: { id: excludeUserId } } : {}),
           },
-        },
-      });
-      
-      if (!existingUsername) {
-        break;
+        });
+
+        if (!existingUsername) {
+          return final;
+        }
+
+        final = `${candidate} ${counter}`;
+        counter++;
       }
-      
-      finalUsername = `${username} ${usernameCounter}`;
-      usernameCounter++;
-    }
+    };
 
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -125,8 +127,29 @@ export class UsersService {
       },
     });
 
+    const finalUsername = await findUniqueUsername(desiredUsername, existingUser?.id);
+
     if (existingUser) {
-      throw new ConflictException('User with this email or phone already exists');
+      if (existingUser.isOld) {
+        // Reuse and refresh imported (isOld) users instead of blocking creation
+        return this.update(existingUser.id, {
+          email: normalizedEmail ?? undefined,
+          phone: normalizedPhone ?? undefined,
+          firstName,
+          lastName,
+          avatar,
+          role: userRole,
+          isActive: isActive ?? true,
+          isOld: isOld ?? false,
+          username: finalUsername,
+          ...(password ? { password, confirmPassword } : {}),
+        });
+      }
+
+      const conflictReason = normalizedPhone && existingUser.phone === normalizedPhone
+        ? 'User with this phone already exists'
+        : 'User with this email already exists';
+      throw new ConflictException(conflictReason);
     }
 
     const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;

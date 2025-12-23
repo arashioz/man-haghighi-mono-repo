@@ -533,7 +533,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           )}
         </div>
 
-        <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-start gap-8 px-4 pb-16 pt-16 sm:px-8 sm:pt-20">
+        <div className="relative mx-auto flex min-h-[80vh] max-w-6xl flex-col justify-end gap-8 px-4 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-14">
           <motion.div variants={stagger} initial="hidden" animate="visible">
             {/* Get hero content from current slider */}
             {(() => {
