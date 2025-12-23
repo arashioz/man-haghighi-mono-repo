@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, 
 import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { CoursesService } from './courses.service';
-import { CreateCourseDto, UpdateCourseDto, EnrollCourseDto } from './dto/course.dto';
+import { CreateCourseDto, UpdateCourseDto, EnrollCourseDto, TransferEnrollmentsDto } from './dto/course.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -242,6 +242,21 @@ export class CoursesController {
   @ApiResponse({ status: 404, description: 'Course not found' })
   async getEnrollments(@Param('id') id: string) {
     return this.coursesService.getEnrollments(id);
+  }
+
+  @Patch(':id/transfer-enrollments')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Transfer all enrollments from a course to another (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Enrollments transferred successfully' })
+  @ApiResponse({ status: 404, description: 'Source or target course not found' })
+  @ApiResponse({ status: 400, description: 'Invalid transfer request' })
+  async transferEnrollments(
+    @Param('id') id: string,
+    @Body() body: TransferEnrollmentsDto,
+  ) {
+    return this.coursesService.transferEnrollments(id, body.targetCourseId);
   }
 
   @Get(':id')
