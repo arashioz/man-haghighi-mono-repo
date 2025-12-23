@@ -77,6 +77,10 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [backupLoading, setBackupLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState({
+    usersWithCourses: false,
+    courses: false,
+  });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -247,6 +251,82 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const downloadBlobFile = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const toCsv = (items: any[], columns: { key: string; label?: string }[]) => {
+    const header = columns.map((c) => `"${(c.label || c.key).replace(/"/g, '""')}"`).join(',');
+    const rows = items.map((item) =>
+      columns
+        .map((c) => {
+          const value = item[c.key] ?? '';
+          return `"${String(value).replace(/"/g, '""')}"`;
+        })
+        .join(',')
+    );
+    return [header, ...rows].join('\n');
+  };
+
+  const handleDownloadUsersWithCourses = async () => {
+    try {
+      setDownloadLoading((prev) => ({ ...prev, usersWithCourses: true }));
+      const data = await usersService.exportUsersJson();
+      const blob =
+        data instanceof Blob
+          ? data
+          : new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const date = new Date().toISOString().split('T')[0];
+      downloadBlobFile(blob, `users_with_courses_${date}.json`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دانلود کاربران و دوره‌ها');
+      console.error('Download users with courses error:', err);
+    } finally {
+      setDownloadLoading((prev) => ({ ...prev, usersWithCourses: false }));
+    }
+  };
+
+  const handleDownloadCourses = async () => {
+    try {
+      setDownloadLoading((prev) => ({ ...prev, courses: true }));
+      const courses = await coursesService.getAll();
+      const slimCourses = courses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        price: c.price,
+        published: c.published ? 'بله' : 'خیر',
+        showOnHomepage: c.showOnHomepage ? 'بله' : 'خیر',
+        createdAt: new Date(c.createdAt).toLocaleDateString('fa-IR'),
+        updatedAt: new Date(c.updatedAt).toLocaleDateString('fa-IR'),
+      }));
+      const csv = toCsv(slimCourses, [
+        { key: 'id', label: 'شناسه' },
+        { key: 'title', label: 'عنوان' },
+        { key: 'price', label: 'قیمت' },
+        { key: 'published', label: 'منتشر شده' },
+        { key: 'showOnHomepage', label: 'نمایش در صفحه اصلی' },
+        { key: 'createdAt', label: 'تاریخ ایجاد' },
+        { key: 'updatedAt', label: 'تاریخ بروزرسانی' },
+      ]);
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const date = new Date().toISOString().split('T')[0];
+      downloadBlobFile(blob, `courses_${date}.csv`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دانلود لیست دوره‌ها');
+      console.error('Download courses error:', err);
+    } finally {
+      setDownloadLoading((prev) => ({ ...prev, courses: false }));
+    }
+  };
+
   const statCards = getStatCards();
 
   if (loading) {
@@ -277,31 +357,73 @@ const Dashboard: React.FC = () => {
   return (
     <div className="ios-fade-in">
       {/* Header با طراحی iOS */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-4xl font-semibold text-gray-900 mb-2">{getPageTitle()}</h1>
           <p className="text-[17px] text-[#8E8E93]">{getPageDescription()}</p>
         </div>
         {user?.role === 'ADMIN' && (
-          <button
-            onClick={handleBackup}
-            disabled={backupLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {backupLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>در حال ایجاد بکاپ...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                <span>دانلود بکاپ دیتابیس</span>
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleDownloadUsersWithCourses}
+              disabled={downloadLoading.usersWithCourses}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadLoading.usersWithCourses ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>در حال آماده‌سازی کاربران...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                  </svg>
+                  <span>دانلود کاربران + دوره‌ها (JSON)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadCourses}
+              disabled={downloadLoading.courses}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadLoading.courses ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>در حال آماده‌سازی دوره‌ها...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                  </svg>
+                  <span>دانلود لیست دوره‌ها (CSV)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleBackup}
+              disabled={backupLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {backupLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>در حال ایجاد بکاپ...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span>دانلود بکاپ دیتابیس</span>
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
