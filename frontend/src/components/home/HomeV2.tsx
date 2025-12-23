@@ -948,7 +948,6 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-8 w-full">
             <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
-            <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-yellow-400/5 via-transparent to-purple-500/10" />
 
               <div className="relative flex flex-col lg:flex-row items-center lg:items-center gap-6 lg:gap-10 w-full p-6 sm:p-8">
