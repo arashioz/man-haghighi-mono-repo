@@ -61,6 +61,21 @@ export class UsersController {
     return this.usersService.getSalesManagers();
   }
 
+  @Get(':id/export/json')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export single user with full data as JSON (Admin only)' })
+  @ApiResponse({ status: 200, description: 'JSON file generated successfully', content: { 'application/json': {} } })
+  async exportSingleUserJson(@Param('id') id: string, @Res() res: Response) {
+    const data = await this.usersService.exportSingleUserWithCourses(id);
+
+    const filename = `user_${id}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    res.send(JSON.stringify(data, null, 2));
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

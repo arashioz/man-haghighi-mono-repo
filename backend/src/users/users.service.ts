@@ -907,6 +907,62 @@ export class UsersService {
     }));
   }
 
+  async exportSingleUserWithCourses(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        purchasedCourses: {
+          include: {
+            course: {
+              include: {
+                videos: {
+                  orderBy: { order: 'asc' },
+                },
+                audios: {
+                  orderBy: { order: 'asc' },
+                },
+              },
+            },
+          },
+          orderBy: { enrolledAt: 'desc' },
+        },
+        videoAccess: { select: { videoId: true } },
+        audioAccess: { select: { audioId: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      phone: user.phone,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      isActive: user.isActive,
+      isOld: user.isOld,
+      isBlocked: user.isBlocked,
+      education: user.education,
+      university: user.university,
+      job: user.job,
+      state: user.state,
+      gender: user.gender,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      purchasedCourses: user.purchasedCourses.map((enrollment) => ({
+        id: enrollment.id,
+        enrolledAt: enrollment.enrolledAt,
+        course: this.urlService.processCourseData(enrollment.course),
+      })),
+      videoAccessIds: user.videoAccess.map((access) => access.videoId),
+      audioAccessIds: user.audioAccess.map((access) => access.audioId),
+    };
+  }
+
   async exportUsers(filters: ExportUsersQueryDto) {
     const where = this.buildUserExportWhere(filters);
 

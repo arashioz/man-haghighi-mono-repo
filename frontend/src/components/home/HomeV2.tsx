@@ -939,7 +939,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         </section>
 
         {/* 3D Globe Section - full width */}
-        <section className="relative border-t border-white/10 py-20 sm:py-28 overflow-hidden">
+        <section className="relative border-t border-white/10 py-16 sm:py-24 overflow-hidden">
           {/* Soft background glows */}
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl" />
@@ -948,20 +948,21 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-8 w-full">
             <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
+            <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-yellow-400/5 via-transparent to-purple-500/10" />
 
-              <div className="relative flex flex-col lg:flex-row items-center lg:items-stretch gap-8 lg:gap-12 w-full p-6 sm:p-10">
+              <div className="relative flex flex-col lg:flex-row items-center lg:items-center gap-6 lg:gap-10 w-full p-6 sm:p-8">
                 {/* 3D globe - left side */}
                 <motion.div
                   variants={fadeUp}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.4 }}
-                  className="w-full lg:w-1/2 flex-shrink-0"
+                  className="w-full lg:w-1/2 flex-shrink-0 flex justify-center"
                 >
-                  <div className="relative w-full h-[400px] sm:h-[500px] lg:h-[600px] overflow-hidden rounded-[28px] border border-white/10 bg-black/50">
+                  <div className="relative w-full max-w-[720px] h-[450px] sm:h-[600px] lg:h-[720px] overflow-hidden rounded-[28px] border border-white/10 bg-black/50 mx-auto">
                     {/* Outer ring / glow */}
-                    <div className="pointer-events-none absolute inset-6 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
+                    <div className="pointer-events-none absolute inset-4 sm:inset-5 lg:inset-6 rounded-full border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
 
                     <Globe
                       ref={globeRef}
