@@ -78,6 +78,8 @@ const UsersManagement: React.FC = () => {
     role: '',
   });
   const [exporting, setExporting] = useState(false);
+  const [exportingJson, setExportingJson] = useState(false);
+  const [exportingUserId, setExportingUserId] = useState<string | null>(null);
 
   const tabs = [
     { id: 'users' as TabType, label: 'کاربران', role: 'USER' },
@@ -233,6 +235,65 @@ const UsersManagement: React.FC = () => {
       setError(err.response?.data?.message || err.message || 'خطا در دانلود فایل Excel');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleExportUsersJson = async () => {
+    setExportingJson(true);
+    try {
+      const currentRole = tabs.find(t => t.id === activeTab)?.role || '';
+      const filters = {
+        ...exportFilters,
+        role: currentRole || exportFilters.role,
+      };
+
+      const blob = await usersService.exportUsersJson(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      const date = new Date().toISOString().split('T')[0];
+      let filename = `users_export_${date}`;
+      if (filters.userType !== 'all') {
+        filename += `_${filters.userType}`;
+      }
+      if (filters.startDate || filters.endDate) {
+        filename += `_${filters.startDate || 'start'}_${filters.endDate || 'end'}`;
+      }
+      if (filters.role) {
+        filename += `_${filters.role}`;
+      }
+      filename += '.json';
+
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'خطا در دانلود JSON');
+    } finally {
+      setExportingJson(false);
+    }
+  };
+
+  const handleExportSingleUser = async (userId: string, userName: string) => {
+    setExportingUserId(userId);
+    try {
+      const blob = await usersService.exportUserJson(userId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = (userName || 'user').replace(/\s+/g, '_');
+      a.download = `user_${safeName || userId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'خطا در دانلود داده کاربر');
+    } finally {
+      setExportingUserId(null);
     }
   };
 
@@ -559,30 +620,54 @@ const UsersManagement: React.FC = () => {
 
       {/* Export Section */}
       <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-col sm:flex-row gap-3">
           <h3 className="text-lg font-semibold text-gray-900">خروجی Excel</h3>
-          <button
-            onClick={handleExportUsers}
-            disabled={exporting}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {exporting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>در حال تولید...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>دانلود Excel</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportUsers}
+              disabled={exporting}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exporting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>در حال تولید...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>دانلود Excel</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleExportUsersJson}
+              disabled={exportingJson}
+              className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {exportingJson ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>JSON...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-6a2 2 0 012-2h6M9 13h6m-3 4l3-3m0 0l-3-3m3 3H9" />
+                  </svg>
+                  <span>دانلود JSON</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -819,6 +904,23 @@ const UsersManagement: React.FC = () => {
                   </td>
                   <td className="px-2 py-3">
                     <div className="flex justify-center gap-1">
+                      <button
+                        onClick={() => handleExportSingleUser(user.id, `${user.firstName} ${user.lastName}`.trim() || user.username)}
+                        className="text-amber-600 hover:text-amber-800 p-1"
+                        title="دانلود داده کاربر"
+                        disabled={exportingUserId === user.id}
+                      >
+                        {exportingUserId === user.id ? (
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16v-4m0 0V8m0 4h4m-4 0H8m4 8a8 8 0 110-16 8 8 0 010 16z" />
+                          </svg>
+                        )}
+                      </button>
                       <button 
                         onClick={() => handleEditUser(user)}
                         className="text-blue-600 hover:text-blue-900 p-1"

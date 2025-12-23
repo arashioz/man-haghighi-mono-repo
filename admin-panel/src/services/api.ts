@@ -245,6 +245,39 @@ export const usersService = {
     return response.data;
   },
 
+  exportUsersJson: async (filters?: {
+    userType?: 'all' | 'old' | 'new';
+    startDate?: string;
+    endDate?: string;
+    role?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.userType && filters.userType !== 'all') {
+      params.append('userType', filters.userType);
+    }
+    if (filters?.startDate) {
+      params.append('startDate', filters.startDate);
+    }
+    if (filters?.endDate) {
+      params.append('endDate', filters.endDate);
+    }
+    if (filters?.role) {
+      params.append('role', filters.role);
+    }
+
+    const response = await api.get(`/users/export/json?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    return response.data;
+  },
+
+  exportUserJson: async (userId: string) => {
+    const response = await api.get(`/users/${userId}/export/json`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
 
 };
 

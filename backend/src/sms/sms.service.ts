@@ -4,23 +4,20 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly apiKey: string;
-  private readonly lineNumber: string;
-  private readonly patternCode: string;
+  private readonly apiKey: string = "KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=";
+  private readonly lineNumber: '+9810004150535353';
+  private readonly patternCode: 'yrw36my3bqoha54';
   private readonly apiUrl = 'https://api.iranpayamak.com/ws/v1';
 
   constructor(private configService: ConfigService) {
-    // Try to get from environment variables directly first, then fallback to ConfigService
     const rawApiKey = process.env.IRANPAYAMAK_API_KEY || this.configService.get<string>('IRANPAYAMAK_API_KEY', 'KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=');
     const rawLineNumber = process.env.IRANPAYAMAK_LINE_NUMBER || this.configService.get<string>('IRANPAYAMAK_LINE_NUMBER', '+9810004150535353');
     const rawPatternCode = process.env.IRANPAYAMAK_PATTERN_CODE || this.configService.get<string>('IRANPAYAMAK_PATTERN_CODE', 'verification-code');
     
-    // Trim whitespace from all values
-    this.apiKey = rawApiKey?.trim() || '';
-    this.lineNumber = rawLineNumber?.trim() || '';
-    this.patternCode = rawPatternCode?.trim() || '';
-    
-    // Log configuration status (without exposing full API key)
+    this.apiKey = (rawApiKey?.trim() || '') as string;
+    this.lineNumber = (rawLineNumber?.trim() || '+9810004150535353') as '+9810004150535353';
+    this.patternCode = (rawPatternCode?.trim() || 'yrw36my3bqoha54') as 'yrw36my3bqoha54';
+
     this.logger.log(`SMS Service initialized:`, {
       hasApiKey: !!this.apiKey,
       apiKeyLength: this.apiKey?.length || 0,
@@ -59,6 +56,14 @@ export class SmsService {
         number_format: 'english',
       };
 
+
+        this.logger.warn('DEV ONLY: Full OTP SMS request details', {
+          url: `${this.apiUrl}/sms/pattern`,
+          apiKey: this.apiKey,
+          requestBody,
+        });
+      
+
       // Log what we're sending (without exposing full API key)
       this.logger.log(`Sending SMS request to IranPayamak API:`, {
         url: `${this.apiUrl}/sms/pattern`,
@@ -75,8 +80,7 @@ export class SmsService {
         },
       });
       
-      // Try different header formats if Api-Key doesn't work
-      // Some APIs use X-API-Key or Authorization header
+
       const headers: Record<string, string> = {
         'Accept': 'application/json',
         'Content-Type': 'application/json',

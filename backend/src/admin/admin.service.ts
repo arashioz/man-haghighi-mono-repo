@@ -39,13 +39,14 @@ export class AdminService {
         throw new Error('DATABASE_URL is not configured');
       }
 
-      // Parse DATABASE_URL (format: postgresql://user:password@host:port/database)
-      const urlMatch = databaseUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-      if (!urlMatch) {
-        throw new Error('Invalid DATABASE_URL format');
-      }
-
-      const [, user, password, host, port, database] = urlMatch;
+      // Parse DATABASE_URL safely (handles query params like ?schema=public)
+      const parsedUrl = new URL(databaseUrl);
+      const user = decodeURIComponent(parsedUrl.username);
+      const password = decodeURIComponent(parsedUrl.password);
+      const host = parsedUrl.hostname;
+      const port = parsedUrl.port || '5432';
+      const database = decodeURIComponent(parsedUrl.pathname.replace(/^\//, ''));
+      const schema = parsedUrl.searchParams.get('schema');
 
       // Create backup directory if it doesn't exist
       const backupDir = path.join(process.cwd(), 'backups');
@@ -66,7 +67,8 @@ export class AdminService {
       };
 
       // Create pg_dump command (plain SQL format for easier download and restore)
-      const pgDumpCommand = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F p --no-owner --no-acl -f "${backupPath}"`;
+      const schemaFlag = schema ? ` --schema=${schema}` : '';
+      const pgDumpCommand = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database}${schemaFlag} -F p --no-owner --no-acl -f "${backupPath}"`;
       
       // Execute pg_dump
       await execAsync(pgDumpCommand, { env, maxBuffer: 1024 * 1024 * 100 }); // 100MB buffer

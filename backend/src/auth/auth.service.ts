@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
@@ -118,7 +118,14 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new UnauthorizedException('User already exists');
+      const hasSameEmail = normalizedEmail && existingUser.email?.toLowerCase() === normalizedEmail;
+      const hasSamePhone = normalizedPhone && existingUser.phone === normalizedPhone;
+      const message = hasSameEmail
+        ? 'این ایمیل قبلاً ثبت شده است'
+        : hasSamePhone
+          ? 'این شماره قبلاً ثبت شده است'
+          : 'کاربر قبلاً ثبت شده است';
+      throw new ConflictException(message);
     }
 
     const userData: Prisma.UserCreateInput = {
@@ -204,60 +211,56 @@ export class AuthService {
       throw new UnauthorizedException('Account is not active');
     }
 
-    if (password) {
-      const isOldUserWithPhone = (user as any).isOld && normalizedPhone && user.phone === normalizedPhone;
-      const isUserRole = user.role === 'USER';
-      
+    const hasPasswordInput = typeof password === 'string' && password.trim() !== '';
+
+    if (hasPasswordInput) {
       if (!user.password) {
-        if (isUserRole) {
-        } else {
-          throw new UnauthorizedException('Password not set for this user. Please use OTP authentication.');
-        }
-      } else {
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-          if (isUserRole && normalizedPhone && user.phone === normalizedPhone) {
-          } else {
-            throw new UnauthorizedException('Invalid credentials');
-          }
-        } else {
-          const token = this.jwtService.sign({
-            sub: user.id,
-            email: user.email,
-            phone: user.phone,
-            role: user.role,
-          });
-
-          const legacyUser = user as any;
-
-          // Check if user must change password
-          const mustChangePassword = (legacyUser.mustChangePassword === true);
-
-          return {
-            user: {
-              id: legacyUser.id,
-              email: legacyUser.email,
-              phone: legacyUser.phone,
-              username: legacyUser.username,
-              firstName: legacyUser.firstName,
-              lastName: legacyUser.lastName,
-              role: legacyUser.role,
-              isActive: legacyUser.isActive,
-              isOld: legacyUser.isOld,
-              mustChangePassword: mustChangePassword,
-              education: legacyUser.education,
-              university: legacyUser.university,
-              job: legacyUser.job,
-              state: legacyUser.state,
-              gender: legacyUser.gender,
-              createdAt: legacyUser.createdAt,
-              updatedAt: legacyUser.updatedAt,
-            },
-            token,
-            mustChangePassword: mustChangePassword,
-          };
-        }
+        const message = user.role === 'USER'
+          ? 'برای ورود با رمز عبور، ابتدا رمز عبور تعیین کنید یا از ورود با کد یکبارمصرف استفاده کنید.'
+          : 'Password not set for this user. Please use OTP authentication.';
+        throw new UnauthorizedException(message);
       }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid credentials');
+      }
+
+      const token = this.jwtService.sign({
+        sub: user.id,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      });
+
+      const legacyUser = user as any;
+
+      // Check if user must change password
+      const mustChangePassword = (legacyUser.mustChangePassword === true);
+
+      return {
+        user: {
+          id: legacyUser.id,
+          email: legacyUser.email,
+          phone: legacyUser.phone,
+          username: legacyUser.username,
+          firstName: legacyUser.firstName,
+          lastName: legacyUser.lastName,
+          role: legacyUser.role,
+          isActive: legacyUser.isActive,
+          isOld: legacyUser.isOld,
+          mustChangePassword: mustChangePassword,
+          education: legacyUser.education,
+          university: legacyUser.university,
+          job: legacyUser.job,
+          state: legacyUser.state,
+          gender: legacyUser.gender,
+          createdAt: legacyUser.createdAt,
+          updatedAt: legacyUser.updatedAt,
+        },
+        token,
+        mustChangePassword: mustChangePassword,
+      };
     }
 
     if (user.role !== 'USER') {

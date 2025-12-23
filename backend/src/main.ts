@@ -31,18 +31,26 @@ async function bootstrap() {
 
   // Get CORS origins from environment variable
   const corsOriginsEnv = configService.get<string>('CORS_ORIGINS', '');
+  const defaultOrigins = [
+    'https://admin.manehaghighi.com',
+    'https://manehaghighi.com',
+    'https://www.manehaghighi.com',
+  ];
   let allowedOrigins: string[] = [];
   
   if (corsOriginsEnv) {
     // Parse comma-separated origins from env
     allowedOrigins = corsOriginsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
-  } else if (!isProduction) {
-    // Development fallback
-    allowedOrigins = [
-      'https://manehaghighi.com',
-      'https://www.manehaghighi.com',
-      'https://admin.manehaghighi.com',
-    ];
+  }
+
+  // Fallback to known safe domains so production admin traffic is not blocked
+  if (allowedOrigins.length === 0) {
+    allowedOrigins = defaultOrigins;
+    if (isProduction) {
+      logger.warn('⚠️  CORS_ORIGINS not set; falling back to default admin domains in production.');
+    } else {
+      logger.log('ℹ️  CORS_ORIGINS not set; using default domains.');
+    }
   }
 
   // Validate no wildcards
@@ -50,18 +58,7 @@ async function bootstrap() {
     throw new Error('CORS origins cannot contain wildcards. Use specific origins only.');
   }
 
-  // In production, CORS origins must be configured
-  if (isProduction && allowedOrigins.length === 0) {
-    logger.error('❌ CORS_ORIGINS is required in production but not configured!');
-    logger.error('   Please set CORS_ORIGINS in your .env file');
-    throw new Error('CORS_ORIGINS is required in production environment');
-  }
-
-  if (allowedOrigins.length === 0) {
-    logger.warn('⚠️  No CORS origins configured. CORS will be disabled.');
-  } else {
-    logger.log(`✅ CORS enabled for ${allowedOrigins.length} origin(s)`);
-  }
+  logger.log(`✅ CORS enabled for ${allowedOrigins.length} origin(s)`);
 
   // Enable CORS first (before helmet)
   app.enableCors({
