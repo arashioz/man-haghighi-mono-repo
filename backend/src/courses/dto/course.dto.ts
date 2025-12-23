@@ -2,6 +2,12 @@ import { IsString, IsOptional, IsBoolean, IsNumber, IsDecimal } from 'class-vali
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
+export class TransferEnrollmentsDto {
+  @ApiProperty({ example: 'target-course-id', description: 'Target course to move all enrollments into' })
+  @IsString()
+  targetCourseId: string;
+}
+
 export class CreateCourseDto {
   @ApiProperty({ example: 'Complete JavaScript Course' })
   @IsString()

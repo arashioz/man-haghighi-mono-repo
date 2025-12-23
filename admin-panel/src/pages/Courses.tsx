@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -140,6 +140,7 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
 };
 
 const MAX_EPISODES_PER_TYPE = 50;
+const ENROLLMENTS_PAGE_SIZE = 20;
 
 const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -191,9 +192,35 @@ const Courses: React.FC = () => {
     };
   }>>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(false);
+  const [enrollmentsPage, setEnrollmentsPage] = useState(1);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [targetCourseId, setTargetCourseId] = useState('');
   const [transferring, setTransferring] = useState(false);
+
+  const validEnrollments = useMemo(
+    () => enrollments.filter((enrollment) => enrollment && enrollment.user),
+    [enrollments],
+  );
+
+  const totalEnrollmentPages = useMemo(
+    () => Math.max(1, Math.ceil(validEnrollments.length / ENROLLMENTS_PAGE_SIZE)),
+    [validEnrollments],
+  );
+
+  const paginatedEnrollments = useMemo(() => {
+    const start = (enrollmentsPage - 1) * ENROLLMENTS_PAGE_SIZE;
+    return validEnrollments.slice(start, start + ENROLLMENTS_PAGE_SIZE);
+  }, [enrollmentsPage, validEnrollments]);
+
+  useEffect(() => {
+    setEnrollmentsPage(1);
+  }, [selectedCourse, enrollments]);
+
+  useEffect(() => {
+    if (enrollmentsPage > totalEnrollmentPages) {
+      setEnrollmentsPage(totalEnrollmentPages);
+    }
+  }, [enrollmentsPage, totalEnrollmentPages]);
 
   // Helper functions for dynamic video/audio management
   const addVideoField = () => {
@@ -874,6 +901,7 @@ const Courses: React.FC = () => {
       setSelectedCourse(course);
       setIsUsersModalOpen(true);
       setLoadingEnrollments(true);
+      setEnrollmentsPage(1);
       setSelectedUserIds(new Set());
       setTargetCourseId('');
       setError(''); // Clear any previous errors
@@ -900,10 +928,10 @@ const Courses: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedUserIds.size === enrollments.length) {
+    if (selectedUserIds.size === validEnrollments.length) {
       setSelectedUserIds(new Set());
     } else {
-      setSelectedUserIds(new Set(enrollments.map(e => e.userId)));
+      setSelectedUserIds(new Set(validEnrollments.map(e => e.userId)));
     }
   };
 
@@ -923,12 +951,12 @@ const Courses: React.FC = () => {
       return;
     }
 
-    if (enrollments.length === 0) {
+    if (validEnrollments.length === 0) {
       setError('هیچ کاربری برای انتقال وجود ندارد');
       return;
     }
 
-    if (!window.confirm(`آیا مطمئن هستید که می‌خواهید همه ${enrollments.length} کاربر را از دوره "${selectedCourse.title}" به دوره انتخابی منتقل کنید؟`)) {
+    if (!window.confirm(`آیا مطمئن هستید که می‌خواهید همه ${validEnrollments.length} کاربر را از دوره "${selectedCourse.title}" به دوره انتخابی منتقل کنید؟`)) {
       return;
     }
 
@@ -2067,11 +2095,11 @@ const Courses: React.FC = () => {
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={selectedUserIds.size === enrollments.length && enrollments.length > 0}
+                    checked={selectedUserIds.size === validEnrollments.length && validEnrollments.length > 0}
                     onChange={handleSelectAll}
                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
-                  <span className="text-sm font-medium text-gray-700">انتخاب همه ({enrollments.length} کاربر)</span>
+                  <span className="text-sm font-medium text-gray-700">انتخاب همه ({validEnrollments.length} کاربر)</span>
                 </label>
               </div>
               <div className="text-sm text-gray-600">
@@ -2079,7 +2107,7 @@ const Courses: React.FC = () => {
               </div>
             </div>
 
-            {enrollments.length === 0 ? (
+            {validEnrollments.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 هیچ کاربری در این دوره ثبت‌نام نکرده است
               </div>
@@ -2110,9 +2138,7 @@ const Courses: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {enrollments
-                        .filter((enrollment) => enrollment && enrollment.user) // Filter out invalid enrollments
-                        .map((enrollment) => (
+                      {paginatedEnrollments.map((enrollment) => (
                           <tr key={enrollment.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 whitespace-nowrap">
                               <input
@@ -2143,8 +2169,31 @@ const Courses: React.FC = () => {
                   </table>
                 </div>
 
-                {enrollments.length > 0 && (
-                  <div className="border-t pt-4 mt-4 space-y-4">
+                {validEnrollments.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      <span>
+                        نمایش {paginatedEnrollments.length} کاربر (صفحه {enrollmentsPage} از {totalEnrollmentPages})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setEnrollmentsPage((p) => Math.max(1, p - 1))}
+                          disabled={enrollmentsPage === 1}
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50 bg-white hover:bg-gray-100"
+                        >
+                          قبلی
+                        </button>
+                        <button
+                          onClick={() => setEnrollmentsPage((p) => Math.min(totalEnrollmentPages, p + 1))}
+                          disabled={enrollmentsPage === totalEnrollmentPages}
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50 bg-white hover:bg-gray-100"
+                        >
+                          بعدی
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4 space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         انتقال همه کاربران به دوره:
@@ -2179,10 +2228,11 @@ const Courses: React.FC = () => {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                           </svg>
-                          <span>انتقال همه {enrollments.length} کاربر به دوره انتخاب شده</span>
+                          <span>انتقال همه {validEnrollments.length} کاربر به دوره انتخاب شده</span>
                         </>
                       )}
                     </button>
+                    </div>
                   </div>
                 )}
               </>
