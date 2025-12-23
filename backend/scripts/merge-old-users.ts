@@ -20,7 +20,7 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { PrismaClient, UserRole } from '@prisma/client';
-import { normalizePhone } from '../src/common/utils/phone.utils';
+import { normalizePhone } from '../dist/src/common/utils/phone.utils';
 
 type RawEntry =
   | { type: 'header' | 'database'; [k: string]: any }
