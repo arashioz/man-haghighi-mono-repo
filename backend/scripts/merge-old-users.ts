@@ -313,8 +313,18 @@ async function ensureUserAndCourses(
 
     // Update missing fields
     if (isEmptyValue(existing.phone) && agg.phone) {
-      updateData.phone = agg.phone;
-      updated = true;
+      const phoneOwner = await prisma.user.findFirst({
+        where: { phone: agg.phone },
+        select: { id: true, username: true },
+      });
+      if (phoneOwner && phoneOwner.id !== existing.id) {
+        console.log(
+          `⚠️  Phone ${agg.phone} already assigned to ${phoneOwner.username || phoneOwner.id}, skipping update for ${existing.username || existing.id}`,
+        );
+      } else {
+        updateData.phone = agg.phone;
+        updated = true;
+      }
     }
     if (isEmptyValue(existing.email) && agg.email) {
       updateData.email = agg.email;
