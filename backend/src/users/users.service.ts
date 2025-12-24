@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, PaginationQueryDto, ExportUsersQueryDto } from './dto/user.dto';
 import * as bcrypt from 'bcryptjs';
@@ -848,6 +848,77 @@ export class UsersService {
       },
       select: baseUserSelect,
     });
+  }
+
+  async promoteUserByPhone(
+    phone: string,
+    role: 'SALES_MANAGER' | 'SALES_PERSON',
+    firstName?: string,
+    lastName?: string,
+    salesManagerId?: string,
+  ) {
+    // Validate target role
+    if (role !== 'SALES_MANAGER' && role !== 'SALES_PERSON') {
+      throw new BadRequestException('نقش معتبر نیست');
+    }
+
+    // Normalize phone
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      throw new BadRequestException('شماره موبایل نامعتبر است');
+    }
+
+    // If assigning to a manager, validate the manager
+    if (role === 'SALES_PERSON' && salesManagerId) {
+      const manager = await this.prisma.user.findUnique({
+        where: { id: salesManagerId },
+        select: { id: true, role: true, isActive: true },
+      });
+
+      if (!manager || manager.role !== 'SALES_MANAGER' || !manager.isActive) {
+        throw new BadRequestException('مدیر فروش معتبر نیست');
+      }
+    }
+
+    // Find or create user by phone
+    let user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          phone: normalizedPhone,
+          username: `user_${normalizedPhone}`,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          role,
+          isActive: true,
+          parentId: role === 'SALES_PERSON' ? salesManagerId || null : null,
+        },
+      });
+    } else {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          role,
+          firstName: typeof firstName !== 'undefined' ? firstName : user.firstName,
+          lastName: typeof lastName !== 'undefined' ? lastName : user.lastName,
+          parentId: role === 'SALES_PERSON' ? salesManagerId || null : null,
+          isActive: true,
+        },
+      });
+    }
+
+    // If promoted to sales manager, ensure no parent assignment
+    if (role === 'SALES_MANAGER' && user.parentId) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { parentId: null },
+      });
+    }
+
+    return user;
   }
 
   private buildUserExportWhere(filters: ExportUsersQueryDto): Prisma.UserWhereInput {

@@ -49,6 +49,16 @@ export class PaymentsController {
     return this.paymentsService.initiateCoursePayment(req.user.id, courseId);
   }
 
+  // Legacy/compat path kept for current clients sending POST /payments/course/:courseId
+  @Post('course/:courseId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'شروع پرداخت دوره (مسیر قدیمی بدون /initiate)' })
+  @ApiParam({ name: 'courseId', description: 'شناسه دوره' })
+  async initiateCoursePaymentLegacy(@Param('courseId') courseId: string, @Req() req) {
+    return this.paymentsService.initiateCoursePayment(req.user.id, courseId);
+  }
+
   @Post('wallet/charge')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

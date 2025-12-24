@@ -84,6 +84,33 @@ export class CreateUserDto {
   gender?: string;
 }
 
+export class PromoteUserByPhoneDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @ApiProperty({ example: 'SALES_PERSON', enum: ['SALES_MANAGER', 'SALES_PERSON'] })
+  @IsString()
+  @IsNotEmpty()
+  role: 'SALES_MANAGER' | 'SALES_PERSON';
+
+  @ApiProperty({ example: 'علی', required: false })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiProperty({ example: 'رضایی', required: false })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiProperty({ example: 'manager-user-id', required: false, description: 'Only for assigning sales person to a manager' })
+  @IsOptional()
+  @IsString()
+  salesManagerId?: string;
+}
+
 export class AssignSalesPersonDto {
   @ApiProperty({ example: 'sales-person-id' })
   @IsString()

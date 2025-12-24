@@ -347,8 +347,21 @@ async function ensureUserAndCourses(
       }
     }
     if (isEmptyValue(existing.email) && agg.email) {
-      updateData.email = agg.email;
-      updated = true;
+      const emailOwner = await prisma.user.findFirst({
+        where: { email: agg.email },
+        select: { id: true, username: true, phone: true },
+      });
+
+      if (emailOwner && emailOwner.id !== existing.id) {
+        console.log(
+          `⚠️  Email ${agg.email} already assigned to ${emailOwner.username || emailOwner.id}, skipping email update for ${
+            existing.username || existing.id
+          }`,
+        );
+      } else {
+        updateData.email = agg.email;
+        updated = true;
+      }
     }
     if (isEmptyValue(existing.firstName) && agg.firstName) {
       updateData.firstName = agg.firstName;

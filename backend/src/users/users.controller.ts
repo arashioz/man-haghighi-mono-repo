@@ -1,7 +1,7 @@
 import { Controller, Get, Patch, Param, Body, Delete, UseGuards, Post, Req, Query, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto, PaginationQueryDto, ExportUsersQueryDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto, AssignSalesPersonDto, PaginationQueryDto, ExportUsersQueryDto, PromoteUserByPhoneDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -30,6 +30,22 @@ export class UsersController {
   @ApiResponse({ status: 201, description: 'User created successfully' })
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Post('promote-by-phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Promote or create user as sales manager/person by phone (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User promoted successfully' })
+  async promoteByPhone(@Body() body: PromoteUserByPhoneDto) {
+    return this.usersService.promoteUserByPhone(
+      body.phone,
+      body.role,
+      body.firstName,
+      body.lastName,
+      body.salesManagerId,
+    );
   }
 
   @Get('sales-persons')

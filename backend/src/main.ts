@@ -34,6 +34,7 @@ async function bootstrap() {
   logger.log(`🔍 CORS_ORIGINS from env: "${corsOriginsEnv}"`);
   const defaultOrigins = [
     'https://admin.manehaghighi.com',
+    'https://sales.manehaghighi.com',
     'https://manehaghighi.com',
     'https://www.manehaghighi.com',
     'https://api.manehaghighi.com',
@@ -45,9 +46,10 @@ async function bootstrap() {
     allowedOrigins = corsOriginsEnv.split(',').map(origin => origin.trim()).filter(Boolean);
   }
 
-  // Fallback to known safe domains so production admin traffic is not blocked
+  // Always include trusted defaults so admin/sales panels don’t break if env is incomplete
+  allowedOrigins = Array.from(new Set([...allowedOrigins, ...defaultOrigins]));
+
   if (allowedOrigins.length === 0) {
-    allowedOrigins = defaultOrigins;
     if (isProduction) {
       logger.warn('⚠️  CORS_ORIGINS not set; falling back to default admin domains in production.');
     } else {
