@@ -193,7 +193,7 @@ const Users: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
       try {
-        await usersService.delete(id);
+        await usersService.remove(id);
         setUsers(users.filter(user => user.id !== id));
         // Remove user courses and products counts from state
         setUserCoursesCount(prev => {
