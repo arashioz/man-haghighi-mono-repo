@@ -44,8 +44,3 @@ CREATE INDEX "logs_statusCode_idx" ON "logs"("statusCode");
 
 
 
-<<<<<<< Current (Your changes)
-
-
-=======
->>>>>>> Incoming (Background Agent changes)

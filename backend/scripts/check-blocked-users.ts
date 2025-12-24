@@ -9,19 +9,19 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const admins = await prisma.user.findMany({
-    where: { role: 'ADMIN' },
+  const users = await prisma.user.findMany({
+    where: { isBlocked: true },
     select: {
       id: true,
-      email: true,
       username: true,
       phone: true,
-      isActive: true,
+      blockedUntil: true,
+      rateLimitViolations: true,
     },
   });
 
-  console.log('Admin Users:');
-  console.log(JSON.stringify(admins, null, 2));
+  console.log('Blocked Users:');
+  console.log(JSON.stringify(users, null, 2));
 }
 
 main()

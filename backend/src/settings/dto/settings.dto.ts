@@ -83,6 +83,41 @@ export class UpdateSettingsDto {
   @IsArray()
   @IsString({ each: true })
   allowedFileTypes?: string[];
+
+  @ApiProperty({ example: '1234567', required: false })
+  @IsOptional()
+  @IsString()
+  gatewayTerminalId?: string;
+
+  @ApiProperty({ example: 'username', required: false })
+  @IsOptional()
+  @IsString()
+  gatewayUsername?: string;
+
+  @ApiProperty({ example: 'password', required: false })
+  @IsOptional()
+  @IsString()
+  gatewayPassword?: string;
+
+  @ApiProperty({ example: 'test', required: false })
+  @IsOptional()
+  @IsString()
+  gatewayMode?: string;
+
+  @ApiProperty({ example: 'https://example.com/callback', required: false })
+  @IsOptional()
+  @IsString()
+  gatewayCallbackUrl?: string;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  gatewayAutoVerify?: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  gatewayAutoSettle?: boolean;
 }
 
 

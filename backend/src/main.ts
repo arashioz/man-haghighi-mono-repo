@@ -31,10 +31,12 @@ async function bootstrap() {
 
   // Get CORS origins from environment variable
   const corsOriginsEnv = configService.get<string>('CORS_ORIGINS', '');
+  logger.log(`🔍 CORS_ORIGINS from env: "${corsOriginsEnv}"`);
   const defaultOrigins = [
     'https://admin.manehaghighi.com',
     'https://manehaghighi.com',
     'https://www.manehaghighi.com',
+    'https://api.manehaghighi.com',
   ];
   let allowedOrigins: string[] = [];
   
@@ -77,7 +79,7 @@ async function bootstrap() {
         if (normalizedAllowed === normalizedOrigin) return true;
         
         return false;
-      });
+      }) || origin.toLowerCase().endsWith('.manehaghighi.com') || origin.toLowerCase() === 'https://manehaghighi.com';
 
       if (isAllowed) {
         callback(null, true);
@@ -92,15 +94,21 @@ async function bootstrap() {
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
-      'Content-Type', 
-      'Authorization', 
-      'Accept', 
-      'Origin', 
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
       'X-Requested-With',
-      'Range', // Important for video streaming
+      'Range',
       'Content-Range',
       'Accept-Ranges',
-      'Access-Control-Allow-Headers'
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Credentials',
+      'Cache-Control',
+      'Pragma',
+      'Expires',
+      'X-HTTP-Method-Override',
     ],
     exposedHeaders: [
       'Content-Length', 

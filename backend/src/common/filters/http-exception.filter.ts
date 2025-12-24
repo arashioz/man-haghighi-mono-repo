@@ -120,10 +120,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const configService = this.moduleRef.get(ConfigService, { strict: false });
       const corsOriginsEnv = configService?.get<string>('CORS_ORIGINS') || '';
       if (corsOriginsEnv) {
+        this.logger.debug(`🔍 CORS_ORIGINS from ConfigService: "${corsOriginsEnv}"`);
         allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
       }
     } catch {
       const corsOriginsEnv = process.env.CORS_ORIGINS || '';
+      this.logger.debug(`🔍 CORS_ORIGINS from process.env: "${corsOriginsEnv}"`);
       allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
     }
     
@@ -133,22 +135,32 @@ export class HttpExceptionFilter implements ExceptionFilter {
         'https://admin.manehaghighi.com',
         'https://manehaghighi.com',
         'https://www.manehaghighi.com',
+        'https://api.manehaghighi.com',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002',
       ];
     }
 
     if (origin) {
       const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+      
       const isAllowed = allowedOrigins.some(allowed => {
         const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
         return normalizedAllowed === normalizedOrigin;
-      });
+      }) || normalizedOrigin.endsWith('.manehaghighi.com') || normalizedOrigin === 'https://manehaghighi.com';
+      
+      this.logger.debug(`CORS Check: origin=${origin}, isAllowed=${isAllowed}`);
       
       if (isAllowed) {
         response.setHeader('Access-Control-Allow-Origin', origin);
         response.setHeader('Access-Control-Allow-Credentials', 'true');
         response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range');
+        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Access-Control-Allow-Headers, Access-Control-Allow-Origin, Access-Control-Allow-Credentials, Cache-Control, Pragma, Expires, X-HTTP-Method-Override');
         response.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges, Content-Location');
+      } else {
+        this.logger.warn(`CORS Check FAILED for origin: ${origin}`);
+        this.logger.debug(`Allowed origins: ${allowedOrigins.join(', ')}`);
       }
     }
 
