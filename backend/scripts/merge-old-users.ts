@@ -315,12 +315,32 @@ async function ensureUserAndCourses(
     if (isEmptyValue(existing.phone) && agg.phone) {
       const phoneOwner = await prisma.user.findFirst({
         where: { phone: agg.phone },
-        select: { id: true, username: true },
+        select: { id: true, username: true, email: true },
       });
       if (phoneOwner && phoneOwner.id !== existing.id) {
-        console.log(
-          `⚠️  Phone ${agg.phone} already assigned to ${phoneOwner.username || phoneOwner.id}, skipping update for ${existing.username || existing.id}`,
-        );
+        // If this user is matched by email to legacy data, we treat their email as authoritative.
+        // Reclaim the phone even if the current owner has an email (to ensure phone login works for the email-matched user).
+        const canReclaim = APPLY_CHANGES && !!existing.email && existing.email === agg.email;
+
+        if (canReclaim) {
+          await prisma.user.update({
+            where: { id: phoneOwner.id },
+            data: { phone: null },
+          });
+          updateData.phone = agg.phone;
+          updated = true;
+          console.log(
+            `♻️  Reclaimed phone ${agg.phone} from ${phoneOwner.username || phoneOwner.id} for ${
+              existing.username || existing.id
+            } (email match)`,
+          );
+        } else {
+          console.log(
+            `⚠️  Phone ${agg.phone} already assigned to ${phoneOwner.username || phoneOwner.id}, skipping update for ${
+              existing.username || existing.id
+            }`,
+          );
+        }
       } else {
         updateData.phone = agg.phone;
         updated = true;
