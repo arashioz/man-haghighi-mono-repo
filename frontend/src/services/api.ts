@@ -277,6 +277,11 @@ export const paymentsService = {
     return response.data;
   },
 
+  getTransactionById: async (transactionId: string) => {
+    const response = await api.get(`/payments/transactions/${transactionId}`);
+    return response.data;
+  },
+
   getMyInvoices: async (limit = 50) => {
     const response = await api.get(`/payments/invoices?limit=${limit}`);
     return response.data;

@@ -89,6 +89,18 @@ export class PaymentsController {
     return this.handlePaymentCallback(body, res);
   }
 
+  @Get('transactions/:transactionId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'جزئیات تراکنش کاربر (برای نمایش پس از پرداخت)' })
+  @ApiParam({ name: 'transactionId', description: 'شناسه تراکنش' })
+  async getTransaction(
+    @Param('transactionId') transactionId: string,
+    @Req() req,
+  ) {
+    return this.paymentsService.getTransactionForUser(req.user, transactionId);
+  }
+
   private async handlePaymentCallback(callbackData: any, res: Response) {
     try {
       const result = await this.paymentsService.processPaymentCallback(callbackData);

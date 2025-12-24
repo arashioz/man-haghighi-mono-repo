@@ -694,5 +694,45 @@ export class PaymentsService {
       },
     };
   }
+
+  async getTransactionForUser(
+    user: { id: string; role: string },
+    transactionId: string,
+  ) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        invoice: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('تراکنش یافت نشد');
+    }
+
+    if (transaction.userId !== user.id && user.role !== 'ADMIN') {
+      throw new UnauthorizedException('دسترسی غیرمجاز به تراکنش');
+    }
+
+    return transaction;
+  }
 }
 
