@@ -4,12 +4,8 @@ services:
     image: postgres:15-alpine
     container_name: haghighi_postgres
     env_file: .env
-<<<<<<< HEAD
     ports:
       - "127.0.0.1:5433:5432"
-=======
-
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -29,8 +25,6 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
-    # Security: Configure PostgreSQL logging (optional)
-    # command: postgres -c log_statement=ddl -c log_destination=stderr
 
   # Backend API
   backend:
@@ -38,8 +32,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: haghighi_backend
-    # Environment variables are loaded from .env file
-    # Required SMS variables: IRANPAYAMAK_API_KEY, IRANPAYAMAK_LINE_NUMBER, IRANPAYAMAK_PATTERN_CODE
     env_file: .env
     ports:
       - "127.0.0.1:3000:3000"
@@ -128,7 +120,7 @@ services:
       retries: 3
       start_period: 10s
 
-  # Prisma CLI Service (for running Prisma commands)
+  # Prisma CLI Service
   prisma:
     build:
       context: ./backend
@@ -145,10 +137,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # This service doesn't run by default - use it with docker-compose run
-    # Example: docker-compose run --rm prisma npx prisma migrate dev
-    # Example: docker-compose run --rm prisma npx prisma studio
-    # Example: docker-compose run --rm prisma npx prisma generate
     command: tail -f /dev/null
     profiles:
       - tools

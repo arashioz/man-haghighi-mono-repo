@@ -911,27 +911,24 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-yellow-400/5 via-transparent to-purple-500/10" />
 
-              <div className="relative flex flex-col lg:flex-row items-center lg:items-center gap-6 lg:gap-10 w-full p-6 sm:p-8">
-                {/* 3D globe - left side */}
+              <div className="relative flex flex-col items-center gap-12 w-full p-6 sm:p-8">
+                {/* 3D globe - centered and larger */}
                 <motion.div
                   variants={fadeUp}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.4 }}
-                  className="w-full lg:w-1/2 flex-shrink-0 flex justify-center"
+                  className="w-full flex justify-center"
                 >
-                  <div className="relative w-full max-w-[900px] aspect-[16/9] overflow-hidden rounded-3xl border border-white/10 bg-black/50 mx-auto">
-                    {/* Outer ring / glow */}
-                    <div className="pointer-events-none absolute inset-3 sm:inset-4 lg:inset-5 rounded-3xl border border-white/10 shadow-[0_0_60px_rgba(250,250,250,0.25)]" />
-
+                  <div className="relative w-full max-w-[800px] aspect-square flex justify-center items-center">
+                    {/* Simplified container - no background/border as requested */}
                     <Globe
                       ref={globeRef}
                       backgroundColor="rgba(0,0,0,0)"
-                      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
-                      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+                      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg"
                       showAtmosphere
                       atmosphereColor="lightskyblue"
-                      atmosphereAltitude={0.18}
+                      atmosphereAltitude={0.25}
                       labelsData={places}
                       labelLat={(d: any) => d.properties?.latitude}
                       labelLng={(d: any) => d.properties?.longitude}
@@ -940,12 +937,14 @@ const HomeV2: React.FC<HomeV2Props> = ({
                       labelDotRadius={(d: any) => Math.sqrt(d.properties?.pop_max || 1) * 4e-4}
                       labelColor={() => 'rgba(255,165,0,0.8)'}
                       labelResolution={2}
+                      width={window.innerWidth < 768 ? 400 : 700}
+                      height={window.innerWidth < 768 ? 400 : 700}
                       onGlobeReady={() => {
                         const controls = globeRef.current?.controls?.();
                         if (controls) {
-                        controls.enableZoom = false;
-                        controls.enableRotate = false;
-                        controls.enablePan = false;
+                          controls.enableZoom = false;
+                          controls.enableRotate = true;
+                          controls.enablePan = false;
                           controls.autoRotate = true;
                           controls.autoRotateSpeed = 0.8;
                         }
@@ -954,13 +953,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   </div>
                 </motion.div>
 
-                {/* Text - right side */}
+                {/* Text - centered below globe */}
                 <motion.div
                   variants={stagger}
                   initial="hidden"
                   whileInView="visible"
                   viewport={{ once: true, amount: 0.3 }}
-                  className="relative z-10 space-y-6 text-right w-full lg:w-1/2 flex flex-col justify-center"
+                  className="relative z-10 space-y-6 text-center w-full max-w-4xl flex flex-col items-center"
                 >
                   <motion.p
                     variants={fadeUp}
@@ -976,7 +975,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   </motion.h2>
                   <motion.p
                     variants={fadeUp}
-                    className="text-base leading-relaxed text-white/85"
+                    className="text-lg leading-relaxed text-white/85"
                   >
                     این کره چرخان نمایی واقعی و نمادین از جامعه جهانی من حقیقی است؛ افرادی از شهرها و
                     کشور‌های مختلف که تصمیم گرفته‌اند نسخه دوم زندگی‌شان را بسازند. هر نقطه، یک انتخاب

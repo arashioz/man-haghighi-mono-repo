@@ -62,7 +62,31 @@ async function bootstrap() {
 
   // Enable CORS first (before helmet)
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Check if origin is allowed
+      const isAllowed = allowedOrigins.some(allowed => {
+        // Exact match
+        if (allowed === origin) return true;
+        // Clean match (remove trailing slash)
+        if (allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')) return true;
+        return false;
+      });
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`🚫 CORS blocked for origin: ${origin}`);
+        logger.debug(`Allowed origins: ${allowedOrigins.join(', ')}`);
+        // We still call callback(null, false) so the browser handles it, 
+        // but it won't have the Access-Control-Allow-Origin header
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
@@ -73,7 +97,8 @@ async function bootstrap() {
       'X-Requested-With',
       'Range', // Important for video streaming
       'Content-Range',
-      'Accept-Ranges'
+      'Accept-Ranges',
+      'Access-Control-Allow-Origin'
     ],
     exposedHeaders: [
       'Content-Length', 

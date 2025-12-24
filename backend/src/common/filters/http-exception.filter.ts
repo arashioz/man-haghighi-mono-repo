@@ -112,14 +112,40 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     // Ensure CORS headers are always set, even on errors
     const origin = request.headers.origin;
-    const corsOriginsEnv = process.env.CORS_ORIGINS || '';
-    const allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
+    let allowedOrigins: string[] = [];
     
-    if (origin && allowedOrigins.includes(origin)) {
-      response.setHeader('Access-Control-Allow-Origin', origin);
-      response.setHeader('Access-Control-Allow-Credentials', 'true');
-      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-      response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    // Try to get allowed origins from ConfigService or process.env
+    try {
+      const configService = this.moduleRef.get(ConfigService, { strict: false });
+      const corsOriginsEnv = configService.get<string>('CORS_ORIGINS', '');
+      if (corsOriginsEnv) {
+        allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
+      }
+    } catch {
+      const corsOriginsEnv = process.env.CORS_ORIGINS || '';
+      allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
+    }
+    
+    // Fallback to defaults if empty
+    if (allowedOrigins.length === 0) {
+      allowedOrigins = [
+        'https://admin.manehaghighi.com',
+        'https://manehaghighi.com',
+        'https://www.manehaghighi.com',
+      ];
+    }
+
+    if (origin) {
+      const isAllowed = allowedOrigins.some(allowed => 
+        allowed === origin || allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')
+      );
+      
+      if (isAllowed) {
+        response.setHeader('Access-Control-Allow-Origin', origin);
+        response.setHeader('Access-Control-Allow-Credentials', 'true');
+        response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range');
+      }
     }
 
     response.status(status).json(responseBody);
