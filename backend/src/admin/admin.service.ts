@@ -225,6 +225,8 @@ export class AdminService {
       workshops,
       activeWorkshops,
       enrollments,
+      invoices,
+      totalSales,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.course.count(),
@@ -235,6 +237,11 @@ export class AdminService {
       this.prisma.workshop.count(),
       this.prisma.workshop.count({ where: { isActive: true } }),
       this.prisma.courseEnrollment.count(),
+      this.prisma.invoice.count(),
+      this.prisma.invoice.aggregate({
+        _sum: { amount: true },
+        where: { status: 'PAID' },
+      }),
     ]);
 
     return {
@@ -247,9 +254,11 @@ export class AdminService {
       workshops,
       activeWorkshops,
       enrollments,
+      invoices,
+      totalSales: Number(totalSales._sum.amount || 0),
       salesTeam: 0, // Placeholder
       teamMembers: 0, // Placeholder
-      monthlySales: 0, // Placeholder
+      monthlySales: Number(totalSales._sum.amount || 0), // Simplifying for now
     };
   }
 }
