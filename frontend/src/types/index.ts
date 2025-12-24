@@ -15,6 +15,9 @@ export interface User {
   job?: string;
   state?: string;
   gender?: string;
+  wallet?: {
+    balance: number;
+  };
   createdAt: string;
   updatedAt: string;
 }
