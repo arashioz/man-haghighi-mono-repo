@@ -37,16 +37,31 @@ export function normalizePhone(input?: string | null): string | null {
     return null;
   }
 
+  // Handle +98 or 98 prefix
   if (digits.startsWith('+98')) {
     digits = '0' + digits.slice(3);
-  } else if (digits.startsWith('98') && digits.length >= 11) {
-    digits = '0' + digits.slice(2);
-  } else if (!digits.startsWith('0') && digits.length === 10) {
+  } else if (digits.startsWith('98')) {
+    // Only strip 98 if it's followed by 10 digits (like 98912...)
+    if (digits.length === 12) {
+      digits = '0' + digits.slice(2);
+    } else if (digits.length === 11 && !digits.startsWith('0')) {
+      // Handle cases like 98912345678 (11 digits, starts with 98)
+      digits = '0' + digits.slice(2);
+    }
+  }
+
+  // If it's 10 digits and doesn't start with 0, prepend 0 (e.g. 9123456789 -> 09123456789)
+  if (!digits.startsWith('0') && digits.length === 10) {
     digits = '0' + digits;
   }
 
+  // If it's more than 11 digits, try to find a valid 11-digit mobile number within it
   if (digits.length > 11) {
-    digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
+    if (digits.startsWith('0098')) {
+      digits = '0' + digits.slice(4);
+    } else {
+      digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
+    }
   }
 
   if (!/^0\d{9,10}$/.test(digits)) {
@@ -167,25 +182,51 @@ function loadRawRows(): RawRow[] {
 }
 
 function aggregateUsers(rows: RawRow[]): Map<string, AggregatedUser> {
-  const map = new Map<string, AggregatedUser>();
+  const users: AggregatedUser[] = [];
+  const phoneMap = new Map<string, AggregatedUser>();
+  const emailMap = new Map<string, AggregatedUser>();
+  const usernameMap = new Map<string, AggregatedUser>();
+
   for (const row of rows) {
     const rawPhone = row.phone?.toString().trim();
     const normPhone = rawPhone ? normalizePhone(rawPhone) : null;
-    const email = row.email?.toString().trim() || null;
+    const email = row.email?.toString().trim().toLowerCase() || null;
     const username = row.username?.toString().trim() || null;
 
-    const key = normPhone || email || username;
-    if (!key) continue; // skip entries without any identifier
+    if (!normPhone && !email && !username) continue;
 
-    const agg = map.get(key) || {
-      key,
-      phone: normPhone,
-      email,
-      username,
-      firstName: row.first_name?.toString().trim() || null,
-      lastName: row.last_name?.toString().trim() || null,
-      courses: new Set<string>(),
-    };
+    // Find if we already have this user by any identifier
+    let agg =
+      (normPhone ? phoneMap.get(normPhone) : null) ||
+      (email ? emailMap.get(email) : null) ||
+      (username ? usernameMap.get(username) : null);
+
+    if (!agg) {
+      agg = {
+        key: normPhone || email || username || 'unknown',
+        phone: normPhone,
+        email,
+        username,
+        firstName: row.first_name?.toString().trim() || null,
+        lastName: row.last_name?.toString().trim() || null,
+        courses: new Set<string>(),
+      };
+      users.push(agg);
+    }
+
+    // Merge identifiers
+    if (normPhone) {
+      agg.phone = agg.phone || normPhone;
+      phoneMap.set(normPhone, agg);
+    }
+    if (email) {
+      agg.email = agg.email || email;
+      emailMap.set(email, agg);
+    }
+    if (username) {
+      agg.username = agg.username || username;
+      usernameMap.set(username, agg);
+    }
 
     const courseTitle = row.course_title?.toString().trim();
     const productName = row.product_name?.toString().trim();
@@ -194,16 +235,17 @@ function aggregateUsers(rows: RawRow[]): Map<string, AggregatedUser> {
       agg.courses.add(chosenTitle);
     }
 
-    // prefer to keep a phone/email/username if it was missing initially
-    if (!agg.phone && normPhone) agg.phone = normPhone;
-    if (!agg.email && email) agg.email = email;
-    if (!agg.username && username) agg.username = username;
-    if (!agg.firstName && row.first_name) agg.firstName = row.first_name;
-    if (!agg.lastName && row.last_name) agg.lastName = row.last_name;
-
-    map.set(key, agg);
+    if (!agg.firstName && row.first_name) agg.firstName = row.first_name.toString().trim();
+    if (!agg.lastName && row.last_name) agg.lastName = row.last_name.toString().trim();
   }
-  return map;
+
+  // Use phone or email or username as final key in the resulting map
+  const finalMap = new Map<string, AggregatedUser>();
+  for (const user of users) {
+    const key = user.phone || user.email || user.username || 'unknown';
+    finalMap.set(key, user);
+  }
+  return finalMap;
 }
 
 function matchCourse(rawTitle: string, courseIndex: CourseIndex): MatchedCourse {
@@ -224,10 +266,22 @@ function matchCourse(rawTitle: string, courseIndex: CourseIndex): MatchedCourse 
   return best;
 }
 
+function isEmptyValue(value?: string | null): boolean {
+  if (!value) {
+    return true;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+  const normalized = trimmed.toLowerCase();
+  return normalized === 'null' || normalized === 'undefined';
+}
+
 async function ensureUserAndCourses(
   agg: AggregatedUser,
   courseMatches: MatchedCourse[],
-): Promise<{ created: boolean; addedCourses: number }> {
+): Promise<{ created: boolean; addedCourses: number; updated: boolean }> {
   const courseIds = Array.from(
     new Set(
       courseMatches
@@ -236,7 +290,12 @@ async function ensureUserAndCourses(
     ),
   );
 
-  if (!courseIds.length) return { created: false, addedCourses: 0 };
+  if (!courseIds.length) {
+    if (agg.username === 'samirarajabiehfard' || agg.phone === '09209203626') {
+      console.log(`⚠️  User ${agg.username} has no matching courses. Titles:`, Array.from(agg.courses));
+    }
+    return { created: false, addedCourses: 0, updated: false };
+  }
 
   const existing = await prisma.user.findFirst({
     where: {
@@ -246,10 +305,38 @@ async function ensureUserAndCourses(
         ...(agg.username ? [{ username: agg.username }] : []),
       ],
     },
-    select: { id: true },
   });
 
   if (existing) {
+    let updated = false;
+    const updateData: any = {};
+
+    // Update missing fields
+    if (isEmptyValue(existing.phone) && agg.phone) {
+      updateData.phone = agg.phone;
+      updated = true;
+    }
+    if (isEmptyValue(existing.email) && agg.email) {
+      updateData.email = agg.email;
+      updated = true;
+    }
+    if (isEmptyValue(existing.firstName) && agg.firstName) {
+      updateData.firstName = agg.firstName;
+      updated = true;
+    }
+    if (isEmptyValue(existing.lastName) && agg.lastName) {
+      updateData.lastName = agg.lastName;
+      updated = true;
+    }
+
+    if (updated && APPLY_CHANGES) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+      console.log(`✅ Updated info for user: ${existing.username || existing.id}`);
+    }
+
     let added = 0;
     for (const courseId of courseIds) {
       const already = await prisma.courseEnrollment.findUnique({
@@ -260,12 +347,12 @@ async function ensureUserAndCourses(
       if (!already) {
         if (APPLY_CHANGES) {
           try {
-        await prisma.courseEnrollment.create({
-          data: {
-            userId: existing.id,
-            courseId,
-          },
-        });
+            await prisma.courseEnrollment.create({
+              data: {
+                userId: existing.id,
+                courseId,
+              },
+            });
           } catch (error: any) {
             if (error.code === 'P2002') {
               console.log(`⚠️  Course enrollment already exists, skipping: user ${existing.id} -> course ${courseId}`);
@@ -277,45 +364,45 @@ async function ensureUserAndCourses(
         added++;
       }
     }
-    return { created: false, addedCourses: added };
+    return { created: false, addedCourses: added, updated };
   }
 
   // Create new user
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   if (APPLY_CHANGES) {
     try {
-    await prisma.user.create({
-      data: {
-        phone: agg.phone,
-        email: agg.email,
-        username: agg.username || agg.phone || agg.email || undefined,
-        firstName: agg.firstName || agg.username || 'کاربر',
-        lastName: agg.lastName || '',
-        role: UserRole.USER,
-        isActive: true,
-        isOld: true,
-        password: hashedPassword,
-        mustChangePassword: true,
-        otp: null,
-        otpExpiresAt: null,
-        purchasedCourses: {
-          create: courseIds.map((courseId) => ({
-            course: { connect: { id: courseId } },
-          })),
+      await prisma.user.create({
+        data: {
+          phone: agg.phone,
+          email: agg.email,
+          username: agg.username || agg.phone || agg.email || undefined,
+          firstName: agg.firstName || agg.username || 'کاربر',
+          lastName: agg.lastName || '',
+          role: UserRole.USER,
+          isActive: true,
+          isOld: true,
+          password: hashedPassword,
+          mustChangePassword: true,
+          otp: null,
+          otpExpiresAt: null,
+          purchasedCourses: {
+            create: courseIds.map((courseId) => ({
+              course: { connect: { id: courseId } },
+            })),
+          },
         },
-      },
-    });
+      });
     } catch (error: any) {
       // If user already exists (unique constraint violation), skip creation
       if (error.code === 'P2002') {
         console.log(`⚠️  User already exists, skipping: ${agg.email || agg.phone || agg.username}`);
-        return { created: false, addedCourses: 0 };
+        return { created: false, addedCourses: 0, updated: false };
       }
       throw error;
     }
   }
 
-  return { created: true, addedCourses: courseIds.length };
+  return { created: true, addedCourses: courseIds.length, updated: false };
 }
 
 async function main() {

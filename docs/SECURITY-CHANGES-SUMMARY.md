@@ -36,9 +36,7 @@ This document lists all code changes made during the security hardening process.
 
 ---
 
-## 📝 Code Changes by File
 
-### New Files Created
 
 #### 1. `backend/src/config/env.validation.ts`
 - **Purpose:** Environment variable validation using class-validator

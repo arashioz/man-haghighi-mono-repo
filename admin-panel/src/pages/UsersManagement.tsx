@@ -5,6 +5,7 @@ import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
 import { usersService, coursesService } from '../services/api';
 import { User, Course } from '../types';
+import { normalizePhoneNumber, isValidIranianPhone } from '../utils/phoneUtils';
 
 const AddIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,29 +279,7 @@ const UsersManagement: React.FC = () => {
 
   // Phone validation function (matches backend normalizePhone logic)
   const validatePhone = (phone: string): boolean => {
-    if (!phone || !phone.trim()) {
-      return false;
-    }
-
-    let digits = phone.trim().replace(/[^\d+]/g, '');
-
-    if (!digits) {
-      return false;
-    }
-
-    if (digits.startsWith('+98')) {
-      digits = '0' + digits.slice(3);
-    } else if (digits.startsWith('98') && digits.length >= 11) {
-      digits = '0' + digits.slice(2);
-    } else if (!digits.startsWith('0') && digits.length === 10) {
-      digits = '0' + digits;
-    }
-
-    if (digits.length > 11) {
-      digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
-    }
-
-    return /^0\d{9,10}$/.test(digits);
+    return isValidIranianPhone(phone);
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
@@ -353,7 +332,7 @@ const UsersManagement: React.FC = () => {
         isActive: newUser.isActive,
       };
 
-      if (newUser.phone.trim()) userData.phone = newUser.phone.trim();
+      if (newUser.phone.trim()) userData.phone = normalizePhoneNumber(newUser.phone);
       if (newUser.email.trim()) userData.email = newUser.email.trim();
       if (newUser.firstName.trim()) userData.firstName = newUser.firstName.trim();
       if (newUser.lastName.trim()) userData.lastName = newUser.lastName.trim();
@@ -462,7 +441,7 @@ const UsersManagement: React.FC = () => {
       // Only send editable fields
       const updateData: any = {
         username: editingUser.username,
-        phone: editingUser.phone,
+        phone: normalizePhoneNumber(editingUser.phone || ''),
         email: editingUser.email,
         firstName: editingUser.firstName,
         lastName: editingUser.lastName,
