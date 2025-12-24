@@ -136,6 +136,7 @@ export const usersService = {
     return response.data;
   },
 
+
   getUserWithProducts: async (id: string) => {
     const response = await api.get(`/users/${id}/products`);
     return response.data;
@@ -1530,7 +1531,26 @@ export const adminService = {
 };
 
 export const paymentsService = {
-  getAllInvoices: async (params?: { page?: number; limit?: number; status?: string; type?: string }) => {
+  createPaymentLink: async (data: {
+    customerName: string;
+    customerMobile: string;
+    amount: number;
+    description?: string;
+  }) => {
+    const response = await api.post('/payments/links', data);
+    return response.data;
+  },
+
+  getPaymentLinks: async () => {
+    const response = await api.get('/payments/links');
+    return response.data;
+  },
+
+  getPaymentLinkByCode: async (linkCode: string) => {
+    const response = await api.get(`/payments/pay/${linkCode}`);
+    return response.data;
+  },
+  getAllInvoices: async (params?: { page?: number; limit?: number; status?: string; type?: string; userId?: string }) => {
     const response = await api.get('/payments/invoices', { params });
     return response.data;
   },

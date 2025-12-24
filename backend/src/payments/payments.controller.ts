@@ -123,9 +123,11 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'لیست فاکتورهای کاربر' })
   @ApiResponse({ status: 200, description: 'لیست فاکتورها' })
-  async getUserInvoices(@Req() req, @Query('limit') limit?: string) {
+  async getUserInvoices(@Req() req, @Query('limit') limit?: string, @Query('userId') userId?: string) {
     const limitNum = limit ? parseInt(limit, 10) : 50;
-    return this.invoiceService.getUserInvoices(req.user.id, limitNum);
+    // اگر userId در query باشد و کاربر ادمین یا مدیر فروش باشد، از آن استفاده کن
+    const targetUserId = (userId && (req.user.role === 'ADMIN' || req.user.role === 'SALES_MANAGER')) ? userId : req.user.id;
+    return this.invoiceService.getUserInvoices(targetUserId, limitNum);
   }
 
   @Get('invoices/:invoiceId')

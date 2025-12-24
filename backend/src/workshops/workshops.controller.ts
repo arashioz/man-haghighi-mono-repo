@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, UseInterceptors, UploadedFiles, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -68,8 +68,11 @@ export class WorkshopsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user enrolled workshops' })
   @ApiResponse({ status: 200, description: 'User workshops retrieved successfully' })
-  async getMyWorkshops(@Request() req) {
-    return this.workshopsService.getUserWorkshops(req.user.id);
+  async getMyWorkshops(@Request() req, @Query('userId') userId?: string) {
+    // اگر userId در query باشد، از آن استفاده کن (برای ادمین/مدیر فروش)
+    // در غیر این صورت از کاربر لاگین شده استفاده کن
+    const targetUserId = userId || req.user.id;
+    return this.workshopsService.getUserWorkshops(targetUserId);
   }
 
   @Get(':id')

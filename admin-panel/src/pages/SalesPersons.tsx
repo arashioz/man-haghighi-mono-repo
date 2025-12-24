@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import UserDetailsModal from '../components/UserDetailsModal';
 import { usersService } from '../services/api';
 import { User } from '../types';
 
@@ -9,6 +10,9 @@ const SalesPersons: React.FC = () => {
   const [salesPersons, setSalesPersons] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchSalesPersons = async () => {
@@ -62,6 +66,24 @@ const SalesPersons: React.FC = () => {
         </div>
       )}
 
+      {/* فیلتر جستجو */}
+      {salesPersons.length > 0 && (
+        <div className="mb-6 bg-white rounded-xl shadow-lg border border-gray-200 p-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="جستجو بر اساس نام، موبایل یا ایمیل..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <svg className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      )}
+
       {salesPersons.length === 0 ? (
         <EmptyState
           icon={
@@ -99,19 +121,37 @@ const SalesPersons: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {salesPersons.map((seller) => (
+                  {salesPersons
+                    .filter(seller => {
+                      if (!searchTerm) return true;
+                      const term = searchTerm.toLowerCase();
+                      return (
+                        seller.firstName?.toLowerCase().includes(term) ||
+                        seller.lastName?.toLowerCase().includes(term) ||
+                        seller.username?.toLowerCase().includes(term) ||
+                        seller.phone?.includes(term) ||
+                        seller.email?.toLowerCase().includes(term)
+                      );
+                    })
+                    .map((seller) => (
                     <tr key={seller.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
-                            <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center text-white font-semibold">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold">
                               {seller.firstName?.[0] || seller.phone?.[0] || 'S'}
                             </div>
                           </div>
                           <div className="mr-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <button
+                              onClick={() => {
+                                setSelectedUserForDetails(seller);
+                                setIsUserDetailsModalOpen(true);
+                              }}
+                              className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-right"
+                            >
                               {seller.firstName} {seller.lastName}
-                            </div>
+                            </button>
                             <div className="text-sm text-gray-500">
                               {seller.username}
                             </div>
@@ -151,6 +191,19 @@ const SalesPersons: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* مودال جزئیات کاربر */}
+      {selectedUserForDetails && (
+        <UserDetailsModal
+          isOpen={isUserDetailsModalOpen}
+          onClose={() => {
+            setIsUserDetailsModalOpen(false);
+            setSelectedUserForDetails(null);
+          }}
+          userId={selectedUserForDetails.id}
+          userName={`${selectedUserForDetails.firstName} ${selectedUserForDetails.lastName}`}
+        />
       )}
     </div>
   );

@@ -23,6 +23,7 @@ import Settings from './pages/Settings';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Messages from './pages/Messages';
+import PaymentLinks from './pages/PaymentLinks';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -56,6 +57,7 @@ function App() {
                     <Route path="/video-podcasts" element={<VideoPodcasts />} />
                     <Route path="/comments" element={<Comments />} />
                     <Route path="/messages" element={<Messages />} />
+                    <Route path="/payment-links" element={<PaymentLinks />} />
                     <Route path="/upload-center" element={<UploadCenter />} />
                     <Route path="/logs" element={<Logs />} />
                     <Route path="/settings" element={<Settings />} />

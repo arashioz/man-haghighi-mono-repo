@@ -34,6 +34,15 @@ export class PaymentsService {
     return `${timestamp}${random}`;
   }
 
+  /**
+   * Convert Toman to Rial for payment gateway
+   * Payment gateways in Iran expect amounts in Rial
+   * 1 Toman = 10 Rial
+   */
+  private tomanToRial(tomanAmount: number): number {
+    return Math.round(tomanAmount * 10);
+  }
+
   async initiateCoursePayment(userId: string, courseId: string) {
     // Check if user is already enrolled
     const existingEnrollment = await this.prisma.courseEnrollment.findUnique({
@@ -148,9 +157,11 @@ export class PaymentsService {
     });
 
     // Create payment request
+    // Convert Toman to Rial for payment gateway (gateways expect Rial)
+    const coursePriceInRial = this.tomanToRial(coursePrice);
     const paymentRequest = await this.gatewayService.createPaymentRequest(
       orderId,
-      coursePrice,
+      coursePriceInRial,
       `خرید دوره: ${course.title}`,
     );
 
@@ -418,6 +429,17 @@ export class PaymentsService {
           },
         });
 
+        // Update invoice status to PAID BEFORE enrolling user
+        // This is important because enrollUser checks for PAID invoice
+        if (transaction.invoice) {
+          await this.invoiceService.updateInvoiceStatus(
+            transaction.invoice.id,
+            'PAID',
+            transaction.id,
+            callbackData,
+          );
+        }
+
         // Enroll in course
         try {
           await this.coursesService.enrollUser({
@@ -438,14 +460,25 @@ export class PaymentsService {
         }
       }
 
-      // Update invoice status
+      // Update invoice status for WALLET_CHARGE and PAYMENT transactions without courseId
       if (transaction.invoice) {
-        await this.invoiceService.updateInvoiceStatus(
-          transaction.invoice.id,
-          'PAID',
-          transaction.id,
-          callbackData,
-        );
+        if (transaction.type === 'WALLET_CHARGE') {
+          await this.invoiceService.updateInvoiceStatus(
+            transaction.invoice.id,
+            'PAID',
+            transaction.id,
+            callbackData,
+          );
+        } else if (transaction.type === 'PAYMENT' && !transaction.invoice?.courseId) {
+          // PAYMENT transactions without courseId (e.g., payment links)
+          await this.invoiceService.updateInvoiceStatus(
+            transaction.invoice.id,
+            'PAID',
+            transaction.id,
+            callbackData,
+          );
+        }
+        // Note: PAYMENT transactions with courseId are already handled above
       }
 
       return {

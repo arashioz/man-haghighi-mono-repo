@@ -131,6 +131,7 @@ const getMenuItems = (userRole: string) => {
       { text: 'تیم من', icon: <TeamIcon />, path: '/my-team' },
       { text: 'فروشندگان', icon: <PeopleIcon />, path: '/sales-persons' },
       { text: 'کارگاه‌ها', icon: <SchoolIcon />, path: '/workshops' },
+      { text: 'لینک‌های پرداخت', icon: <InvoiceIcon />, path: '/payment-links' },
       { text: 'گزارش فروش', icon: <DashboardIcon />, path: '/sales-report' },
     ];
   } else if (userRole === 'SALES_PERSON') {
@@ -138,6 +139,7 @@ const getMenuItems = (userRole: string) => {
       ...baseItems,
       { text: 'کارگاه‌های من', icon: <SchoolIcon />, path: '/my-workshops' },
       { text: 'مشتریان من', icon: <PeopleIcon />, path: '/my-customers' },
+      { text: 'لینک‌های پرداخت', icon: <InvoiceIcon />, path: '/payment-links' },
       { text: 'گزارش فروش', icon: <DashboardIcon />, path: '/my-sales-report' },
     ];
   }

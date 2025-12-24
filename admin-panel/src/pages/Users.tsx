@@ -4,6 +4,7 @@ import { User, Course } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import UserDetailsModal from '../components/UserDetailsModal';
 import { truncateWords } from '../utils/text';
 import { normalizePhoneNumber, isValidIranianPhone } from '../utils/phoneUtils';
 
@@ -43,6 +44,8 @@ const Users: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProductsModalOpen, setIsProductsModalOpen] = useState(false);
+  const [isUserDetailsModalOpen, setIsUserDetailsModalOpen] = useState(false);
+  const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
   const [selectedUserForProducts, setSelectedUserForProducts] = useState<User | null>(null);
   const [selectedUserProductsData, setSelectedUserProductsData] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -709,9 +712,15 @@ const Users: React.FC = () => {
                         </div>
                       </div>
                       <div className="mr-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <button
+                          onClick={() => {
+                            setSelectedUserForDetails(user);
+                            setIsUserDetailsModalOpen(true);
+                          }}
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-right"
+                        >
                           {user.firstName} {user.lastName}
-                        </div>
+                        </button>
                         <div className="text-sm text-gray-500">
                           {user.phone || user.email}
                         </div>
@@ -1384,6 +1393,19 @@ const Users: React.FC = () => {
           </form>
         )}
       </Modal>
+
+      {/* مودال جزئیات کاربر */}
+      {selectedUserForDetails && (
+        <UserDetailsModal
+          isOpen={isUserDetailsModalOpen}
+          onClose={() => {
+            setIsUserDetailsModalOpen(false);
+            setSelectedUserForDetails(null);
+          }}
+          userId={selectedUserForDetails.id}
+          userName={`${selectedUserForDetails.firstName} ${selectedUserForDetails.lastName}`}
+        />
+      )}
     </div>
   );
 };

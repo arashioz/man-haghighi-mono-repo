@@ -1,0 +1,592 @@
+import React, { useState, useEffect } from 'react';
+import PageHeader from '../components/PageHeader';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
+import Modal from '../components/Modal';
+import { paymentsService, usersService } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { formatPersianDateTime } from '../utils/dateUtils';
+
+interface PaymentLink {
+  id: string;
+  linkCode: string;
+  amount: number;
+  customerName: string;
+  customerPhone: string;
+  description?: string;
+  isActive: boolean;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    username: string;
+  };
+  invoices?: Array<{
+    id: string;
+    status: string;
+    paidAt?: string;
+  }>;
+}
+
+const PaymentLinks: React.FC = () => {
+  const { user } = useAuth();
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'paid'>('all');
+  const [selectedLink, setSelectedLink] = useState<PaymentLink | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const [newLink, setNewLink] = useState({
+    customerName: '',
+    customerMobile: '',
+    amount: '',
+    description: '',
+  });
+
+  useEffect(() => {
+    fetchPaymentLinks();
+  }, []);
+
+  const fetchPaymentLinks = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await paymentsService.getPaymentLinks();
+      setPaymentLinks(data);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت لینک‌های پرداخت');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      const amount = parseFloat(newLink.amount.replace(/,/g, ''));
+      if (isNaN(amount) || amount < 1000) {
+        setError('مبلغ باید حداقل 1000 ریال باشد');
+        return;
+      }
+
+      if (!/^09[0-9]{9}$/.test(newLink.customerMobile)) {
+        setError('شماره موبایل نامعتبر است');
+        return;
+      }
+
+      await paymentsService.createPaymentLink({
+        customerName: newLink.customerName,
+        customerMobile: newLink.customerMobile,
+        amount: amount,
+        description: newLink.description || undefined,
+      });
+
+      setIsCreateModalOpen(false);
+      setNewLink({
+        customerName: '',
+        customerMobile: '',
+        amount: '',
+        description: '',
+      });
+      await fetchPaymentLinks();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در ایجاد لینک پرداخت');
+    }
+  };
+
+  const formatAmount = (amount: number) => {
+    return amount.toLocaleString('fa-IR');
+  };
+
+  const getPaymentUrl = (linkCode: string) => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/api/payments/pay/${linkCode}`;
+  };
+
+  const copyToClipboard = async (text: string, message: string = 'کپی شد!') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert(message);
+    } catch (err) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert(message);
+    }
+  };
+
+  const sendWhatsApp = (phone: string, name: string, amount: number, link: string) => {
+    const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
+    const whatsappPhone = `98${cleanPhone}`;
+    const message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} ریال (${formatAmount(Math.round(amount / 10))} تومان)\nلینک پرداخت:\n${link}`;
+    const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const getFilteredLinks = () => {
+    let filtered = paymentLinks;
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        link =>
+          link.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          link.customerPhone.includes(searchTerm) ||
+          link.linkCode.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    switch (filterStatus) {
+      case 'active':
+        filtered = filtered.filter(link => link.isActive);
+        break;
+      case 'inactive':
+        filtered = filtered.filter(link => !link.isActive);
+        break;
+      case 'paid':
+        filtered = filtered.filter(link => link.invoices?.some(inv => inv.status === 'PAID'));
+        break;
+    }
+
+    return filtered;
+  };
+
+  const getStats = () => {
+    const total = paymentLinks.length;
+    const active = paymentLinks.filter(l => l.isActive).length;
+    const paid = paymentLinks.filter(l => l.invoices?.some(inv => inv.status === 'PAID')).length;
+    const totalAmount = paymentLinks.reduce((sum, link) => sum + link.amount, 0);
+    const paidAmount = paymentLinks
+      .filter(l => l.invoices?.some(inv => inv.status === 'PAID'))
+      .reduce((sum, link) => sum + link.amount, 0);
+
+    return { total, active, paid, totalAmount, paidAmount };
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  const stats = getStats();
+  const filteredLinks = getFilteredLinks();
+
+  return (
+    <div>
+      <PageHeader
+        title="لینک‌های پرداخت"
+        description="مدیریت و ایجاد لینک‌های پرداخت برای مشتریان"
+        action={
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            ایجاد لینک پرداخت
+          </button>
+        }
+      />
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 animate-fade-in">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* آمار کلی */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium opacity-90">کل لینک‌ها</h3>
+            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </div>
+          <p className="text-3xl font-bold">{stats.total}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium opacity-90">فعال</h3>
+            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-3xl font-bold">{stats.active}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium opacity-90">پرداخت شده</h3>
+            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <p className="text-3xl font-bold">{stats.paid}</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium opacity-90">کل فروش (تومان)</h3>
+            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-3xl font-bold">{formatAmount(Math.round(stats.paidAmount / 10))}</p>
+        </div>
+      </div>
+
+      {/* فیلتر و جستجو */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="جستجو بر اساس نام، موبایل یا کد لینک..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <svg className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          <div className="md:w-64">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">همه وضعیت‌ها</option>
+              <option value="active">فعال</option>
+              <option value="inactive">غیرفعال</option>
+              <option value="paid">پرداخت شده</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* لیست لینک‌ها */}
+      {filteredLinks.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12">
+          <EmptyState
+            icon={
+              <svg className="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            }
+            title="لینک پرداختی یافت نشد"
+            description={searchTerm ? 'نتیجه‌ای برای جستجوی شما یافت نشد' : 'هنوز لینک پرداختی ایجاد نشده است'}
+          />
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                <tr>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مشتری</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مبلغ</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">تاریخ ایجاد</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">عملیات</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredLinks.map((link) => {
+                  const paymentUrl = getPaymentUrl(link.linkCode);
+                  const isPaid = link.invoices?.some(inv => inv.status === 'PAID');
+                  
+                  return (
+                    <tr key={link.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
+                            {link.customerName?.[0] || '?'}
+                          </div>
+                          <div className="mr-4">
+                            <div className="text-sm font-medium text-gray-900">{link.customerName}</div>
+                            <div className="text-sm text-gray-500">{link.customerPhone}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} ریال</div>
+                        <div className="text-sm text-gray-500">{formatAmount(Math.round(link.amount / 10))} تومان</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          isPaid
+                            ? 'bg-green-100 text-green-800'
+                            : link.isActive
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {isPaid ? '✅ پرداخت شده' : link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatPersianDateTime(link.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedLink(link);
+                              setIsDetailsModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="جزئیات"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => copyToClipboard(paymentUrl, 'لینک پرداخت کپی شد!')}
+                            className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="کپی لینک"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => sendWhatsApp(link.customerPhone, link.customerName, link.amount, paymentUrl)}
+                            className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                            title="ارسال واتساپ"
+                          >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* مودال ایجاد لینک */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setNewLink({
+            customerName: '',
+            customerMobile: '',
+            amount: '',
+            description: '',
+          });
+          setError('');
+        }}
+        title="ایجاد لینک پرداخت جدید"
+      >
+        <form onSubmit={handleCreateLink} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی مشتری</label>
+            <input
+              type="text"
+              value={newLink.customerName}
+              onChange={(e) => setNewLink({...newLink, customerName: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="مثال: علی احمدی"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل</label>
+            <input
+              type="text"
+              value={newLink.customerMobile}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                if (value.length <= 11) {
+                  setNewLink({...newLink, customerMobile: value});
+                }
+              }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="09123456789"
+              pattern="09[0-9]{9}"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان)</label>
+            <input
+              type="text"
+              value={newLink.amount}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                setNewLink({...newLink, amount: value});
+              }}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="100000"
+            />
+            {newLink.amount && (
+              <p className="text-sm text-gray-500 mt-1">
+                معادل: {formatAmount(parseFloat(newLink.amount.replace(/,/g, '')) * 10)} ریال
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">توضیحات (اختیاری)</label>
+            <textarea
+              value={newLink.description}
+              onChange={(e) => setNewLink({...newLink, description: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              rows={3}
+              placeholder="توضیحات سفارش..."
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreateModalOpen(false);
+                setNewLink({
+                  customerName: '',
+                  customerMobile: '',
+                  amount: '',
+                  description: '',
+                });
+                setError('');
+              }}
+              className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              انصراف
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
+            >
+              ایجاد لینک
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* مودال جزئیات */}
+      {selectedLink && (
+        <Modal
+          isOpen={isDetailsModalOpen}
+          onClose={() => {
+            setIsDetailsModalOpen(false);
+            setSelectedLink(null);
+          }}
+          title="جزئیات لینک پرداخت"
+        >
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{selectedLink.customerName}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">شماره موبایل</p>
+                  <p className="text-base font-medium text-gray-900">{selectedLink.customerPhone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">مبلغ</p>
+                  <p className="text-base font-medium text-gray-900">
+                    {formatAmount(selectedLink.amount)} ریال ({formatAmount(Math.round(selectedLink.amount / 10))} تومان)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">کد لینک</p>
+                  <p className="text-base font-medium text-gray-900 font-mono">{selectedLink.linkCode}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">وضعیت</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    selectedLink.invoices?.some(inv => inv.status === 'PAID')
+                      ? 'bg-green-100 text-green-800'
+                      : selectedLink.isActive
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedLink.invoices?.some(inv => inv.status === 'PAID') ? '✅ پرداخت شده' : selectedLink.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                  </span>
+                </div>
+              </div>
+              {selectedLink.description && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600">توضیحات</p>
+                  <p className="text-base text-gray-900">{selectedLink.description}</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">لینک پرداخت</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={getPaymentUrl(selectedLink.linkCode)}
+                  readOnly
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 font-mono text-sm"
+                />
+                <button
+                  onClick={() => copyToClipboard(getPaymentUrl(selectedLink.linkCode), 'لینک کپی شد!')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                >
+                  کپی
+                </button>
+              </div>
+            </div>
+
+            {selectedLink.invoices && selectedLink.invoices.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">فاکتورها</h4>
+                <div className="space-y-2">
+                  {selectedLink.invoices.map((invoice) => (
+                    <div key={invoice.id} className="bg-gray-50 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-sm text-gray-700">فاکتور #{invoice.id.slice(0, 8)}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        invoice.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {invoice.status === 'PAID' ? 'پرداخت شده' : 'در انتظار'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => sendWhatsApp(selectedLink.customerPhone, selectedLink.customerName, selectedLink.amount, getPaymentUrl(selectedLink.linkCode))}
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                ارسال واتساپ
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+export default PaymentLinks;
+
