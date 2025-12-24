@@ -799,7 +799,7 @@ const UserDashboard: React.FC = () => {
           )}
         </div>
       </div>
-        )}
+        
 
         {/* Profile Tab Content */}
         {mainTab === 'profile' && (
@@ -1086,5 +1086,4 @@ const UserDashboard: React.FC = () => {
     </div>
   );
 };
-
 export default UserDashboard;
