@@ -213,5 +213,44 @@ export class AdminService {
 
     return { data, filename };
   }
+
+  async getStats() {
+    const [
+      users,
+      courses,
+      articles,
+      podcasts,
+      videoPodcasts,
+      sliders,
+      workshops,
+      activeWorkshops,
+      enrollments,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.course.count(),
+      this.prisma.article.count(),
+      this.prisma.podcast.count(),
+      this.prisma.videoPodcast.count(),
+      this.prisma.slider.count(),
+      this.prisma.workshop.count(),
+      this.prisma.workshop.count({ where: { isActive: true } }),
+      this.prisma.courseEnrollment.count(),
+    ]);
+
+    return {
+      users,
+      courses,
+      articles,
+      podcasts,
+      videoPodcasts,
+      sliders,
+      workshops,
+      activeWorkshops,
+      enrollments,
+      salesTeam: 0, // Placeholder
+      teamMembers: 0, // Placeholder
+      monthlySales: 0, // Placeholder
+    };
+  }
 }
 

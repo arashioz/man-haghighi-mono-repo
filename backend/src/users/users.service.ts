@@ -207,7 +207,15 @@ export class UsersService {
     // Get paginated users
     const users = await this.prisma.user.findMany({
       where,
-      select: baseUserSelect,
+      select: {
+        ...baseUserSelect,
+        _count: {
+          select: {
+            purchasedCourses: true,
+            oldProducts: true,
+          },
+        },
+      },
       skip,
       take: limit,
       orderBy: {

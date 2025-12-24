@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ModuleRef } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { LogsService } from '../../logs/logs.service';
 
 @Catch()
@@ -117,7 +118,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Try to get allowed origins from ConfigService or process.env
     try {
       const configService = this.moduleRef.get(ConfigService, { strict: false });
-      const corsOriginsEnv = configService.get<string>('CORS_ORIGINS', '');
+      const corsOriginsEnv = configService?.get<string>('CORS_ORIGINS') || '';
       if (corsOriginsEnv) {
         allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
       }
@@ -136,15 +137,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     if (origin) {
-      const isAllowed = allowedOrigins.some(allowed => 
-        allowed === origin || allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')
-      );
+      const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+      const isAllowed = allowedOrigins.some(allowed => {
+        const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
+        return normalizedAllowed === normalizedOrigin;
+      });
       
       if (isAllowed) {
         response.setHeader('Access-Control-Allow-Origin', origin);
         response.setHeader('Access-Control-Allow-Credentials', 'true');
         response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range');
+        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range');
+        response.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges, Content-Location');
       }
     }
 

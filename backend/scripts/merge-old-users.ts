@@ -26,8 +26,11 @@ export function normalizePhone(input?: string | null): string | null {
     return null;
   }
 
+  // Convert Persian/Arabic digits to English digits
   let digits = String(input)
     .trim()
+    .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
     .replace(/[^\d+]/g, '');
 
   if (!digits) {

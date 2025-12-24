@@ -74,5 +74,12 @@ export class AdminController {
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.send(JSON.stringify(data, null, 2));
   }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get overall system stats (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Stats retrieved successfully' })
+  async getStats() {
+    return this.adminService.getStats();
+  }
 }
 

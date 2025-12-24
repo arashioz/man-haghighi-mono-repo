@@ -112,35 +112,14 @@ const UsersManagement: React.FC = () => {
         setTotalPages(usersResponse.meta.totalPages);
         setCourses(coursesResponse);
         
-        // Fetch all counts in parallel for MUCH better performance
+        // Use the counts provided by the backend to avoid extra API calls
         const coursesCountData: {[userId: string]: number} = {};
         const productsCountData: {[userId: string]: number} = {};
         
-        // Create array of promises for parallel execution
-        const userDataPromises = usersResponse.data.map(async (user) => {
-          try {
-            // Get courses count
-            const userCoursesResponse = await usersService.getUserCourses(user.id);
-            coursesCountData[user.id] = userCoursesResponse.length;
-            
-            // Get products count (only for old users)
-            if (user.isOld) {
-              try {
-                const userProductsResponse = await usersService.getUserWithProducts(user.id);
-                productsCountData[user.id] = userProductsResponse.oldProducts?.length || 0;
-              } catch (err) {
-                productsCountData[user.id] = 0;
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch data for user ${user.id}:`, err);
-            coursesCountData[user.id] = 0;
-            productsCountData[user.id] = 0;
-          }
+        usersResponse.data.forEach((user: any) => {
+          coursesCountData[user.id] = user._count?.purchasedCourses || 0;
+          productsCountData[user.id] = user._count?.oldProducts || 0;
         });
-        
-        // Wait for all requests to complete in parallel
-        await Promise.all(userDataPromises);
         
         setUserCoursesCount(coursesCountData);
         setUserProductsCount(productsCountData);

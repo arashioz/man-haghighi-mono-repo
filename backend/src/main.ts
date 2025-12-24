@@ -70,10 +70,12 @@ async function bootstrap() {
 
       // Check if origin is allowed
       const isAllowed = allowedOrigins.some(allowed => {
+        const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
+        const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+        
         // Exact match
-        if (allowed === origin) return true;
-        // Clean match (remove trailing slash)
-        if (allowed.replace(/\/$/, '') === origin.replace(/\/$/, '')) return true;
+        if (normalizedAllowed === normalizedOrigin) return true;
+        
         return false;
       });
 
@@ -98,7 +100,7 @@ async function bootstrap() {
       'Range', // Important for video streaming
       'Content-Range',
       'Accept-Ranges',
-      'Access-Control-Allow-Origin'
+      'Access-Control-Allow-Headers'
     ],
     exposedHeaders: [
       'Content-Length', 

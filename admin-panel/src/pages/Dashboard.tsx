@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersService, slidersService, articlesService, podcastsService, videoPodcastsService, coursesService, salesService, salesTeamsService, adminService } from '../services/api';
+import { usersService, slidersService, articlesService, podcastsService, videoPodcastsService, coursesService, salesService, salesTeamsService, adminService, systemService } from '../services/api';
 import { SalesTeam } from '../types';
 
 const PeopleIcon = () => (
@@ -86,28 +86,10 @@ const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       try {
         if (user?.role === 'ADMIN') {
-          const [users, sliders, articles, podcasts, courses, videoPodcasts] = await Promise.all([
-            usersService.getAll({ page: 1, limit: 1 }), // Just get the total count
-            slidersService.getAll(),
-            articlesService.getAll(),
-            podcastsService.getAll(),
-            coursesService.getAll(),
-            videoPodcastsService.getAll(),
-          ]);
-
+          const statsData = await systemService.getStats();
           setStats({
-            users: users.meta?.total || 0,
-            sliders: sliders.length || 0,
-            articles: articles.length || 0,
-            podcasts: podcasts.length || 0,
-            courses: courses.length || 0,
-            videoPodcasts: videoPodcasts.length || 0,
-            salesTeam: 0,
-            enrollments: 0,
-            workshops: 0,
-            teamMembers: 0,
-            activeWorkshops: 0,
-            monthlySales: 0,
+            ...stats,
+            ...statsData,
           });
         } else if (user?.role === 'SALES_MANAGER') {
           try {

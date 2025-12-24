@@ -117,10 +117,6 @@ export const usersService = {
     return response.data;
   },
 
-  delete: async (id: string): Promise<void> => {
-    await api.delete(`/users/${id}`);
-  },
-
   remove: async (id: string): Promise<void> => {
     await api.delete(`/users/${id}`);
   },
@@ -159,11 +155,6 @@ export const usersService = {
     await api.delete(`/users/${userId}/video-access/${videoId}`);
   },
 
-  getSalesTeam: async (managerId: string): Promise<User[]> => {
-    const response = await api.get(`/users/sales-team/${managerId}`);
-    return response.data;
-  },
-
   getSalesPersons: async (): Promise<User[]> => {
     const response = await api.get('/users/sales-persons');
     return response.data;
@@ -184,38 +175,6 @@ export const usersService = {
 
   unassignSalesPersonFromManager: async (salesPersonId: string) => {
     const response = await api.delete(`/users/unassign-sales-person/${salesPersonId}`);
-    return response.data;
-  },
-
-  getChildren: async (userId: string): Promise<User[]> => {
-    const response = await api.get(`/users/${userId}/children`);
-    return response.data;
-  },
-
-  getParent: async (userId: string): Promise<User> => {
-    const response = await api.get(`/users/${userId}/parent`);
-    return response.data;
-  },
-
-  getUserStats: async (userId: string) => {
-    const response = await api.get(`/users/${userId}/stats`);
-    return response.data;
-  },
-
-  bulkUpdate: async (userIds: string[], data: Partial<User>) => {
-    const response = await api.patch('/users/bulk', { userIds, data });
-    return response.data;
-  },
-
-  bulkDelete: async (userIds: string[]) => {
-    const response = await api.delete('/users/bulk', { data: { userIds } });
-    return response.data;
-  },
-
-  search: async (query: string, filters?: any) => {
-    const response = await api.get('/users/search', { 
-      params: { q: query, ...filters } 
-    });
     return response.data;
   },
 
@@ -277,8 +236,6 @@ export const usersService = {
     });
     return response.data;
   },
-
-
 };
 
 export const messagesService = {
@@ -1442,73 +1399,30 @@ export const uploadsService = {
 
 export const systemService = {
   getHealth: async () => {
-    const response = await api.get('/system/health');
+    const response = await api.get('/health');
     return response.data;
   },
 
   getStats: async () => {
-    const response = await api.get('/system/stats');
+    // This might be provided by a dashboard service, but keeping it here for now
+    const response = await api.get('/admin/stats');
     return response.data;
   },
 
   backupDatabase: async () => {
-    const response = await api.post('/system/backup');
-    return response.data;
-  },
-
-  restoreDatabase: async (backupFile: File) => {
-    const formData = new FormData();
-    formData.append('backup', backupFile);
-    
-    const response = await api.post('/system/restore', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await api.get('/admin/backup', {
+      responseType: 'blob',
     });
     return response.data;
   },
 
   clearCache: async () => {
-    const response = await api.post('/system/clear-cache');
+    const response = await api.post('/admin/clear-cache');
     return response.data;
   },
 
-  getLogs: async (level?: string, limit?: number) => {
-    const params: any = {};
-    if (level) params.level = level;
-    if (limit) params.limit = limit;
-    
-    const response = await api.get('/system/logs', { params });
-    return response.data;
-  },
-
-  getSettings: async () => {
-    const response = await api.get('/system/settings');
-    return response.data;
-  },
-
-  updateSettings: async (settings: any) => {
-    const response = await api.patch('/system/settings', settings);
-    return response.data;
-  },
-
-  enableMaintenanceMode: async () => {
-    const response = await api.post('/system/maintenance/enable');
-    return response.data;
-  },
-
-  disableMaintenanceMode: async () => {
-    const response = await api.post('/system/maintenance/disable');
-    return response.data;
-  },
-
-  checkUpdates: async () => {
-    const response = await api.get('/system/updates/check');
-    return response.data;
-  },
-
-  installUpdates: async () => {
-    const response = await api.post('/system/updates/install');
+  getLogs: async (filters?: any) => {
+    const response = await api.get('/logs', { params: filters });
     return response.data;
   },
 };
