@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Environment
 .env
@@ -14,11 +13,7 @@ package-lock.json
 .env.test.local
 *.env
 !*.env.example
-<<<<<<< HEAD
 /moc-old-data/
-=======
-
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
 # Build outputs
 dist/
 build/
@@ -56,9 +51,6 @@ temp/
 tmp/
 
 # Local large data
-<<<<<<< HEAD
 moc-old-data
-=======
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
 moc-old-data/last_data_on_db.json
 moc-old-data/users_with_courses_2025-12-23.json
