@@ -4,6 +4,8 @@ import { coursesService, videosService, audiosService, workshopsService, authSer
 import { Course, Video, Audio, Workshop, UserMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
+type TabId = 'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages';
+
 const UserDashboard: React.FC = () => {
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [myVideos, setMyVideos] = useState<Video[]>([]);
@@ -13,7 +15,7 @@ const UserDashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages'>('courses');
+  const [activeTab, setActiveTab] = useState<TabId>('courses');
   const navigate = useNavigate();
   const { user, loading: authLoading, updateProfile: saveProfile } = useAuth();
   const [profileForm, setProfileForm] = useState({
@@ -214,6 +216,14 @@ const UserDashboard: React.FC = () => {
   ];
   const isProfileIncomplete = !!user && profileFieldsToComplete.some((field) => !(user as any)?.[field]);
   const unreadMessages = inboxMessages.filter((msg) => !msg.isRead).length;
+  const tabsConfig: Array<{ id: TabId; name: string; icon: string; count: number }> = [
+    { id: 'messages', name: 'پیام‌ها', icon: '✉️', count: unreadMessages },
+    { id: 'courses', name: 'دوره‌های من', icon: '📚', count: myCourses.length },
+    { id: 'workshops', name: 'کارگاه‌های من', icon: '🎓', count: myWorkshops.length },
+    { id: 'videos', name: 'ویدیوهای من', icon: '🎥', count: myVideos.length },
+    { id: 'audios', name: 'فایل‌های صوتی', icon: '🎵', count: myAudios.length },
+    { id: 'wallet', name: 'کیف پول', icon: '💰', count: 0 },
+  ];
 
   const handleVideoClick = (videoId: string, courseId: string) => {
     navigate(`/courses/${courseId}/videos/${videoId}`);
@@ -571,31 +581,25 @@ const UserDashboard: React.FC = () => {
         )}
 
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
-          <div className="border-b border-gray-200 overflow-x-auto">
-            <nav className="-mb-px flex space-x-4 sm:space-x-8 space-x-reverse min-w-max sm:min-w-0">
-              {[
-                { id: 'messages', name: 'پیام‌ها', icon: '✉️', count: unreadMessages },
-                { id: 'courses', name: 'دوره‌های من', icon: '📚', count: myCourses.length },
-                { id: 'workshops', name: 'کارگاه‌های من', icon: '🎓', count: myWorkshops.length },
-                { id: 'videos', name: 'ویدیوهای من', icon: '🎥', count: myVideos.length },
-                { id: 'audios', name: 'فایل‌های صوتی', icon: '🎵', count: myAudios.length },
-                { id: 'wallet', name: 'کیف پول', icon: '💰', count: 0 },
-              ].map((tab) => (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-6 overflow-hidden">
+          <div className="border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 sm:px-6 py-3">
+            <nav className="custom-scrollbar flex gap-3 sm:gap-4 overflow-x-auto">
+              {tabsConfig.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-3 sm:py-4 px-4 sm:px-6 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-2 space-x-reverse whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`tab-pill flex items-center space-x-2 space-x-reverse whitespace-nowrap px-4 py-2 sm:px-5 sm:py-3 text-sm sm:text-base ${
+                    activeTab === tab.id ? 'tab-pill-active' : 'tab-pill-inactive hover:text-gray-700'
                   }`}
                 >
-                  <span className="text-base sm:text-lg">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.name}</span>
-                  <span className="sm:hidden">{tab.name.split(' ')[0]}</span>
+                  <span className="text-lg sm:text-xl">{tab.icon}</span>
+                  <span className="font-medium">{tab.name}</span>
                   {tab.count > 0 && (
-                    <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                        activeTab === tab.id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
                       {tab.count}
                     </span>
                   )}
@@ -606,84 +610,85 @@ const UserDashboard: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {activeTab === 'messages' && (
-            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
-                <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">صندوق پیام‌ها</h2>
-                  <p className="text-gray-600 text-sm">پیام‌های ارسالی توسط تیم ما برای شما</p>
-                </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <span className="px-3 py-1 rounded-full text-sm bg-indigo-50 text-indigo-700">
-                    پیام‌های جدید: {unreadMessages}
-                  </span>
-                </div>
-              </div>
-
-              {messagesLoading ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-3"></div>
-                    <p className="text-gray-600">در حال دریافت پیام‌ها...</p>
-                  </div>
-                </div>
-              ) : inboxMessages.length > 0 ? (
-                <div className="space-y-3 overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
-                  {inboxMessages.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`border rounded-lg p-4 transition-all ${
-                        item.isRead ? 'border-gray-100 bg-white' : 'border-indigo-100 bg-indigo-50'
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <div className="flex items-center space-x-3 space-x-reverse">
-                          <span
-                            className={`w-2 h-2 rounded-full ${
-                              item.isRead ? 'bg-gray-300' : 'bg-indigo-500'
-                            }`}
-                          ></span>
-                          <h3 className="font-semibold text-gray-900">{item.message.title}</h3>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          {new Date(item.message.createdAt).toLocaleString('fa-IR')}
-                        </p>
-                      </div>
-                      <p className="text-gray-700 text-sm leading-relaxed mb-3">{item.message.body}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          {item.message.sendSms && <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">ارسال پیامک</span>}
-                          {item.message.sendInApp && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">ارسال درون پنل</span>}
-                        </div>
-                        {!item.isRead && (
-                          <button
-                            onClick={() => handleMarkMessageRead(item.id)}
-                            className="text-indigo-600 hover:text-indigo-700 font-medium"
-                          >
-                            علامت‌گذاری به عنوان خوانده شده
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-center py-8 sm:py-12">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden">
+          <div className="max-h-[82vh] sm:max-h-[86vh] overflow-y-auto custom-scrollbar">
+            {activeTab === 'messages' && (
+              <div className="p-4 sm:p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
                   <div>
-                    <div className="w-20 sm:w-24 h-20 sm:h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-3xl sm:text-4xl">✉️</span>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">پیامی ندارید</h3>
-                    <p className="text-gray-600">به محض ارسال پیام جدید از سمت ما، اینجا نمایش داده می‌شود.</p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">صندوق پیام‌ها</h2>
+                    <p className="text-gray-600 text-sm">پیام‌های ارسالی توسط تیم ما برای شما</p>
+                  </div>
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <span className="px-3 py-1 rounded-full text-sm bg-indigo-50 text-indigo-700">
+                      پیام‌های جدید: {unreadMessages}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {messagesLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-3"></div>
+                      <p className="text-gray-600">در حال دریافت پیام‌ها...</p>
+                    </div>
+                  </div>
+                ) : inboxMessages.length > 0 ? (
+                  <div className="space-y-4 custom-scrollbar max-h-[58vh] overflow-y-auto pr-3">
+                    {inboxMessages.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`border rounded-xl p-4 transition-all ${
+                          item.isRead ? 'border-gray-100 bg-white' : 'border-indigo-100 bg-indigo-50'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                          <div className="flex items-center space-x-3 space-x-reverse">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                item.isRead ? 'bg-gray-300' : 'bg-indigo-500'
+                              }`}
+                            ></span>
+                            <h3 className="font-semibold text-gray-900">{item.message.title}</h3>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(item.message.createdAt).toLocaleString('fa-IR')}
+                          </p>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-3">{item.message.body}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center space-x-2 space-x-reverse">
+                            {item.message.sendSms && <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">ارسال پیامک</span>}
+                            {item.message.sendInApp && <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">ارسال درون پنل</span>}
+                          </div>
+                          {!item.isRead && (
+                            <button
+                              onClick={() => handleMarkMessageRead(item.id)}
+                              className="text-indigo-600 hover:text-indigo-700 font-medium"
+                            >
+                              علامت‌گذاری به عنوان خوانده شده
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center text-center py-8 sm:py-12">
+                    <div>
+                      <div className="w-20 sm:w-24 h-20 sm:h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl sm:text-4xl">✉️</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">پیامی ندارید</h3>
+                      <p className="text-gray-600">به محض ارسال پیام جدید از سمت ما، اینجا نمایش داده می‌شود.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
           {activeTab === 'courses' && (
-            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+            <div className="p-4 sm:p-6 space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">دوره‌های من</h2>
                 <button
@@ -695,42 +700,45 @@ const UserDashboard: React.FC = () => {
               </div>
               
               {myCourses.length > 0 ? (
-                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
-                  {myCourses.map((course) => (
-                    <div key={course.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                      {course.thumbnail && (
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      )}
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {course.title}
-                        </h3>
-                        {course.description && (
-                          <p className="text-gray-600 mb-4 line-clamp-2">{course.description}</p>
+                    {myCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="dashboard-card bg-gradient-to-br from-white to-gray-50 rounded-xl transform-gpu transition-all hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+                      >
+                        {course.thumbnail && (
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="w-full h-48 object-cover"
+                          />
                         )}
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-green-600">
-                            {course.price.toLocaleString()} تومان
-                          </span>
-                          <button
-                            onClick={() => navigate(`/courses/${course.id}`)}
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            مشاهده دوره
-                          </button>
+                        <div className="p-6">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {course.title}
+                          </h3>
+                          {course.description && (
+                            <p className="text-gray-600 mb-4 line-clamp-2">{course.description}</p>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-green-600">
+                              {course.price.toLocaleString()} تومان
+                            </span>
+                            <button
+                              onClick={() => navigate(`/courses/${course.id}`)}
+                              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                              مشاهده دوره
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                <div className="text-center py-10 sm:py-14">
                   <div>
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">📚</span>
@@ -750,7 +758,7 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'workshops' && (
-            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+            <div className="p-4 sm:p-6 space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">کارگاه‌های من</h2>
                 <button
@@ -762,52 +770,55 @@ const UserDashboard: React.FC = () => {
               </div>
               
               {myWorkshops.length > 0 ? (
-                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
-                  {myWorkshops.map((workshop) => (
-                    <div key={workshop.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                      {workshop.thumbnail && (
-                        <img
-                          src={workshop.thumbnail}
-                          alt={workshop.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      )}
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {workshop.title}
-                        </h3>
-                        {workshop.description && (
-                          <p className="text-gray-600 mb-4 line-clamp-2">{workshop.description}</p>
+                    {myWorkshops.map((workshop) => (
+                      <div
+                        key={workshop.id}
+                        className="dashboard-card bg-gradient-to-br from-white to-gray-50 rounded-xl transform-gpu transition-all hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+                      >
+                        {workshop.thumbnail && (
+                          <img
+                            src={workshop.thumbnail}
+                            alt={workshop.title}
+                            className="w-full h-48 object-cover"
+                          />
                         )}
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <span className="ml-2">📅</span>
-                            <span>{workshop.date}</span>
+                        <div className="p-6">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {workshop.title}
+                          </h3>
+                          {workshop.description && (
+                            <p className="text-gray-600 mb-4 line-clamp-2">{workshop.description}</p>
+                          )}
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <span className="ml-2">📅</span>
+                              <span>{workshop.date}</span>
+                            </div>
+                            <div className="flex items-center text-sm text-gray-600">
+                              <span className="ml-2">📍</span>
+                              <span>{workshop.location}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <span className="ml-2">📍</span>
-                            <span>{workshop.location}</span>
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-green-600">
+                              {workshop.price.toLocaleString()} تومان
+                            </span>
+                            <button
+                              onClick={() => navigate(`/workshops/${workshop.id}`)}
+                              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                              مشاهده کارگاه
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-green-600">
-                            {workshop.price.toLocaleString()} تومان
-                          </span>
-                          <button
-                            onClick={() => navigate(`/workshops/${workshop.id}`)}
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            مشاهده کارگاه
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                <div className="text-center py-10 sm:py-14">
                   <div>
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎓</span>
