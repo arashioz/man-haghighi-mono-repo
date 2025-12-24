@@ -796,9 +796,13 @@ const UserDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+            
           )}
         </div>
       </div>
+      </>
+)}
+      
         
 
         {/* Profile Tab Content */}
@@ -1084,6 +1088,7 @@ const UserDashboard: React.FC = () => {
         )}
       </div>
     </div>
+  
   );
 };
 export default UserDashboard;
