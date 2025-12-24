@@ -686,7 +686,6 @@ const UserDashboard: React.FC = () => {
                 )}
               </div>
             )}
-
           {activeTab === 'courses' && (
             <div className="p-4 sm:p-6 space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-4">
@@ -838,48 +837,51 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'videos' && (
-            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+            <div className="p-4 sm:p-6 space-y-6">
               <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">ویدیوهای من</h2>
               </div>
               
               {myVideos.length > 0 ? (
-                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
-                  {myVideos.map((video) => (
-                    <div key={video.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                      {video.thumbnail && (
-                        <img
-                          src={video.thumbnail}
-                          alt={video.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      )}
-                      <div className="p-6">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {video.title}
-                        </h3>
-                        {video.description && (
-                          <p className="text-gray-600 mb-4 line-clamp-2">{video.description}</p>
+                    {myVideos.map((video) => (
+                      <div
+                        key={video.id}
+                        className="dashboard-card bg-gradient-to-br from-white to-gray-50 rounded-xl transform-gpu transition-all hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+                      >
+                        {video.thumbnail && (
+                          <img
+                            src={video.thumbnail}
+                            alt={video.title}
+                            className="w-full h-48 object-cover"
+                          />
                         )}
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">
-                            {video.duration}
-                          </span>
-                          <button
-                            onClick={() => handleVideoClick(video.id, video.courseId)}
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                          >
-                            تماشا
-                          </button>
+                        <div className="p-6">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                            {video.title}
+                          </h3>
+                          {video.description && (
+                            <p className="text-gray-600 mb-4 line-clamp-2">{video.description}</p>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">
+                              {video.duration}
+                            </span>
+                            <button
+                              onClick={() => handleVideoClick(video.id, video.courseId)}
+                              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                            >
+                              تماشا
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                <div className="text-center py-10 sm:py-14">
                   <div>
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎥</span>
@@ -899,56 +901,59 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'audios' && (
-            <div className="p-4 sm:p-6 flex flex-col h-full max-h-[calc(100vh-280px)] sm:max-h-[calc(100vh-320px)]">
+            <div className="p-4 sm:p-6 space-y-6">
               <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">فایل‌های صوتی من</h2>
               </div>
               
               {myAudios.length > 0 ? (
-                <div className="overflow-y-auto flex-1 -mr-4 pr-4 custom-scrollbar">
+                <div className="max-h-[60vh] overflow-y-auto custom-scrollbar pr-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pb-4">
-                  {myAudios.map((audio) => (
-                    <div key={audio.id} className="bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                      {audio.thumbnail && (
-                        <img
-                          src={audio.thumbnail}
-                          alt={audio.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      )}
-                      <div className="p-6">
-                        <div className="flex items-center mb-3">
-                          <svg className="w-8 h-8 text-purple-500 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
-                          </svg>
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {audio.title}
-                          </h3>
-                        </div>
-                        {audio.description && (
-                          <p className="text-gray-600 mb-4 line-clamp-2">{audio.description}</p>
+                    {myAudios.map((audio) => (
+                      <div
+                        key={audio.id}
+                        className="dashboard-card bg-gradient-to-br from-white to-gray-50 rounded-xl transform-gpu transition-all hover:-translate-y-1 hover:shadow-2xl overflow-hidden"
+                      >
+                        {audio.thumbnail && (
+                          <img
+                            src={audio.thumbnail}
+                            alt={audio.title}
+                            className="w-full h-48 object-cover"
+                          />
                         )}
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">
-                            {audio.duration ? `${Math.floor(audio.duration / 60)} دقیقه` : 'نامشخص'}
-                          </span>
-                          <button
-                            onClick={() => {
-                              const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
-                              window.open(audioUrl, '_blank');
-                            }}
-                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                          >
-                            پخش
-                          </button>
+                        <div className="p-6">
+                          <div className="flex items-center mb-3">
+                            <svg className="w-8 h-8 text-purple-500 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+                            </svg>
+                            <h3 className="text-xl font-semibold text-gray-900">
+                              {audio.title}
+                            </h3>
+                          </div>
+                          {audio.description && (
+                            <p className="text-gray-600 mb-4 line-clamp-2">{audio.description}</p>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">
+                              {audio.duration ? `${Math.floor(audio.duration / 60)} دقیقه` : 'نامشخص'}
+                            </span>
+                            <button
+                              onClick={() => {
+                                const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
+                                window.open(audioUrl, '_blank');
+                              }}
+                              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                            >
+                              پخش
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-8 sm:py-12 flex-1 flex items-center justify-center">
+                <div className="text-center py-10 sm:py-14">
                   <div>
                     <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <span className="text-3xl sm:text-4xl">🎵</span>
@@ -968,8 +973,8 @@ const UserDashboard: React.FC = () => {
           )}
 
           {activeTab === 'wallet' && (
-            <div className="p-4 sm:p-6">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="p-4 sm:p-6 space-y-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold text-gray-900">کیف پول و فاکتورها</h2>
                   <p className="text-gray-600 text-sm">مدیریت موجودی و سوابق تراکنش‌ها</p>
@@ -985,9 +990,12 @@ const UserDashboard: React.FC = () => {
                 <div className="bg-gray-50 rounded-2xl p-4 sm:p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">آخرین فاکتورها</h3>
                   {invoices.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-3">
                       {invoices.map((invoice) => (
-                        <div key={invoice.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div
+                          key={invoice.id}
+                          className="dashboard-card p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+                        >
                           <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
                               invoice.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
@@ -1031,6 +1039,7 @@ const UserDashboard: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };

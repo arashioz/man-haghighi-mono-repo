@@ -120,6 +120,40 @@ body {
   scrollbar-color: #6366f1 #f1f5f9;
 }
 
+/* Enhanced tab pills */
+.tab-pill {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: background-color 0.35s ease, box-shadow 0.35s ease, color 0.35s ease, transform 0.35s ease;
+}
+.tab-pill-active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(129,140,248,0.3));
+  border-color: rgba(79,70,229,0.35);
+  color: #312e81;
+  box-shadow: 0 15px 35px rgba(79,70,229,0.2);
+}
+.tab-pill-inactive {
+  background: transparent;
+  border-color: transparent;
+  color: #6b7280;
+}
+.tab-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.35);
+}
+
+/* Stylish cards */
+.dashboard-card {
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #f4f6ff 100%);
+  box-shadow: 0 15px 30px rgba(99, 102, 241, 0.16);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 45px rgba(79, 70, 229, 0.25);
+}
+
 /* Video controls RTL alignment */
 video {
   direction: rtl;
