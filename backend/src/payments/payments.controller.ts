@@ -73,29 +73,34 @@ export class PaymentsController {
   }
 
   @Get('callback')
-  @ApiOperation({ summary: 'Callback درگاه پرداخت' })
+  @ApiOperation({ summary: 'Callback درگاه پرداخت (GET)' })
   @ApiQuery({ name: 'ResCode', required: false })
   @ApiQuery({ name: 'SaleOrderId', required: false })
   @ApiQuery({ name: 'SaleReferenceId', required: false })
   @ApiQuery({ name: 'RefId', required: false })
   @ApiQuery({ name: 'CardHolderPan', required: false })
-  async paymentCallback(
-    @Query() query: any,
-    @Res() res: Response,
-  ) {
+  async paymentCallbackGet(@Query() query: any, @Res() res: Response) {
+    return this.handlePaymentCallback(query, res);
+  }
+
+  @Post('callback')
+  @ApiOperation({ summary: 'Callback درگاه پرداخت (POST)' })
+  async paymentCallbackPost(@Body() body: any, @Res() res: Response) {
+    return this.handlePaymentCallback(body, res);
+  }
+
+  private async handlePaymentCallback(callbackData: any, res: Response) {
     try {
-      const result = await this.paymentsService.processPaymentCallback(query);
+      const result = await this.paymentsService.processPaymentCallback(callbackData);
 
       if (result.success) {
-        // Redirect to success page
         const redirectUrl = `https://manehaghighi.com/payment/success?transactionId=${result.transaction.id}`;
         return res.redirect(redirectUrl);
-      } else {
-        // Redirect to error page
-        const redirectUrl = `https://manehaghighi.com/payment/error?error=${encodeURIComponent(result.error)}`;
-        return res.redirect(redirectUrl);
       }
-    } catch (error) {
+
+      const redirectUrl = `https://manehaghighi.com/payment/error?error=${encodeURIComponent(result.error)}`;
+      return res.redirect(redirectUrl);
+    } catch (error: any) {
       const redirectUrl = `https://manehaghighi.com/payment/error?error=${encodeURIComponent(error.message)}`;
       return res.redirect(redirectUrl);
     }

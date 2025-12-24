@@ -204,7 +204,8 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      // Explicit message when no account matches the provided login
+      throw new UnauthorizedException('کاربری با این مشخصات یافت نشد');
     }
 
     if (!user.isActive) {
@@ -223,7 +224,7 @@ export class AuthService {
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
       }
 
       const token = this.jwtService.sign({

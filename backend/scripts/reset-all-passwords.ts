@@ -14,7 +14,7 @@ async function resetAllPasswords() {
   const result = await prisma.user.updateMany({
     data: {
       password: hashedPassword,
-      mustChangePassword: false,
+      mustChangePassword: true,
     },
   });
 
