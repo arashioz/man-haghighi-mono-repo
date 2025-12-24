@@ -123,6 +123,8 @@ const Dashboard: React.FC = () => {
               teamMembers,
               activeWorkshops: 0,
               monthlySales: 0,
+              invoices: 0,
+              totalSales: 0,
             });
           } catch (teamError) {
             console.error('Error fetching team data:', teamError);
@@ -139,6 +141,8 @@ const Dashboard: React.FC = () => {
               teamMembers: 0,
               activeWorkshops: 0,
               monthlySales: 0,
+              invoices: 0,
+              totalSales: 0,
             });
           }
         } else if (user?.role === 'SALES_PERSON') {
@@ -156,6 +160,8 @@ const Dashboard: React.FC = () => {
             teamMembers: 0,
             activeWorkshops: 0,
             monthlySales: 0,
+            invoices: 0,
+            totalSales: 0,
           });
         }
       } catch (err: any) {
