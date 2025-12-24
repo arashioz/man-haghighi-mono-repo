@@ -1529,6 +1529,23 @@ export const adminService = {
   },
 };
 
+export const paymentsService = {
+  getAllInvoices: async (params?: { page?: number; limit?: number; status?: string; type?: string }) => {
+    const response = await api.get('/payments/invoices', { params });
+    return response.data;
+  },
+
+  getInvoiceById: async (invoiceId: string) => {
+    const response = await api.get(`/payments/invoices/${invoiceId}`);
+    return response.data;
+  },
+
+  getCourseInvoices: async (courseId: string) => {
+    const response = await api.get(`/payments/course/${courseId}/invoices`);
+    return response.data;
+  },
+};
+
 export const settingsService = {
   getSettings: async () => {
     const response = await api.get('/settings');

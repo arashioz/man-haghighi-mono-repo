@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { coursesService, videosService, audiosService, workshopsService, authService, messagesService } from '../services/api';
+import { coursesService, videosService, audiosService, workshopsService, authService, messagesService, paymentsService } from '../services/api';
 import { Course, Video, Audio, Workshop, UserMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -10,6 +10,7 @@ const UserDashboard: React.FC = () => {
   const [myAudios, setMyAudios] = useState<Audio[]>([]);
   const [myWorkshops, setMyWorkshops] = useState<Workshop[]>([]);
   const [inboxMessages, setInboxMessages] = useState<UserMessage[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages'>('courses');
@@ -55,18 +56,20 @@ const UserDashboard: React.FC = () => {
   const fetchUserData = async () => {
     setMessagesLoading(true);
     try {
-      const [coursesData, videosData, audiosData, workshopsData, messagesData] = await Promise.all([
+      const [coursesData, videosData, audiosData, workshopsData, messagesData, invoicesData] = await Promise.all([
         coursesService.getMyCourses(),
         videosService.getMyVideos(),
         audiosService.getMyAudios(),
         workshopsService.getMyWorkshops(),
         messagesService.getMyMessages(),
+        paymentsService.getMyInvoices(10),
       ]);
       setMyCourses(coursesData);
       setMyVideos(videosData);
       setMyAudios(audiosData);
       setMyWorkshops(workshopsData);
       setInboxMessages(messagesData || []);
+      setInvoices(invoicesData || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت اطلاعات کاربر');
     } finally {
@@ -955,23 +958,62 @@ const UserDashboard: React.FC = () => {
 
           {activeTab === 'wallet' && (
             <div className="p-4 sm:p-6">
-              <div className="text-center py-8 sm:py-12">
-                <div className="w-20 sm:w-24 h-20 sm:h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl sm:text-4xl">💰</span>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">کیف پول و فاکتورها</h2>
+                  <p className="text-gray-600 text-sm">مدیریت موجودی و سوابق تراکنش‌ها</p>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">کیف پول</h3>
-                <p className="text-gray-600 mb-6">موجودی فعلی شما</p>
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-8 mb-8">
-                  <p className="text-4xl font-bold text-green-600 mb-2">۰ تومان</p>
-                  <p className="text-gray-600">موجودی قابل برداشت</p>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-lg">
+                  <p className="text-xs opacity-80 mb-1">موجودی فعلی</p>
+                  <p className="text-2xl font-bold">{user?.wallet?.balance ? Number(user.wallet.balance).toLocaleString() : 0} تومان</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-                  <button className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors">
-                    واریز وجه
-                  </button>
-                  <button className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors">
-                    برداشت وجه
-                  </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-8">
+                {/* Invoice List */}
+                <div className="bg-gray-50 rounded-2xl p-4 sm:p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">آخرین فاکتورها</h3>
+                  {invoices.length > 0 ? (
+                    <div className="space-y-3">
+                      {invoices.map((invoice) => (
+                        <div key={invoice.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                              invoice.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
+                            }`}>
+                              <span className="text-xl">
+                                {invoice.type === 'COURSE_PURCHASE' ? '📚' : invoice.type === 'WALLET_CHARGE' ? '💰' : '🔗'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {invoice.type === 'COURSE_PURCHASE' ? `خرید دوره: ${invoice.course?.title || 'نامشخص'}` : 
+                                 invoice.type === 'WALLET_CHARGE' ? 'شارژ کیف پول' : 'پرداخت لینک مستقیم'}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                شماره فاکتور: {invoice.invoiceNumber} | {new Date(invoice.createdAt).toLocaleDateString('fa-IR')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between w-full sm:w-auto gap-6">
+                            <p className="font-bold text-gray-900">{Number(invoice.amount).toLocaleString()} تومان</p>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              invoice.status === 'PAID' ? 'bg-green-50 text-green-700 border border-green-100' : 
+                              invoice.status === 'FAILED' ? 'bg-red-50 text-red-700 border border-red-100' :
+                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                            }`}>
+                              {invoice.status === 'PAID' ? 'پرداخت شده' : 
+                               invoice.status === 'FAILED' ? 'ناموفق' : 'در انتظار'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500">تراکنشی یافت نشد</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

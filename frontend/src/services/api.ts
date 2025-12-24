@@ -271,6 +271,23 @@ export const audiosService = {
   },
 };
 
+export const paymentsService = {
+  initiateCoursePayment: async (courseId: string) => {
+    const response = await api.post(`/payments/course/${courseId}`);
+    return response.data;
+  },
+
+  getMyInvoices: async (limit = 50) => {
+    const response = await api.get(`/payments/invoices?limit=${limit}`);
+    return response.data;
+  },
+
+  getInvoiceById: async (invoiceId: string) => {
+    const response = await api.get(`/payments/invoices/${invoiceId}`);
+    return response.data;
+  },
+};
+
 export const workshopsService = {
   getActive: async (): Promise<Workshop[]> => {
     try {

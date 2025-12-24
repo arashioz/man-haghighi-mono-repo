@@ -14,6 +14,7 @@ import Sliders from './pages/Sliders';
 import Articles from './pages/Articles';
 import Podcasts from './pages/Podcasts';
 import Courses from './pages/Courses';
+import Invoices from './pages/Invoices';
 import VideoPodcasts from './pages/VideoPodcasts';
 import Comments from './pages/Comments';
 import Logs from './pages/Logs';
@@ -51,6 +52,7 @@ function App() {
                     <Route path="/articles" element={<Articles />} />
                     <Route path="/podcasts" element={<Podcasts />} />
                     <Route path="/courses" element={<Courses />} />
+                    <Route path="/invoices" element={<Invoices />} />
                     <Route path="/video-podcasts" element={<VideoPodcasts />} />
                     <Route path="/comments" element={<Comments />} />
                     <Route path="/messages" element={<Messages />} />

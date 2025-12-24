@@ -487,7 +487,7 @@ const UploadCenter: React.FC = () => {
             setPreviewFile(null);
           }}
           title={`پیش‌نمایش: ${previewFile.filename}`}
-          maxWidth="max-w-4xl"
+          size="large"
         >
           <div className="space-y-4">
             <div className="aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center">

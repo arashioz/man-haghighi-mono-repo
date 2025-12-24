@@ -20,6 +20,8 @@ import VideoPlayer from './pages/VideoPlayer';
 import AudioPlayer from './pages/AudioPlayer';
 import VideoPodcastDetail from './pages/VideoPodcastDetail';
 import WorkshopDetail from './pages/WorkshopDetail';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentError from './pages/PaymentError';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -43,6 +45,8 @@ function App() {
               <Route path="/courses/:courseId/videos/:videoId" element={<VideoPlayer />} />
               <Route path="/courses/:courseId/audios/:audioId" element={<AudioPlayer />} />
               <Route path="/workshops/:id" element={<WorkshopDetail />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              <Route path="/payment/error" element={<PaymentError />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/dashboard" element={<UserDashboard />} />

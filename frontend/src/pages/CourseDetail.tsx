@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { coursesService, API_ORIGIN, audiosService } from '../services/api';
+import { coursesService, API_ORIGIN, audiosService, paymentsService } from '../services/api';
 import { Course } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
@@ -371,12 +371,39 @@ const CourseDetail: React.FC = () => {
 
     setEnrolling(true);
     try {
-      await coursesService.enroll(id!);
-      setIsEnrolled(true);
-      // Refresh course data to show videos
-      await fetchCourse();
+      // Check if course is free or paid
+      if (Number(course?.price) === 0) {
+        await coursesService.enroll(id!);
+        setIsEnrolled(true);
+        // Refresh course data to show videos
+        await fetchCourse();
+      } else {
+        // Paid course - initiate payment
+        const paymentData = await paymentsService.initiateCoursePayment(id!);
+        
+        if (paymentData.enrolled) {
+          // Already purchased or wallet balance was enough
+          setIsEnrolled(true);
+          await fetchCourse();
+        } else if (paymentData.paymentUrl && paymentData.refId) {
+          // Redirect to payment gateway
+          // Behpardakht Mellat requires POST request with RefId
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = paymentData.paymentUrl;
+
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'RefId';
+          input.value = paymentData.refId;
+          
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+        }
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در ثبت‌نام در دوره');
+      setError(err.response?.data?.message || 'خطا در فرآیند ثبت‌نام');
     } finally {
       setEnrolling(false);
     }
