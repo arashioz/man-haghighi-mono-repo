@@ -1546,12 +1546,22 @@ export const paymentsService = {
     return response.data;
   },
 
+  getCustomerPaymentLinks: async (phone: string) => {
+    const response = await api.get(`/payments/links/customer/${phone}`);
+    return response.data;
+  },
+
+  togglePaymentLink: async (linkId: string) => {
+    const response = await api.patch(`/payments/links/${linkId}/toggle`);
+    return response.data;
+  },
+
   getPaymentLinkByCode: async (linkCode: string) => {
     const response = await api.get(`/payments/pay/${linkCode}`);
     return response.data;
   },
   getAllInvoices: async (params?: { page?: number; limit?: number; status?: string; type?: string; userId?: string }) => {
-    const response = await api.get('/payments/invoices', { params });
+    const response = await api.get('/payments/invoices/all', { params });
     return response.data;
   },
 

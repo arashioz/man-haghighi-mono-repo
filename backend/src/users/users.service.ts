@@ -586,24 +586,41 @@ export class UsersService {
     
     // حذف تیم‌های فروش مربوط به مدیر فروش
     if (user.role === 'SALES_MANAGER') {
-      try {
-        await (this.prisma as any).salesTeam?.deleteMany({
-          where: { managerId: id },
+      // ابتدا تمام تیم‌های تحت مدیریت این مدیر را پیدا می‌کنیم
+      const teams = await this.prisma.salesTeam.findMany({
+        where: { managerId: id },
+        select: { id: true },
+      });
+
+      // برای هر تیم، ابتدا اعضای تیم را حذف می‌کنیم
+      for (const team of teams) {
+        await this.prisma.salesTeamMember.deleteMany({
+          where: { teamId: team.id },
         });
-      } catch (error) {
-        // Ignore if salesTeam model doesn't exist
       }
+
+      // سپس خود تیم‌ها را حذف می‌کنیم
+      await this.prisma.salesTeam.deleteMany({
+        where: { managerId: id },
+      });
+
+      // تمام فروشنده‌هایی که تحت نظر این مدیر هستند را از انتساب خارج می‌کنیم
+      await this.prisma.user.updateMany({
+        where: { parentId: id },
+        data: { parentId: null },
+      });
+
+      // حذف دسترسی‌های کارگاه که توسط این مدیر داده شده
+      await this.prisma.salesPersonWorkshopAccess.deleteMany({
+        where: { grantedBy: id },
+      });
     }
     
     // حذف عضویت‌های تیم و دسترسی‌های کارشناس فروش
     if (user.role === 'SALES_PERSON') {
-      try {
-        await (this.prisma as any).salesTeamMember?.deleteMany({
-          where: { salesPersonId: id },
-        });
-      } catch (error) {
-        // Ignore if salesTeamMember model doesn't exist
-      }
+      await this.prisma.salesTeamMember.deleteMany({
+        where: { salesPersonId: id },
+      });
       
       await this.prisma.salesPersonWorkshopAccess.deleteMany({
         where: { 

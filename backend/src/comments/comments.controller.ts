@@ -9,6 +9,7 @@ import {
   Query,
   Request,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CommentsService } from './comments.service';
@@ -114,6 +115,35 @@ export class AdminCommentsController {
   @ApiOperation({ summary: 'Admin: delete comment' })
   async remove(@Param('commentId') commentId: string) {
     return this.commentsService.adminDelete(commentId);
+  }
+
+  @Post(':commentId/reply')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin: reply to a comment' })
+  async reply(
+    @Param('commentId') commentId: string,
+    @Body() dto: { content: string },
+    @Request() req: any,
+  ) {
+    const parent = await this.commentsService.findOne(commentId);
+    if (!parent) {
+      throw new NotFoundException('Comment not found');
+    }
+    
+    // Create reply as admin (auto-published)
+    return this.commentsService.createForTarget(
+      parent.targetType,
+      parent.targetId,
+      {
+        authorName: 'مدیر سایت',
+        content: dto.content,
+        parentId: commentId,
+      },
+      true, // Auto-publish admin replies
+      req.user.id,
+    );
   }
 }
 

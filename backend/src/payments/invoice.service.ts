@@ -215,5 +215,77 @@ export class InvoiceService {
 
     return invoice;
   }
+
+  async getAllInvoices(params?: {
+    page?: number;
+    limit?: number;
+    status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+    type?: 'COURSE_PURCHASE' | 'WALLET_CHARGE' | 'PAYMENT_LINK';
+    userId?: string;
+  }) {
+    const page = params?.page || 1;
+    const limit = params?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (params?.status) {
+      where.status = params.status;
+    }
+
+    if (params?.type) {
+      where.type = params.type;
+    }
+
+    if (params?.userId) {
+      where.userId = params.userId;
+    }
+
+    const [invoices, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+              username: true,
+            },
+          },
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          paymentLink: {
+            select: {
+              id: true,
+              linkCode: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.invoice.count({ where }),
+    ]);
+
+    return {
+      invoices,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }
 

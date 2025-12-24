@@ -65,6 +65,15 @@ const WorkshopIcon = () => (
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect sales managers and sales persons to sales dashboard
+    if (user?.role === 'SALES_MANAGER' || user?.role === 'SALES_PERSON') {
+      navigate('/sales-dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
   const [stats, setStats] = useState({
     users: 0,
     sliders: 0,

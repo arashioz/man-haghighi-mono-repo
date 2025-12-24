@@ -276,6 +276,9 @@ model Comment {
   authorPhone String?
   content     String  @db.Text
 
+  // Reply functionality
+  parentId    String? // If this is a reply to another comment
+
   isPublished   Boolean   @default(false)
   publishedAt   DateTime?
   publishedById String?
@@ -288,11 +291,14 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  publishedBy User? @relation("CommentPublishedBy", fields: [publishedById], references: [id])
-  editedBy    User? @relation("CommentEditedBy", fields: [editedById], references: [id])
+  publishedBy User?     @relation("CommentPublishedBy", fields: [publishedById], references: [id])
+  editedBy    User?     @relation("CommentEditedBy", fields: [editedById], references: [id])
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
 
   @@index([targetType, targetId])
   @@index([targetType, targetId, isPublished])
+  @@index([parentId])
   @@index([createdAt])
   @@index([isPublished])
   @@map("comments")

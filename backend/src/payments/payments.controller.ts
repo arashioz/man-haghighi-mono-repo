@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   Query,
@@ -130,6 +131,34 @@ export class PaymentsController {
     return this.invoiceService.getUserInvoices(targetUserId, limitNum);
   }
 
+  @Get('invoices/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'لیست تمام فاکتورها (فقط ادمین)' })
+  @ApiResponse({ status: 200, description: 'لیست تمام فاکتورها' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'] })
+  @ApiQuery({ name: 'type', required: false, enum: ['COURSE_PURCHASE', 'WALLET_CHARGE', 'PAYMENT_LINK'] })
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  async getAllInvoices(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED',
+    @Query('type') type?: 'COURSE_PURCHASE' | 'WALLET_CHARGE' | 'PAYMENT_LINK',
+    @Query('userId') userId?: string,
+  ) {
+    const params: any = {};
+    if (page) params.page = parseInt(page, 10);
+    if (limit) params.limit = parseInt(limit, 10);
+    if (status) params.status = status;
+    if (type) params.type = type;
+    if (userId) params.userId = userId;
+    
+    return this.invoiceService.getAllInvoices(params);
+  }
+
   @Get('invoices/:invoiceId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -188,8 +217,13 @@ export class PaymentsController {
       },
       include: {
         invoices: {
-          where: {
-            status: 'PAID',
+          include: {
+            transactions: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+            },
           },
         },
       },
@@ -201,11 +235,183 @@ export class PaymentsController {
     return links;
   }
 
+  @Get('links/customer/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'لیست لینک‌های پرداخت یک مشتری' })
+  @ApiParam({ name: 'phone', description: 'شماره موبایل مشتری' })
+  async getCustomerPaymentLinks(@Param('phone') phone: string, @Req() req) {
+    const links = await this.prisma.paymentLink.findMany({
+      where: {
+        customerPhone: phone,
+        createdById: req.user.id,
+      },
+      include: {
+        invoices: {
+          include: {
+            transactions: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return links;
+  }
+
+  @Patch('links/:id/toggle')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'فعال/غیرفعال کردن لینک پرداخت' })
+  @ApiParam({ name: 'id', description: 'شناسه لینک پرداخت' })
+  async togglePaymentLink(@Param('id') id: string, @Req() req) {
+    const link = await this.prisma.paymentLink.findUnique({
+      where: { id },
+    });
+
+    if (!link) {
+      throw new Error('لینک پرداخت یافت نشد');
+    }
+
+    if (link.createdById !== req.user.id && req.user.role !== 'ADMIN') {
+      throw new Error('دسترسی غیرمجاز');
+    }
+
+    const updated = await this.prisma.paymentLink.update({
+      where: { id },
+      data: {
+        isActive: !link.isActive,
+      },
+    });
+
+    return updated;
+  }
+
   @Get('pay/:linkCode')
   @ApiOperation({ summary: 'پرداخت از طریق لینک' })
   @ApiParam({ name: 'linkCode', description: 'کد لینک پرداخت' })
-  async payWithLink(@Param('linkCode') linkCode: string, @Query('userId') userId?: string) {
-    return this.paymentsService.initiatePaymentLinkPayment(linkCode, userId);
+  async payWithLink(
+    @Param('linkCode') linkCode: string,
+    @Query('userId') userId: string | undefined,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.paymentsService.initiatePaymentLinkPayment(linkCode, userId);
+      
+      // Return HTML page that auto-submits form to payment gateway
+      const html = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="fa">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>در حال انتقال به درگاه پرداخت...</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: #fff;
+            }
+            .container {
+              text-align: center;
+              padding: 2rem;
+            }
+            .spinner {
+              border: 4px solid rgba(255, 255, 255, 0.3);
+              border-top: 4px solid #fff;
+              border-radius: 50%;
+              width: 50px;
+              height: 50px;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 1rem;
+            }
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+            h1 {
+              margin: 0;
+              font-size: 1.5rem;
+            }
+            p {
+              margin-top: 0.5rem;
+              opacity: 0.9;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="spinner"></div>
+            <h1>در حال انتقال به درگاه پرداخت...</h1>
+            <p>لطفاً صبر کنید</p>
+          </div>
+          <form id="paymentForm" method="post" action="${result.paymentUrl}">
+            <input type="hidden" name="RefId" value="${result.refId}" />
+          </form>
+          <script>
+            document.getElementById('paymentForm').submit();
+          </script>
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(html);
+    } catch (error: any) {
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="fa">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>خطا در پرداخت</title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              background: #f5f5f5;
+            }
+            .error-container {
+              background: white;
+              padding: 2rem;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              text-align: center;
+              max-width: 500px;
+            }
+            h1 { color: #e74c3c; margin-top: 0; }
+            p { color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="error-container">
+            <h1>خطا در پرداخت</h1>
+            <p>${error.message || 'لینک پرداخت نامعتبر است یا منقضی شده است'}</p>
+          </div>
+        </body>
+        </html>
+      `;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.status(400).send(errorHtml);
+    }
   }
 
   @Get('course/:courseId/invoices')

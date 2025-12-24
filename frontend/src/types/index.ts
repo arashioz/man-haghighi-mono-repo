@@ -149,6 +149,7 @@ export interface Comment {
   authorName: string;
   authorPhone?: string | null;
   content: string;
+  parentId?: string | null;
   isPublished: boolean;
   publishedAt?: string | null;
   publishedById?: string | null;
@@ -157,6 +158,7 @@ export interface Comment {
   editedById?: string | null;
   createdAt: string;
   updatedAt: string;
+  replies?: Comment[];
 }
 
 export interface Video {

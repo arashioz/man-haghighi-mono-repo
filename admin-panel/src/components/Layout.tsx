@@ -103,8 +103,12 @@ const LogoutIcon = () => (
 );
 
 const getMenuItems = (userRole: string) => {
+  const dashboardPath = (userRole === 'SALES_MANAGER' || userRole === 'SALES_PERSON') 
+    ? '/sales-dashboard' 
+    : '/dashboard';
+  
   const baseItems = [
-    { text: 'داشبورد', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'داشبورد', icon: <DashboardIcon />, path: dashboardPath },
   ];
 
   if (userRole === 'ADMIN') {
@@ -128,19 +132,13 @@ const getMenuItems = (userRole: string) => {
   } else if (userRole === 'SALES_MANAGER') {
     return [
       ...baseItems,
-      { text: 'تیم من', icon: <TeamIcon />, path: '/my-team' },
-      { text: 'فروشندگان', icon: <PeopleIcon />, path: '/sales-persons' },
       { text: 'کارگاه‌ها', icon: <SchoolIcon />, path: '/workshops' },
-      { text: 'لینک‌های پرداخت', icon: <InvoiceIcon />, path: '/payment-links' },
-      { text: 'گزارش فروش', icon: <DashboardIcon />, path: '/sales-report' },
     ];
   } else if (userRole === 'SALES_PERSON') {
     return [
       ...baseItems,
       { text: 'کارگاه‌های من', icon: <SchoolIcon />, path: '/my-workshops' },
       { text: 'مشتریان من', icon: <PeopleIcon />, path: '/my-customers' },
-      { text: 'لینک‌های پرداخت', icon: <InvoiceIcon />, path: '/payment-links' },
-      { text: 'گزارش فروش', icon: <DashboardIcon />, path: '/my-sales-report' },
     ];
   }
 

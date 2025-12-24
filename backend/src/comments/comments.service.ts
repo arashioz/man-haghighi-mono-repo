@@ -44,8 +44,27 @@ export class CommentsService {
     }
   }
 
-  async createForTarget(targetType: CommentTargetType, targetId: string, dto: CreateCommentDto) {
+  async createForTarget(
+    targetType: CommentTargetType,
+    targetId: string,
+    dto: CreateCommentDto,
+    autoPublish: boolean = false,
+    publishedById?: string,
+  ) {
     await this.assertTargetAllowsComments(targetType, targetId);
+
+    // If this is a reply, verify parent comment exists and belongs to same target
+    if (dto.parentId) {
+      const parent = await this.prisma.comment.findUnique({
+        where: { id: dto.parentId },
+      });
+      if (!parent) {
+        throw new NotFoundException('Parent comment not found');
+      }
+      if (parent.targetType !== targetType || parent.targetId !== targetId) {
+        throw new BadRequestException('Parent comment does not belong to this target');
+      }
+    }
 
     return this.prisma.comment.create({
       data: {
@@ -54,8 +73,17 @@ export class CommentsService {
         authorName: dto.authorName,
         authorPhone: dto.authorPhone,
         content: dto.content,
-        isPublished: false,
+        parentId: dto.parentId,
+        isPublished: autoPublish,
+        publishedAt: autoPublish ? new Date() : null,
+        publishedById: autoPublish && publishedById ? publishedById : null,
       },
+    });
+  }
+
+  async findOne(commentId: string) {
+    return this.prisma.comment.findUnique({
+      where: { id: commentId },
     });
   }
 
@@ -70,14 +98,26 @@ export class CommentsService {
       throw e;
     }
 
-    return this.prisma.comment.findMany({
+    // Get top-level comments (without parent) with their replies
+    const topLevelComments = await this.prisma.comment.findMany({
       where: {
         targetType,
         targetId,
         isPublished: true,
+        parentId: null, // Only top-level comments
       },
       orderBy: { createdAt: 'desc' },
+      include: {
+        replies: {
+          where: {
+            isPublished: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
+
+    return topLevelComments;
   }
 
   async adminList(params: {

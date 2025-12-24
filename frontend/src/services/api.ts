@@ -180,7 +180,7 @@ export const commentsService = {
     const response = await api.get(`/comments/articles/${articleId}`);
     return response.data;
   },
-  createArticleComment: async (articleId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+  createArticleComment: async (articleId: string, data: { authorName: string; authorPhone?: string; content: string; parentId?: string }): Promise<Comment> => {
     const response = await api.post(`/comments/articles/${articleId}`, data);
     return response.data;
   },
@@ -189,7 +189,7 @@ export const commentsService = {
     const response = await api.get(`/comments/podcasts/${podcastId}`);
     return response.data;
   },
-  createPodcastComment: async (podcastId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+  createPodcastComment: async (podcastId: string, data: { authorName: string; authorPhone?: string; content: string; parentId?: string }): Promise<Comment> => {
     const response = await api.post(`/comments/podcasts/${podcastId}`, data);
     return response.data;
   },
@@ -198,7 +198,7 @@ export const commentsService = {
     const response = await api.get(`/comments/courses/${courseId}`);
     return response.data;
   },
-  createCourseComment: async (courseId: string, data: { authorName: string; authorPhone?: string; content: string }): Promise<Comment> => {
+  createCourseComment: async (courseId: string, data: { authorName: string; authorPhone?: string; content: string; parentId?: string }): Promise<Comment> => {
     const response = await api.post(`/comments/courses/${courseId}`, data);
     return response.data;
   },

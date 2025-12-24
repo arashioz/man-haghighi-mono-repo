@@ -19,6 +19,11 @@ export class CreateCommentDto {
   @MinLength(2)
   @MaxLength(5000)
   content: string;
+
+  @ApiProperty({ example: 'comment-id-here', required: false, description: 'Parent comment ID if this is a reply' })
+  @IsOptional()
+  @IsString()
+  parentId?: string;
 }
 
 

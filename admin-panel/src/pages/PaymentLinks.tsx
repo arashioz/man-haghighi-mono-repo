@@ -3,9 +3,10 @@ import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
-import { paymentsService, usersService } from '../services/api';
+import { paymentsService, usersService, workshopsService, coursesService, API_ORIGIN } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
+import { Workshop, Course } from '../types';
 
 interface PaymentLink {
   id: string;
@@ -28,6 +29,11 @@ interface PaymentLink {
     id: string;
     status: string;
     paidAt?: string;
+    transactions?: Array<{
+      id: string;
+      status: string;
+      createdAt: string;
+    }>;
   }>;
 }
 
@@ -41,17 +47,46 @@ const PaymentLinks: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'paid'>('all');
   const [selectedLink, setSelectedLink] = useState<PaymentLink | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedCustomerPhone, setSelectedCustomerPhone] = useState<string>('');
+  const [customerLinks, setCustomerLinks] = useState<PaymentLink[]>([]);
+  const [isCustomerLinksModalOpen, setIsCustomerLinksModalOpen] = useState(false);
 
   const [newLink, setNewLink] = useState({
     customerName: '',
     customerMobile: '',
     amount: '',
     description: '',
+    workshopId: '',
+    courseId: '',
   });
+  const [availableWorkshops, setAvailableWorkshops] = useState<Workshop[]>([]);
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [linkType, setLinkType] = useState<'manual' | 'workshop' | 'course'>('manual');
 
   useEffect(() => {
     fetchPaymentLinks();
+    fetchAvailableItems();
   }, []);
+
+  const fetchAvailableItems = async () => {
+    try {
+      if (user?.role === 'SALES_PERSON') {
+        // For sales persons, get only accessible workshops
+        const workshops = await workshopsService.getSalesPersonAccessible();
+        setAvailableWorkshops(workshops);
+      } else if (user?.role === 'SALES_MANAGER' || user?.role === 'ADMIN') {
+        // For managers and admins, get all active workshops and published courses
+        const [workshops, courses] = await Promise.all([
+          workshopsService.getActive(),
+          coursesService.getPublished(),
+        ]);
+        setAvailableWorkshops(workshops);
+        setAvailableCourses(courses);
+      }
+    } catch (err: any) {
+      console.error('Error fetching available items:', err);
+    }
+  };
 
   const fetchPaymentLinks = async () => {
     try {
@@ -71,6 +106,7 @@ const PaymentLinks: React.FC = () => {
     setError('');
 
     try {
+      // Amount is always manual - workshop/course prices are just for reference
       const amount = parseFloat(newLink.amount.replace(/,/g, ''));
       if (isNaN(amount) || amount < 1000) {
         setError('مبلغ باید حداقل 1000 ریال باشد');
@@ -82,11 +118,20 @@ const PaymentLinks: React.FC = () => {
         return;
       }
 
+      let description = newLink.description || '';
+      if (linkType === 'workshop' && newLink.workshopId) {
+        const workshop = availableWorkshops.find(w => w.id === newLink.workshopId);
+        description = `پرداخت کارگاه: ${workshop?.title}${description ? ` - ${description}` : ''}`;
+      } else if (linkType === 'course' && newLink.courseId) {
+        const course = availableCourses.find(c => c.id === newLink.courseId);
+        description = `پرداخت دوره: ${course?.title}${description ? ` - ${description}` : ''}`;
+      }
+
       await paymentsService.createPaymentLink({
         customerName: newLink.customerName,
         customerMobile: newLink.customerMobile,
         amount: amount,
-        description: newLink.description || undefined,
+        description: description || undefined,
       });
 
       setIsCreateModalOpen(false);
@@ -95,7 +140,10 @@ const PaymentLinks: React.FC = () => {
         customerMobile: '',
         amount: '',
         description: '',
+        workshopId: '',
+        courseId: '',
       });
+      setLinkType('manual');
       await fetchPaymentLinks();
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ایجاد لینک پرداخت');
@@ -107,8 +155,17 @@ const PaymentLinks: React.FC = () => {
   };
 
   const getPaymentUrl = (linkCode: string) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/api/payments/pay/${linkCode}`;
+    // Use main site URL instead of admin panel URL
+    // Convert api.manehaghighi.com to manehaghighi.com
+    let siteUrl = API_ORIGIN;
+    if (siteUrl.includes('api.manehaghighi.com')) {
+      siteUrl = siteUrl.replace('api.manehaghighi.com', 'manehaghighi.com');
+    } else if (siteUrl.includes('api.')) {
+      // For other domains, remove api. subdomain
+      siteUrl = siteUrl.replace(/api\./, '');
+    }
+    
+    return `${siteUrl}/api/payments/pay/${linkCode}`;
   };
 
   const copyToClipboard = async (text: string, message: string = 'کپی شد!') => {
@@ -134,6 +191,60 @@ const PaymentLinks: React.FC = () => {
     window.open(whatsappUrl, '_blank');
   };
 
+  const getPaymentStatus = (link: PaymentLink): 'paid' | 'pending' | 'failed' => {
+    // Check if invoice has PAID status
+    const paidInvoice = link.invoices?.find(inv => inv.status === 'PAID');
+    if (paidInvoice) {
+      return 'paid';
+    }
+
+    // Check if there's a transaction with PAID status
+    const paidTransaction = link.invoices?.some(inv => 
+      inv.transactions?.some((t: any) => t.status === 'PAID')
+    );
+    if (paidTransaction) {
+      return 'paid';
+    }
+
+    // Check if there's a pending transaction
+    const pendingTransaction = link.invoices?.some(inv => 
+      inv.transactions?.some((t: any) => t.status === 'PENDING')
+    );
+    if (pendingTransaction) {
+      return 'pending';
+    }
+
+    return 'pending';
+  };
+
+  const openCustomerLinksModal = async (phone: string, name: string) => {
+    try {
+      setLoading(true);
+      const links = await paymentsService.getCustomerPaymentLinks(phone);
+      setCustomerLinks(links);
+      setSelectedCustomerPhone(phone);
+      setIsCustomerLinksModalOpen(true);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت لینک‌های مشتری');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleLink = async (linkId: string) => {
+    try {
+      await paymentsService.togglePaymentLink(linkId);
+      await fetchPaymentLinks();
+      // Also refresh customer links if modal is open
+      if (isCustomerLinksModalOpen && selectedCustomerPhone) {
+        const links = await paymentsService.getCustomerPaymentLinks(selectedCustomerPhone);
+        setCustomerLinks(links);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در تغییر وضعیت لینک');
+    }
+  };
+
   const getFilteredLinks = () => {
     let filtered = paymentLinks;
 
@@ -154,7 +265,7 @@ const PaymentLinks: React.FC = () => {
         filtered = filtered.filter(link => !link.isActive);
         break;
       case 'paid':
-        filtered = filtered.filter(link => link.invoices?.some(inv => inv.status === 'PAID'));
+        filtered = filtered.filter(link => getPaymentStatus(link) === 'paid');
         break;
     }
 
@@ -180,12 +291,34 @@ const PaymentLinks: React.FC = () => {
   const stats = getStats();
   const filteredLinks = getFilteredLinks();
 
+  const isInDashboard = window.location.pathname.includes('sales-dashboard');
+
   return (
     <div>
-      <PageHeader
-        title="لینک‌های پرداخت"
-        description="مدیریت و ایجاد لینک‌های پرداخت برای مشتریان"
-        action={
+      {!isInDashboard && (
+        <PageHeader
+          title="لینک‌های پرداخت"
+          description="مدیریت و ایجاد لینک‌های پرداخت برای مشتریان"
+          action={
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              ایجاد لینک پرداخت
+            </button>
+          }
+        />
+      )}
+      
+      {isInDashboard && (
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">لینک‌های پرداخت</h2>
+            <p className="text-gray-600 mt-1">مدیریت و ایجاد لینک‌های پرداخت برای مشتریان</p>
+          </div>
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 font-medium"
@@ -195,8 +328,8 @@ const PaymentLinks: React.FC = () => {
             </svg>
             ایجاد لینک پرداخت
           </button>
-        }
-      />
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 animate-fade-in">
@@ -300,7 +433,8 @@ const PaymentLinks: React.FC = () => {
                 <tr>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مشتری</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مبلغ</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت لینک</th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت پرداخت</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">تاریخ ایجاد</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">عملیات</th>
                 </tr>
@@ -318,7 +452,12 @@ const PaymentLinks: React.FC = () => {
                             {link.customerName?.[0] || '?'}
                           </div>
                           <div className="mr-4">
-                            <div className="text-sm font-medium text-gray-900">{link.customerName}</div>
+                            <button
+                              onClick={() => openCustomerLinksModal(link.customerPhone, link.customerName)}
+                              className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-right"
+                            >
+                              {link.customerName}
+                            </button>
                             <div className="text-sm text-gray-500">{link.customerPhone}</div>
                           </div>
                         </div>
@@ -329,14 +468,28 @@ const PaymentLinks: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          isPaid
-                            ? 'bg-green-100 text-green-800'
-                            : link.isActive
+                          link.isActive
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {isPaid ? '✅ پرداخت شده' : link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                          {link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(() => {
+                          const paymentStatus = getPaymentStatus(link);
+                          return (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                              paymentStatus === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : paymentStatus === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {paymentStatus === 'paid' ? '✅ پرداخت شده' : paymentStatus === 'pending' ? '⏳ در انتظار' : '❌ ناموفق'}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatPersianDateTime(link.createdAt)}
@@ -395,12 +548,136 @@ const PaymentLinks: React.FC = () => {
             customerMobile: '',
             amount: '',
             description: '',
+            workshopId: '',
+            courseId: '',
           });
+          setLinkType('manual');
           setError('');
         }}
         title="ایجاد لینک پرداخت جدید"
       >
         <form onSubmit={handleCreateLink} className="space-y-4">
+          {/* نوع لینک */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نوع لینک</label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setLinkType('manual');
+                  setNewLink({...newLink, workshopId: '', courseId: '', amount: ''});
+                }}
+                className={`px-4 py-2 rounded-lg border transition-colors ${
+                  linkType === 'manual'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                دستی
+              </button>
+              {availableWorkshops.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkType('workshop');
+                    setNewLink({...newLink, courseId: '', amount: ''});
+                  }}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${
+                    linkType === 'workshop'
+                      ? 'bg-purple-50 border-purple-500 text-purple-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  کارگاه
+                </button>
+              )}
+              {availableCourses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkType('course');
+                    setNewLink({...newLink, workshopId: '', amount: ''});
+                  }}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${
+                    linkType === 'course'
+                      ? 'bg-green-50 border-green-500 text-green-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  دوره
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* انتخاب کارگاه */}
+          {linkType === 'workshop' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">انتخاب کارگاه</label>
+              <select
+                value={newLink.workshopId}
+                onChange={(e) => {
+                  const workshopId = e.target.value;
+                  const workshop = availableWorkshops.find(w => w.id === workshopId);
+                  setNewLink({
+                    ...newLink,
+                    workshopId,
+                    amount: workshop ? Math.round(workshop.price).toString() : '',
+                  });
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                required
+              >
+                <option value="">انتخاب کارگاه...</option>
+                {availableWorkshops.map((workshop) => (
+                  <option key={workshop.id} value={workshop.id}>
+                    {workshop.title} - {workshop.price.toLocaleString('fa-IR')} تومان
+                  </option>
+                ))}
+              </select>
+              {newLink.workshopId && (
+                <p className="text-sm text-gray-500 mt-1">
+                  مبلغ: {formatAmount(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} تومان
+                  ({formatAmount((availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0) * 10)} ریال)
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* انتخاب دوره */}
+          {linkType === 'course' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">انتخاب دوره</label>
+              <select
+                value={newLink.courseId}
+                onChange={(e) => {
+                  const courseId = e.target.value;
+                  const course = availableCourses.find(c => c.id === courseId);
+                  setNewLink({
+                    ...newLink,
+                    courseId,
+                    amount: course ? Math.round(course.price).toString() : '',
+                  });
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                required
+              >
+                <option value="">انتخاب دوره...</option>
+                {availableCourses.map((course) => (
+                  <option key={course.id} value={course.id}>
+                    {course.title} - {course.price.toLocaleString('fa-IR')} تومان
+                  </option>
+                ))}
+              </select>
+              {newLink.courseId && (
+                <p className="text-sm text-gray-500 mt-1">
+                  مبلغ: {formatAmount(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} تومان
+                  ({formatAmount((availableCourses.find(c => c.id === newLink.courseId)?.price || 0) * 10)} ریال)
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی مشتری</label>
             <input
@@ -430,7 +707,7 @@ const PaymentLinks: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان) *</label>
             <input
               type="text"
               value={newLink.amount}
@@ -447,6 +724,11 @@ const PaymentLinks: React.FC = () => {
                 معادل: {formatAmount(parseFloat(newLink.amount.replace(/,/g, '')) * 10)} ریال
               </p>
             )}
+            {(linkType === 'workshop' && newLink.workshopId) || (linkType === 'course' && newLink.courseId) ? (
+              <p className="text-sm text-blue-600 mt-1">
+                💡 مبلغ کارگاه/دوره فقط برای نمایش است. می‌توانید هر مبلغی که می‌خواهید وارد کنید.
+              </p>
+            ) : null}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">توضیحات (اختیاری)</label>
@@ -468,7 +750,10 @@ const PaymentLinks: React.FC = () => {
                   customerMobile: '',
                   amount: '',
                   description: '',
+                  workshopId: '',
+                  courseId: '',
                 });
+                setLinkType('manual');
                 setError('');
               }}
               className="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
@@ -584,6 +869,99 @@ const PaymentLinks: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* مودال لینک‌های مشتری */}
+      <Modal
+        isOpen={isCustomerLinksModalOpen}
+        onClose={() => {
+          setIsCustomerLinksModalOpen(false);
+          setSelectedCustomerPhone('');
+          setCustomerLinks([]);
+        }}
+        title={`لینک‌های پرداخت: ${customerLinks[0]?.customerName || ''}`}
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>شماره موبایل:</strong> {selectedCustomerPhone}
+            </p>
+            <p className="text-sm text-blue-800 mt-1">
+              <strong>تعداد لینک‌ها:</strong> {customerLinks.length}
+            </p>
+          </div>
+
+          {customerLinks.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">لینکی برای این مشتری یافت نشد</p>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {customerLinks.map((link) => {
+                const paymentStatus = getPaymentStatus(link);
+                return (
+                  <div
+                    key={link.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            مبلغ: {formatAmount(link.amount)} ریال ({formatAmount(Math.round(link.amount / 10))} تومان)
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            link.isActive
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            paymentStatus === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : paymentStatus === 'pending'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {paymentStatus === 'paid' ? '✅ پرداخت شده' : paymentStatus === 'pending' ? '⏳ در انتظار' : '❌ ناموفق'}
+                          </span>
+                        </div>
+                        {link.description && (
+                          <p className="text-sm text-gray-600 mt-1">{link.description}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          ایجاد شده: {formatPersianDateTime(link.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleToggleLink(link.id)}
+                          className={`px-3 py-1 text-xs rounded transition-colors ${
+                            link.isActive
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          {link.isActive ? 'غیرفعال' : 'فعال'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedLink(link);
+                            setIsDetailsModalOpen(true);
+                          }}
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        >
+                          جزئیات
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

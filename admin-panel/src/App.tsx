@@ -24,6 +24,7 @@ import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Messages from './pages/Messages';
 import PaymentLinks from './pages/PaymentLinks';
+import SalesDashboard from './pages/SalesDashboard';
 import NotFound from './pages/NotFound';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/sales-dashboard" element={<SalesDashboard />} />
                     <Route path="/users-management" element={<UsersManagement />} />
                     <Route path="/sales-persons" element={<SalesPersons />} />
                     <Route path="/sales-management" element={<SalesManagement />} />

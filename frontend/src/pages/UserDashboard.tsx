@@ -5,6 +5,7 @@ import { Course, Video, Audio, Workshop, UserMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 type TabId = 'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages';
+type MainTabId = 'dashboard' | 'profile';
 
 const UserDashboard: React.FC = () => {
   const [myCourses, setMyCourses] = useState<Course[]>([]);
@@ -15,6 +16,7 @@ const UserDashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mainTab, setMainTab] = useState<MainTabId>('dashboard');
   const [activeTab, setActiveTab] = useState<TabId>('courses');
   const navigate = useNavigate();
   const { user, loading: authLoading, updateProfile: saveProfile } = useAuth();
@@ -305,284 +307,40 @@ const UserDashboard: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {(user?.isOld || isProfileIncomplete) && (
-          <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
-            <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">تکمیل اطلاعات حساب کاربری</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                برای استفاده بهتر از خدمات سایت، لطفاً اطلاعات تماس و سوابق خود را به‌روزرسانی کنید.
-              </p>
-              {user?.isOld && (
-                <p className="text-xs text-indigo-600 mt-2">
-                  حساب شما از سامانه قدیمی منتقل شده است. لطفاً شماره تلفن و سایر اطلاعات را بازبینی نمایید.
-                </p>
-              )}
-            </div>
-            <form onSubmit={handleProfileSubmit} className="p-4 sm:p-6 space-y-4">
-              {profileSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                  {profileSuccess}
-                </div>
-              )}
-              {profileError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                  {profileError}
-                </div>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="profile-firstName" className="block text-sm font-medium text-gray-700">
-                    نام
-                  </label>
-                  <input
-                    id="profile-firstName"
-                    name="firstName"
-                    type="text"
-                    value={profileForm.firstName}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="نام شما"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-lastName" className="block text-sm font-medium text-gray-700">
-                    نام خانوادگی
-                  </label>
-                  <input
-                    id="profile-lastName"
-                    name="lastName"
-                    type="text"
-                    value={profileForm.lastName}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="نام خانوادگی"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700">
-                    شماره تلفن همراه
-                  </label>
-                  <input
-                    id="profile-phone"
-                    name="phone"
-                    type="tel"
-                    value={profileForm.phone}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="09123456789"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700">
-                    ایمیل (اختیاری)
-                  </label>
-                  <input
-                    id="profile-email"
-                    name="email"
-                    type="email"
-                    value={profileForm.email}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="example@email.com"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-education" className="block text-sm font-medium text-gray-700">
-                    مقطع تحصیلی
-                  </label>
-                  <input
-                    id="profile-education"
-                    name="education"
-                    type="text"
-                    value={profileForm.education}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="مثال: کارشناسی ارشد"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-university" className="block text-sm font-medium text-gray-700">
-                    دانشگاه
-                  </label>
-                  <input
-                    id="profile-university"
-                    name="university"
-                    type="text"
-                    value={profileForm.university}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="دانشگاه محل تحصیل"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-job" className="block text-sm font-medium text-gray-700">
-                    شغل
-                  </label>
-                  <input
-                    id="profile-job"
-                    name="job"
-                    type="text"
-                    value={profileForm.job}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="عنوان شغلی"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-state" className="block text-sm font-medium text-gray-700">
-                    استان محل سکونت
-                  </label>
-                  <input
-                    id="profile-state"
-                    name="state"
-                    type="text"
-                    value={profileForm.state}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="مثال: تهران"
-                    disabled={profileSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="profile-gender" className="block text-sm font-medium text-gray-700">
-                    جنسیت
-                  </label>
-                  <select
-                    id="profile-gender"
-                    name="gender"
-                    value={profileForm.gender}
-                    onChange={handleProfileChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    disabled={profileSaving}
-                  >
-                    <option value="">انتخاب کنید</option>
-                    <option value="female">زن</option>
-                    <option value="male">مرد</option>
-                    <option value="other">دیگر</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleProfileReset}
-                  className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                  disabled={profileSaving}
-                >
-                  بازنشانی
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  disabled={profileSaving}
-                >
-                  {profileSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
-                </button>
-              </div>
-            </form>
+        {/* Main Tabs */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-6 overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 sm:px-6 py-4">
+            <nav className="flex gap-4">
+              <button
+                onClick={() => setMainTab('dashboard')}
+                className={`flex items-center space-x-2 space-x-reverse px-6 py-3 text-base font-medium rounded-lg transition-all ${
+                  mainTab === 'dashboard'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="text-xl">📊</span>
+                <span>داشبورد اصلی</span>
+              </button>
+              <button
+                onClick={() => setMainTab('profile')}
+                className={`flex items-center space-x-2 space-x-reverse px-6 py-3 text-base font-medium rounded-lg transition-all ${
+                  mainTab === 'profile'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="text-xl">👤</span>
+                <span>اطلاعات کاربری</span>
+              </button>
+            </nav>
           </div>
-        )}
+        </div>
 
-        {/* Password Change Section - Only for USER role */}
-        {user?.role === 'USER' && (
-          <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8">
-            <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
-              <h2 className="text-lg font-semibold text-gray-900">تغییر رمز عبور</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                می‌توانید رمز عبور خود را تنظیم یا تغییر دهید
-              </p>
-            </div>
-            <form onSubmit={handlePasswordSubmit} className="p-4 sm:p-6 space-y-4">
-              {passwordSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                  {passwordSuccess}
-                </div>
-              )}
-              {passwordError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                  {passwordError}
-                </div>
-              )}
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
-                    رمز عبور فعلی (در صورت وجود)
-                  </label>
-                  <input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type="password"
-                    value={passwordForm.currentPassword}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="اگر قبلاً رمز عبور تنظیم کرده‌اید، وارد کنید"
-                    disabled={passwordSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
-                    رمز عبور جدید
-                  </label>
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    value={passwordForm.newPassword}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="حداقل ۶ کاراکتر"
-                    required
-                    minLength={6}
-                    disabled={passwordSaving}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                    تکرار رمز عبور جدید
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    value={passwordForm.confirmPassword}
-                    onChange={handlePasswordChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="رمز عبور جدید را دوباره وارد کنید"
-                    required
-                    minLength={6}
-                    disabled={passwordSaving}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handlePasswordReset}
-                  className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                  disabled={passwordSaving}
-                >
-                  بازنشانی
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                  disabled={passwordSaving}
-                >
-                  {passwordSaving ? 'در حال ذخیره...' : 'تغییر رمز عبور'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Navigation Tabs */}
+        {/* Main Dashboard Tab Content */}
+        {mainTab === 'dashboard' && (
+          <>
+            {/* Navigation Tabs */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-6 overflow-hidden">
           <div className="border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 sm:px-6 py-3">
             <nav className="custom-scrollbar flex gap-3 sm:gap-4 overflow-x-auto">
@@ -1041,7 +799,290 @@ const UserDashboard: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
+        )}
+
+        {/* Profile Tab Content */}
+        {mainTab === 'profile' && (
+          <div className="space-y-6">
+            {/* Profile Information Form */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
+                <h2 className="text-lg font-semibold text-gray-900">تکمیل اطلاعات حساب کاربری</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  برای استفاده بهتر از خدمات سایت، لطفاً اطلاعات تماس و سوابق خود را به‌روزرسانی کنید.
+                </p>
+                {(user?.isOld || isProfileIncomplete) && (
+                  <p className="text-xs text-indigo-600 mt-2">
+                    {user?.isOld && 'حساب شما از سامانه قدیمی منتقل شده است. '}
+                    {isProfileIncomplete && 'لطفاً اطلاعات ناقص را تکمیل نمایید.'}
+                  </p>
+                )}
+              </div>
+              <form onSubmit={handleProfileSubmit} className="p-4 sm:p-6 space-y-4">
+                {profileSuccess && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                    {profileSuccess}
+                  </div>
+                )}
+                {profileError && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                    {profileError}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="profile-firstName" className="block text-sm font-medium text-gray-700">
+                      نام
+                    </label>
+                    <input
+                      id="profile-firstName"
+                      name="firstName"
+                      type="text"
+                      value={profileForm.firstName}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="نام شما"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-lastName" className="block text-sm font-medium text-gray-700">
+                      نام خانوادگی
+                    </label>
+                    <input
+                      id="profile-lastName"
+                      name="lastName"
+                      type="text"
+                      value={profileForm.lastName}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="نام خانوادگی"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700">
+                      شماره تلفن همراه
+                    </label>
+                    <input
+                      id="profile-phone"
+                      name="phone"
+                      type="tel"
+                      value={profileForm.phone}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="09123456789"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700">
+                      ایمیل (اختیاری)
+                    </label>
+                    <input
+                      id="profile-email"
+                      name="email"
+                      type="email"
+                      value={profileForm.email}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="example@email.com"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-education" className="block text-sm font-medium text-gray-700">
+                      مقطع تحصیلی
+                    </label>
+                    <input
+                      id="profile-education"
+                      name="education"
+                      type="text"
+                      value={profileForm.education}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="مثال: کارشناسی ارشد"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-university" className="block text-sm font-medium text-gray-700">
+                      دانشگاه
+                    </label>
+                    <input
+                      id="profile-university"
+                      name="university"
+                      type="text"
+                      value={profileForm.university}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="دانشگاه محل تحصیل"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-job" className="block text-sm font-medium text-gray-700">
+                      شغل
+                    </label>
+                    <input
+                      id="profile-job"
+                      name="job"
+                      type="text"
+                      value={profileForm.job}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="عنوان شغلی"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-state" className="block text-sm font-medium text-gray-700">
+                      استان محل سکونت
+                    </label>
+                    <input
+                      id="profile-state"
+                      name="state"
+                      type="text"
+                      value={profileForm.state}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="مثال: تهران"
+                      disabled={profileSaving}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="profile-gender" className="block text-sm font-medium text-gray-700">
+                      جنسیت
+                    </label>
+                    <select
+                      id="profile-gender"
+                      name="gender"
+                      value={profileForm.gender}
+                      onChange={handleProfileChange}
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      disabled={profileSaving}
+                    >
+                      <option value="">انتخاب کنید</option>
+                      <option value="female">زن</option>
+                      <option value="male">مرد</option>
+                      <option value="other">دیگر</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleProfileReset}
+                    className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    disabled={profileSaving}
+                  >
+                    بازنشانی
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                    disabled={profileSaving}
+                  >
+                    {profileSaving ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Password Change Section - Only for USER role */}
+            {user?.role === 'USER' && (
+              <div className="bg-white rounded-lg shadow-sm">
+                <div className="border-b border-gray-200 px-4 sm:px-6 py-4">
+                  <h2 className="text-lg font-semibold text-gray-900">تغییر رمز عبور</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    می‌توانید رمز عبور خود را تنظیم یا تغییر دهید
+                  </p>
+                </div>
+                <form onSubmit={handlePasswordSubmit} className="p-4 sm:p-6 space-y-4">
+                  {passwordSuccess && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                      {passwordSuccess}
+                    </div>
+                  )}
+                  {passwordError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+                      {passwordError}
+                    </div>
+                  )}
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+                        رمز عبور فعلی (در صورت وجود)
+                      </label>
+                      <input
+                        id="currentPassword"
+                        name="currentPassword"
+                        type="password"
+                        value={passwordForm.currentPassword}
+                        onChange={handlePasswordChange}
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="اگر قبلاً رمز عبور تنظیم کرده‌اید، وارد کنید"
+                        disabled={passwordSaving}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                        رمز عبور جدید
+                      </label>
+                      <input
+                        id="newPassword"
+                        name="newPassword"
+                        type="password"
+                        value={passwordForm.newPassword}
+                        onChange={handlePasswordChange}
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="حداقل ۶ کاراکتر"
+                        required
+                        minLength={6}
+                        disabled={passwordSaving}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                        تکرار رمز عبور جدید
+                      </label>
+                      <input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        value={passwordForm.confirmPassword}
+                        onChange={handlePasswordChange}
+                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                        placeholder="رمز عبور جدید را دوباره وارد کنید"
+                        required
+                        minLength={6}
+                        disabled={passwordSaving}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handlePasswordReset}
+                      className="inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      disabled={passwordSaving}
+                    >
+                      بازنشانی
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      disabled={passwordSaving}
+                    >
+                      {passwordSaving ? 'در حال ذخیره...' : 'تغییر رمز عبور'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

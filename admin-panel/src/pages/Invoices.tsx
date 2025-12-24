@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import PageHeader from '../components/PageHeader';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 import { paymentsService } from '../services/api';
 
 const Invoices: React.FC = () => {
@@ -10,7 +13,8 @@ const Invoices: React.FC = () => {
     try {
       setLoading(true);
       const data = await paymentsService.getAllInvoices();
-      setInvoices(data);
+      // Backend returns { invoices, pagination }
+      setInvoices(data.invoices || data || []);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت فاکتورها');
     } finally {
@@ -51,21 +55,15 @@ const Invoices: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="ios-fade-in">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-semibold text-gray-900 mb-2">مدیریت فاکتورها</h1>
-          <p className="text-[17px] text-[#8E8E93]">مشاهده و رهگیری تراکنش‌های مالی</p>
-        </div>
-      </div>
+      <PageHeader 
+        title="مدیریت فاکتورها"
+        description="مشاهده و رهگیری تراکنش‌های مالی"
+      />
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-2xl mb-6">
@@ -73,22 +71,32 @@ const Invoices: React.FC = () => {
         </div>
       )}
 
-      <div className="ios-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right border-collapse">
-            <thead>
-              <tr className="bg-[#F2F2F7] border-b border-gray-100">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">شماره فاکتور</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">کاربر</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">نوع</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">مبلغ (تومان)</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">وضعیت</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-600">تاریخ</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y border-gray-50">
-              {invoices.length > 0 ? (
-                invoices.map((invoice) => (
+      {invoices.length === 0 ? (
+        <EmptyState
+          icon={
+            <svg className="h-10 w-10 text-gray-300" viewBox="0 0 24 24" fill="none">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          }
+          title="هیچ فاکتوری یافت نشد"
+          description="هنوز فاکتوری در سیستم ثبت نشده است"
+        />
+      ) : (
+        <div className="ios-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-right border-collapse">
+              <thead>
+                <tr className="bg-[#F2F2F7] border-b border-gray-100">
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">شماره فاکتور</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">کاربر</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">نوع</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">مبلغ (تومان)</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">وضعیت</th>
+                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">تاریخ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y border-gray-50">
+                {invoices.map((invoice) => (
                   <tr key={invoice.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{invoice.invoiceNumber}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -108,18 +116,12 @@ const Invoices: React.FC = () => {
                       {new Date(invoice.createdAt).toLocaleDateString('fa-IR')}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    هیچ فاکتوری یافت نشد.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

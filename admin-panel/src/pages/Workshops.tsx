@@ -6,8 +6,8 @@ import Modal from '../components/Modal';
 import ProgressBar from '../components/ProgressBar';
 import PersianDatePicker from '../components/PersianDatePicker';
 import WorkshopTemplate from '../components/WorkshopTemplate';
-import { workshopsService, usersService, API_ORIGIN } from '../services/api';
-import { Workshop, User } from '../types';
+import { workshopsService, usersService, salesTeamsService, API_ORIGIN } from '../services/api';
+import { Workshop, User, SalesTeam } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
 import { truncateWords } from '../utils/text';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,6 +27,10 @@ const Workshops: React.FC = () => {
   const [selectedWorkshop, setSelectedWorkshop] = useState<Workshop | null>(null);
   const [workshopAccess, setWorkshopAccess] = useState<any[]>([]);
   const [salesPersons, setSalesPersons] = useState<User[]>([]);
+  const [salesTeams, setSalesTeams] = useState<SalesTeam[]>([]);
+  const [selectedSalesPersonIds, setSelectedSalesPersonIds] = useState<string[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [isGrantingAccess, setIsGrantingAccess] = useState(false);
   const [newWorkshop, setNewWorkshop] = useState({
     title: '',
     description: '',
@@ -210,13 +214,17 @@ const Workshops: React.FC = () => {
 
   const openAccessModal = async (workshop: Workshop) => {
     setSelectedWorkshop(workshop);
+    setSelectedSalesPersonIds([]);
+    setSelectedTeamIds([]);
     try {
-      const [accessData, salesData] = await Promise.all([
+      const [accessData, salesData, teamsData] = await Promise.all([
         workshopsService.getWorkshopSalesPersonAccess(workshop.id),
-        usersService.getSalesPersons()
+        usersService.getSalesPersons(),
+        salesTeamsService.getAll()
       ]);
       setWorkshopAccess(accessData);
       setSalesPersons(salesData);
+      setSalesTeams(teamsData);
       setIsAccessModalOpen(true);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت اطلاعات دسترسی');
@@ -233,6 +241,81 @@ const Workshops: React.FC = () => {
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در اعطای دسترسی');
     }
+  };
+
+  const handleBulkGrantAccess = async () => {
+    if (!selectedWorkshop) return;
+    if (selectedSalesPersonIds.length === 0 && selectedTeamIds.length === 0) {
+      setError('لطفا حداقل یک فروشنده یا تیم را انتخاب کنید');
+      return;
+    }
+
+    setIsGrantingAccess(true);
+    setError('');
+
+    try {
+      const salesPersonIdsToGrant: string[] = [...selectedSalesPersonIds];
+
+      // اضافه کردن اعضای تیم‌های انتخاب شده
+      selectedTeamIds.forEach(teamId => {
+        const team = salesTeams.find(t => t.id === teamId);
+        if (team) {
+          team.members.forEach(member => {
+            if (member.isActive && member.salesPerson) {
+              const salesPersonId = member.salesPerson.id;
+              if (!salesPersonIdsToGrant.includes(salesPersonId) &&
+                  !workshopAccess.some(access => access.salesPersonId === salesPersonId)) {
+                salesPersonIdsToGrant.push(salesPersonId);
+              }
+            }
+          });
+        }
+      });
+
+      // اعطای دسترسی به همه فروشندگان انتخاب شده
+      const grantPromises = salesPersonIdsToGrant.map(salesPersonId =>
+        workshopsService.grantSalesPersonAccess(selectedWorkshop.id, salesPersonId)
+      );
+
+      await Promise.all(grantPromises);
+
+      // به‌روزرسانی لیست دسترسی‌ها
+      const accessData = await workshopsService.getWorkshopSalesPersonAccess(selectedWorkshop.id);
+      setWorkshopAccess(accessData);
+      
+      // پاک کردن انتخاب‌ها
+      setSelectedSalesPersonIds([]);
+      setSelectedTeamIds([]);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در اعطای دسترسی');
+    } finally {
+      setIsGrantingAccess(false);
+    }
+  };
+
+  const handleToggleSalesPersonSelection = (salesPersonId: string) => {
+    if (selectedSalesPersonIds.includes(salesPersonId)) {
+      setSelectedSalesPersonIds(selectedSalesPersonIds.filter(id => id !== salesPersonId));
+    } else {
+      setSelectedSalesPersonIds([...selectedSalesPersonIds, salesPersonId]);
+    }
+  };
+
+  const handleToggleTeamSelection = (teamId: string) => {
+    if (selectedTeamIds.includes(teamId)) {
+      setSelectedTeamIds(selectedTeamIds.filter(id => id !== teamId));
+    } else {
+      setSelectedTeamIds([...selectedTeamIds, teamId]);
+    }
+  };
+
+  const getSelectedTeamMembersCount = (teamId: string) => {
+    const team = salesTeams.find(t => t.id === teamId);
+    if (!team) return 0;
+    return team.members.filter(member => 
+      member.isActive && 
+      !workshopAccess.some(access => access.salesPersonId === member.salesPersonId)
+    ).length;
   };
 
   const handleRevokeAccess = async (salesPersonId: string) => {
@@ -807,6 +890,8 @@ const Workshops: React.FC = () => {
           setIsAccessModalOpen(false);
           setSelectedWorkshop(null);
           setWorkshopAccess([]);
+          setSelectedSalesPersonIds([]);
+          setSelectedTeamIds([]);
         }}
         title="مدیریت دسترسی فروشندگان"
       >
@@ -859,38 +944,121 @@ const Workshops: React.FC = () => {
 
           <div className="border-t pt-4">
             <h6 className="text-md font-medium text-gray-900 mb-3">اعطای دسترسی جدید</h6>
-            <div className="space-y-2">
-              {salesPersons
-                .filter(salesPerson => 
+            
+            {/* انتخاب تیم‌ها */}
+            {salesTeams.length > 0 && (
+              <div className="mb-4">
+                <h6 className="text-sm font-medium text-gray-700 mb-2 block">انتخاب تیم‌ها</h6>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded-lg p-2">
+                  {salesTeams
+                    .filter(team => team.isActive)
+                    .map((team) => {
+                      const availableMembersCount = getSelectedTeamMembersCount(team.id);
+                      if (availableMembersCount === 0) return null;
+                      
+                      return (
+                        <div key={team.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedTeamIds.includes(team.id)}
+                            onChange={() => handleToggleTeamSelection(team.id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ml-2"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">
+                              {team.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {availableMembersCount} فروشنده قابل انتخاب
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* انتخاب فروشندگان */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h6 className="text-sm font-medium text-gray-700">انتخاب فروشندگان</h6>
+                {selectedSalesPersonIds.length > 0 && (
+                  <span className="text-xs text-blue-600">
+                    {selectedSalesPersonIds.length} نفر انتخاب شده
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2">
+                {salesPersons
+                  .filter(salesPerson => 
+                    salesPerson.role === 'SALES_PERSON' && 
+                    !workshopAccess.some(access => access.salesPersonId === salesPerson.id)
+                  )
+                  .map((salesPerson) => (
+                    <div key={salesPerson.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+                      <input
+                        type="checkbox"
+                        checked={selectedSalesPersonIds.includes(salesPerson.id)}
+                        onChange={() => handleToggleSalesPersonSelection(salesPerson.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ml-2"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm">
+                          {salesPerson.firstName} {salesPerson.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500">{salesPerson.username}</p>
+                      </div>
+                    </div>
+                  ))}
+                {salesPersons.filter(salesPerson => 
                   salesPerson.role === 'SALES_PERSON' && 
                   !workshopAccess.some(access => access.salesPersonId === salesPerson.id)
-                )
-                .map((salesPerson) => (
-                  <div key={salesPerson.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {salesPerson.firstName} {salesPerson.lastName}
-                      </p>
-                      <p className="text-sm text-gray-500">{salesPerson.username}</p>
-                    </div>
-                    <button
-                      onClick={() => handleGrantAccess(salesPerson.id)}
-                      className="text-green-600 hover:text-green-900 text-sm"
-                    >
-                      اعطای دسترسی
-                    </button>
-                  </div>
-                ))}
+                ).length === 0 && (
+                  <p className="text-gray-500 text-sm text-center py-4">
+                    همه فروشندگان دسترسی دارند
+                  </p>
+                )}
+              </div>
             </div>
+
+            {/* دکمه اعطای دسترسی گروهی */}
+            {(selectedSalesPersonIds.length > 0 || selectedTeamIds.length > 0) && (
+              <div className="flex justify-end pt-2 border-t">
+                <button
+                  onClick={handleBulkGrantAccess}
+                  disabled={isGrantingAccess}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+                    isGrantingAccess
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {isGrantingAccess 
+                    ? 'در حال اعطای دسترسی...' 
+                    : (() => {
+                        // محاسبه تعداد کل فروشندگانی که دسترسی دریافت می‌کنند
+                        let totalCount = selectedSalesPersonIds.length;
+                        selectedTeamIds.forEach(teamId => {
+                          totalCount += getSelectedTeamMembersCount(teamId);
+                        });
+                        return `اعطای دسترسی به ${totalCount} فروشنده`;
+                      })()
+                  }
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-4 border-t">
           <button
             onClick={() => {
               setIsAccessModalOpen(false);
               setSelectedWorkshop(null);
               setWorkshopAccess([]);
+              setSelectedSalesPersonIds([]);
+              setSelectedTeamIds([]);
             }}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
           >

@@ -38,6 +38,9 @@ const Comments: React.FC = () => {
   const [filters, setFilters] = useState<Filters>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{ isPublished?: boolean; editedContent?: string }>({});
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [replying, setReplying] = useState(false);
 
   const fetchComments = useMemo(
     () => async (pageParam = page, filtersParam = filters) => {
@@ -103,6 +106,25 @@ const Comments: React.FC = () => {
       fetchComments(page, filters);
     } catch (err: any) {
       alert(err?.response?.data?.message || 'خطا در حذف نظر');
+    }
+  };
+
+  const submitReply = async (commentId: string) => {
+    if (!replyContent.trim()) {
+      alert('لطفاً متن پاسخ را وارد کنید');
+      return;
+    }
+    try {
+      setReplying(true);
+      await api.post(`/admin/comments/${commentId}/reply`, { content: replyContent });
+      alert('پاسخ با موفقیت ثبت شد و منتشر گردید.');
+      setReplyingToId(null);
+      setReplyContent('');
+      fetchComments(page, filters);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'خطا در ثبت پاسخ');
+    } finally {
+      setReplying(false);
     }
   };
 
@@ -255,19 +277,59 @@ const Comments: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex gap-2">
-                          <button
-                            className="px-3 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700"
-                            onClick={() => startEdit(c)}
-                          >
-                            ویرایش/انتشار
-                          </button>
-                          <button
-                            className="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700"
-                            onClick={() => deleteComment(c.id)}
-                          >
-                            حذف
-                          </button>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <button
+                              className="px-3 py-2 text-sm rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                              onClick={() => startEdit(c)}
+                            >
+                              ویرایش/انتشار
+                            </button>
+                            <button
+                              className="px-3 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700"
+                              onClick={() => {
+                                setReplyingToId(c.id);
+                                setReplyContent('');
+                              }}
+                            >
+                              پاسخ
+                            </button>
+                            <button
+                              className="px-3 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+                              onClick={() => deleteComment(c.id)}
+                            >
+                              حذف
+                            </button>
+                          </div>
+                          {replyingToId === c.id && (
+                            <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <textarea
+                                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm mb-2"
+                                rows={3}
+                                placeholder="پاسخ خود را بنویسید..."
+                                value={replyContent}
+                                onChange={(e) => setReplyContent(e.target.value)}
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  className="px-3 py-1.5 text-sm rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                                  onClick={() => submitReply(c.id)}
+                                  disabled={replying || !replyContent.trim()}
+                                >
+                                  {replying ? 'در حال ارسال...' : 'ارسال پاسخ'}
+                                </button>
+                                <button
+                                  className="px-3 py-1.5 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                  onClick={() => {
+                                    setReplyingToId(null);
+                                    setReplyContent('');
+                                  }}
+                                >
+                                  لغو
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
