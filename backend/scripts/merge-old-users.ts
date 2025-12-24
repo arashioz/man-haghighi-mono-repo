@@ -20,11 +20,38 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { PrismaClient, UserRole } from '@prisma/client';
-<<<<<<< HEAD
-import { normalizePhone } from '../dist/src/common/utils/phone.utils';
-=======
-import { normalizePhone } from '../src/common/utils/phone.utils';
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
+
+export function normalizePhone(input?: string | null): string | null {
+  if (!input) {
+    return null;
+  }
+
+  let digits = String(input)
+    .trim()
+    .replace(/[^\d+]/g, '');
+
+  if (!digits) {
+    return null;
+  }
+
+  if (digits.startsWith('+98')) {
+    digits = '0' + digits.slice(3);
+  } else if (digits.startsWith('98') && digits.length >= 11) {
+    digits = '0' + digits.slice(2);
+  } else if (!digits.startsWith('0') && digits.length === 10) {
+    digits = '0' + digits;
+  }
+
+  if (digits.length > 11) {
+    digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
+  }
+
+  if (!/^0\d{9,10}$/.test(digits)) {
+    return null;
+  }
+
+  return digits;
+}
 
 type RawEntry =
   | { type: 'header' | 'database'; [k: string]: any }
@@ -227,20 +254,15 @@ async function ensureUserAndCourses(
           userId_courseId: { userId: existing.id, courseId },
         },
       });
-<<<<<<< HEAD
       if (!already) {
         if (APPLY_CHANGES) {
           try {
-=======
-      if (!already && APPLY_CHANGES) {
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
         await prisma.courseEnrollment.create({
           data: {
             userId: existing.id,
             courseId,
           },
         });
-<<<<<<< HEAD
           } catch (error: any) {
             if (error.code === 'P2002') {
               console.log(`⚠️  Course enrollment already exists, skipping: user ${existing.id} -> course ${courseId}`);
@@ -249,10 +271,6 @@ async function ensureUserAndCourses(
             throw error;
           }
         }
-=======
-        added++;
-      } else if (!already) {
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
         added++;
       }
     }
@@ -262,10 +280,7 @@ async function ensureUserAndCourses(
   // Create new user
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   if (APPLY_CHANGES) {
-<<<<<<< HEAD
     try {
-=======
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
     await prisma.user.create({
       data: {
         phone: agg.phone,
@@ -287,7 +302,6 @@ async function ensureUserAndCourses(
         },
       },
     });
-<<<<<<< HEAD
     } catch (error: any) {
       // If user already exists (unique constraint violation), skip creation
       if (error.code === 'P2002') {
@@ -296,8 +310,6 @@ async function ensureUserAndCourses(
       }
       throw error;
     }
-=======
->>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
   }
 
   return { created: true, addedCourses: courseIds.length };
