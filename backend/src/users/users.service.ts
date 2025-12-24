@@ -287,6 +287,21 @@ export class UsersService {
                     order: 'asc',
                   },
                 },
+                audios: {
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    thumbnail: true,
+                    audioFile: true,
+                    duration: true,
+                    order: true,
+                    published: true,
+                  },
+                  orderBy: {
+                    order: 'asc',
+                  },
+                },
               },
             },
           },
@@ -301,7 +316,13 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    return user;
+    return {
+      ...user,
+      purchasedCourses: user.purchasedCourses.map((enrollment) => ({
+        ...enrollment,
+        course: this.urlService.processCourseData(enrollment.course),
+      })),
+    };
   }
 
   // Assign a single course to user
@@ -623,7 +644,7 @@ export class UsersService {
   }
 
   async getUserCourses(userId: string) {
-    return this.prisma.courseEnrollment.findMany({
+    const enrollments = await this.prisma.courseEnrollment.findMany({
       where: { userId },
       include: {
         course: {
@@ -633,10 +654,46 @@ export class UsersService {
             description: true,
             thumbnail: true,
             price: true,
+            published: true,
+            attachments: true,
+            videos: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+                duration: true,
+                order: true,
+                published: true,
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
+            audios: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                thumbnail: true,
+                audioFile: true,
+                duration: true,
+                order: true,
+                published: true,
+              },
+              orderBy: {
+                order: 'asc',
+              },
+            },
           },
         },
       },
     });
+
+    return enrollments.map((enrollment) => ({
+      ...enrollment,
+      course: this.urlService.processCourseData(enrollment.course),
+    }));
   }
 
   async grantVideoAccess(userId: string, videoId: string) {
