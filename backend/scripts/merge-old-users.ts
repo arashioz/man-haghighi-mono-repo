@@ -20,7 +20,11 @@ import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 import { PrismaClient, UserRole } from '@prisma/client';
+<<<<<<< HEAD
 import { normalizePhone } from '../dist/src/common/utils/phone.utils';
+=======
+import { normalizePhone } from '../src/common/utils/phone.utils';
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
 
 type RawEntry =
   | { type: 'header' | 'database'; [k: string]: any }
@@ -223,15 +227,20 @@ async function ensureUserAndCourses(
           userId_courseId: { userId: existing.id, courseId },
         },
       });
+<<<<<<< HEAD
       if (!already) {
         if (APPLY_CHANGES) {
           try {
+=======
+      if (!already && APPLY_CHANGES) {
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
         await prisma.courseEnrollment.create({
           data: {
             userId: existing.id,
             courseId,
           },
         });
+<<<<<<< HEAD
           } catch (error: any) {
             if (error.code === 'P2002') {
               console.log(`⚠️  Course enrollment already exists, skipping: user ${existing.id} -> course ${courseId}`);
@@ -240,6 +249,10 @@ async function ensureUserAndCourses(
             throw error;
           }
         }
+=======
+        added++;
+      } else if (!already) {
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
         added++;
       }
     }
@@ -249,7 +262,10 @@ async function ensureUserAndCourses(
   // Create new user
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   if (APPLY_CHANGES) {
+<<<<<<< HEAD
     try {
+=======
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
     await prisma.user.create({
       data: {
         phone: agg.phone,
@@ -271,6 +287,7 @@ async function ensureUserAndCourses(
         },
       },
     });
+<<<<<<< HEAD
     } catch (error: any) {
       // If user already exists (unique constraint violation), skip creation
       if (error.code === 'P2002') {
@@ -279,6 +296,8 @@ async function ensureUserAndCourses(
       }
       throw error;
     }
+=======
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
   }
 
   return { created: true, addedCourses: courseIds.length };

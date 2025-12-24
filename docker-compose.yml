@@ -4,8 +4,12 @@ services:
     image: postgres:15-alpine
     container_name: haghighi_postgres
     env_file: .env
+<<<<<<< HEAD
     ports:
       - "127.0.0.1:5433:5432"
+=======
+
+>>>>>>> b2bef2c563c2a72c076aad64333dafc14b05c7a9
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
