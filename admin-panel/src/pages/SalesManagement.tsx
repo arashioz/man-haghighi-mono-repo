@@ -625,7 +625,25 @@ const SalesManagement: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-between pt-4">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!selectedTeam) return;
+                  if (!window.confirm('آیا از حذف این تیم فروش اطمینان دارید؟')) return;
+                  try {
+                    await salesTeamsService.delete(selectedTeam.id);
+                    setIsTeamDetailsModalOpen(false);
+                    setSelectedTeam(null);
+                    await fetchData();
+                  } catch (err) {
+                    alert('حذف تیم با خطا مواجه شد!');
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-lg hover:bg-red-700 transition-colors"
+              >
+                حذف تیم
+              </button>
               <button
                 type="button"
                 onClick={() => {

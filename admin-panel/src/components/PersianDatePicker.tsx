@@ -65,8 +65,7 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
 
   const handleDateSelect = (date: moment.Moment) => {
     setSelectedDate(date);
-    // استفاده از local time برای جلوگیری از مشکل timezone
-    // با استفاده از format مستقیم بدون تبدیل timezone
+
     const persianDateString = date.format('jYYYY/jMM/jDD HH:mm');
     onChange(persianDateString);
     setIsOpen(false);

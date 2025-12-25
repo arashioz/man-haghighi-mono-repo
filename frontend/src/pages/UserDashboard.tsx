@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AudioPlayButton from '../components/AudioPlayButton';
 import { useNavigate } from 'react-router-dom';
 import { coursesService, videosService, audiosService, workshopsService, authService, messagesService, paymentsService } from '../services/api';
 import { Course, Video, Audio, Workshop, UserMessage } from '../types';
@@ -697,15 +698,7 @@ const UserDashboard: React.FC = () => {
                             <span className="text-sm text-gray-500">
                               {audio.duration ? `${Math.floor(audio.duration / 60)} دقیقه` : 'نامشخص'}
                             </span>
-                            <button
-                              onClick={() => {
-                                const audioUrl = `http://localhost:3000/uploads/${audio.audioFile}`;
-                                window.open(audioUrl, '_blank');
-                              }}
-                              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                            >
-                              پخش
-                            </button>
+                            <AudioPlayButton audio={audio} />
                           </div>
                         </div>
                       </div>
