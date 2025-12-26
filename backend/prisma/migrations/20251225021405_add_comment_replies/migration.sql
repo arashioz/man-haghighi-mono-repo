@@ -22,3 +22,5 @@ CREATE INDEX IF NOT EXISTS "comments_parentId_idx" ON "comments"("parentId");
 
 
 
+
+
