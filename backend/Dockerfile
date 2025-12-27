@@ -16,7 +16,7 @@ RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 # ===============================
 # Stage 2: Production
 # ===============================
-FROM node:18-alpine3.19
+FROM docker.arvancloud.ir/node:18-alpine
 WORKDIR /app
 
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
