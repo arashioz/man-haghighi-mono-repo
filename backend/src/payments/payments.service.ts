@@ -644,6 +644,124 @@ export class PaymentsService {
     return paymentLink;
   }
 
+  async getPaymentLinkInvoice(linkCode: string, userId?: string) {
+    const paymentLink = await this.getPaymentLinkByCode(linkCode);
+
+    // If user is provided, use it; otherwise find by phone
+    let customerUser = userId
+      ? await this.prisma.user.findUnique({ where: { id: userId } })
+      : await this.prisma.user.findUnique({ where: { phone: paymentLink.customerPhone } });
+
+    if (!customerUser) {
+      throw new NotFoundException('کاربر یافت نشد');
+    }
+
+    const amount = Number(paymentLink.amount);
+
+    // Find or create invoice
+    let invoice = await this.prisma.invoice.findFirst({
+      where: {
+        paymentLinkId: paymentLink.id,
+        userId: customerUser.id,
+        status: 'PENDING',
+      },
+    });
+
+    if (!invoice) {
+      const wallet = await this.walletService.getOrCreateWallet(customerUser.id);
+      invoice = await this.invoiceService.createInvoice({
+        userId: customerUser.id,
+        type: 'PAYMENT_LINK',
+        amount,
+        paymentLinkId: paymentLink.id,
+        customerName: paymentLink.customerName,
+        customerPhone: paymentLink.customerPhone,
+        description: paymentLink.description,
+        walletId: wallet.id,
+      });
+    }
+
+    // Check if payment is already initiated for this invoice
+    let transaction = await this.prisma.transaction.findFirst({
+      where: {
+        invoiceId: invoice.id,
+        status: 'PENDING',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (!transaction) {
+      // Create new transaction and payment request
+      const orderId = this.generateOrderId();
+
+      transaction = await this.prisma.transaction.create({
+        data: {
+          userId: customerUser.id,
+          invoiceId: invoice.id,
+          paymentLinkId: paymentLink.id,
+          type: 'PAYMENT',
+          amount: new Decimal(amount),
+          orderId,
+          status: 'PENDING',
+          description: paymentLink.description || 'پرداخت لینک',
+          createdBySalesPersonId: paymentLink.createdById,
+        },
+      });
+
+      // Create payment request
+      const paymentRequest = await this.gatewayService.createPaymentRequest(
+        orderId,
+        amount,
+        paymentLink.description || 'پرداخت لینک',
+      );
+
+      // Update transaction with payment gateway details
+      transaction = await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          refId: paymentRequest.refId,
+          bpPayRequestRaw: paymentRequest.response,
+          bpPayRequestDate: new Date(),
+          status: 'PENDING',
+        },
+      });
+
+      return {
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        description: invoice.description,
+        customerName: invoice.customerName,
+        createdAt: invoice.createdAt,
+        paymentUrl: paymentRequest.paymentUrl,
+        refId: paymentRequest.refId,
+      };
+    } else {
+      // Use existing transaction details
+      if (!transaction.refId) {
+        throw new BadRequestException('تراکنش پرداخت کامل نیست');
+      }
+
+      // Get payment URL again (it should be stored or regenerated)
+      const paymentRequest = await this.gatewayService.createPaymentRequest(
+        transaction.orderId!,
+        amount,
+        paymentLink.description || 'پرداخت لینک',
+      );
+
+      return {
+        invoiceNumber: invoice.invoiceNumber,
+        amount: invoice.amount,
+        description: invoice.description,
+        customerName: invoice.customerName,
+        createdAt: invoice.createdAt,
+        paymentUrl: paymentRequest.paymentUrl,
+        refId: transaction.refId,
+      };
+    }
+  }
+
   async initiatePaymentLinkPayment(linkCode: string, userId?: string) {
     const paymentLink = await this.getPaymentLinkByCode(linkCode);
 

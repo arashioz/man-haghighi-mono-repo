@@ -21,13 +21,30 @@ export class SmsService {
     this.logger.log(`SMS Service initialized:`, {
       hasApiKey: !!this.apiKey,
       apiKeyLength: this.apiKey?.length || 0,
-      apiKeyPrefix: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'N/A',
+      apiKeyPrefix: this.apiKey ? `${this.apiKey}` : 'N/A',
       lineNumber: this.lineNumber,
       patternCode: this.patternCode,
     });
     
     if (!this.apiKey || !this.lineNumber || !this.patternCode) {
       this.logger.warn('IranPayamak SMS credentials are not fully configured. SMS functionality may not work.');
+    }
+  }
+
+  async sendPasswordResetOtp(phoneNumber: string, otpCode: string): Promise<boolean> {
+    // Use the specific pattern code for password reset OTP
+    const passwordResetPatternCode = process.env.IRANPAYAMAK_PASSWORD_RESET_PATTERN_CODE || 'SJ3FgPrE0C';
+    const originalPatternCode = this.patternCode;
+
+    // Temporarily override the pattern code for password reset
+    this.patternCode = passwordResetPatternCode;
+
+    try {
+      const result = await this.sendOtp(phoneNumber, otpCode);
+      return result;
+    } finally {
+      // Restore the original pattern code
+      this.patternCode = originalPatternCode;
     }
   }
 
@@ -71,7 +88,7 @@ export class SmsService {
         patternCode: this.patternCode,
         lineNumber: this.lineNumber,
         apiKeyLength: this.apiKey?.length || 0,
-        apiKeyPrefix: this.apiKey ? `${this.apiKey.substring(0, 8)}...` : 'N/A',
+        apiKeyPrefix: this.apiKey ? `${this.apiKey}...` : 'N/A',
         requestBody: JSON.stringify(requestBody),
         headers: {
           'Accept': 'application/json',

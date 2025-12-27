@@ -39,14 +39,29 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({ childr
   const [volume, setVolumeState] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Helper: resolve the correct audio URL for a podcast/audio object
+  const resolveAudioUrl = (podcast: Podcast | null): string | null => {
+    if (!podcast) return null;
+    if (podcast.streamUrl) return podcast.streamUrl;
+    const file = podcast.audioFile;
+    if (!file) return null;
+    // If it's already an absolute URL, use it directly
+    if (file.startsWith('http://') || file.startsWith('https://')) return file;
+    // If it starts with a leading slash, attach API_ORIGIN
+    if (file.startsWith('/')) return `${API_ORIGIN}${file}`;
+    // Otherwise assume it's a stored filename under /uploads/
+    return `${API_ORIGIN}/uploads/${file}`;
+  };
+
   // Create audio element when podcast changes
   useEffect(() => {
-    if (currentPodcast && audioRef.current) {
-      const audioUrl = currentPodcast.streamUrl || 
-        (currentPodcast.audioFile 
-          ? `${API_ORIGIN}/uploads/${currentPodcast.audioFile}` 
-          : null);
-      
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.volume = volume;
+    }
+
+    if (currentPodcast) {
+      const audioUrl = resolveAudioUrl(currentPodcast);
       if (audioUrl && audioRef.current.src !== audioUrl) {
         audioRef.current.src = audioUrl;
         audioRef.current.load();
@@ -120,10 +135,7 @@ export const AudioPlayerProvider: React.FC<AudioPlayerProviderProps> = ({ childr
     audioRef.current.pause();
     setCurrentPodcast(podcast);
     
-    const audioUrl = podcast.streamUrl || 
-      (podcast.audioFile 
-        ? `${API_ORIGIN}/uploads/${podcast.audioFile}` 
-        : null);
+    const audioUrl = resolveAudioUrl(podcast);
     
     if (audioUrl) {
       audioRef.current.src = audioUrl;

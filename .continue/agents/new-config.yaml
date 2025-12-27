@@ -8,12 +8,26 @@ schema: v1
 # Define which models can be used
 # https://docs.continue.dev/customization/models
 models:
-  - name: my gpt-5
+  - name: my gpt-5.1-codex
     provider: openai
-    model: gpt-5
+    model: gpt-5.1-codex
     apiKey: sk-lbEnnKmAxiMUiSoSOBSKeemOznuSRsWKjSGyjCAX4ELhEGe8 
   - uses: ollama/qwen2.5-coder-7b
   - uses: anthropic/claude-4-sonnet
 # https://docs.continue.dev/customization/mcp-tools
 mcpServers:
   - uses: anthropic/memory-mcp
+ {
+   "url": "https://api.iranpayamak.com/ws/v1/sms/pattern",
+   "apiKey": "KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=",
+   "requestBody": {
+     "code": "yrw36my3bqoha54",
+     "attributes": {
+       "var1": "205427"
+     },
+     "recipient": "09122027088",
+     "line_number": "+9810004150535353",
+     "number_format": "english"
+     }
+   }
+ }

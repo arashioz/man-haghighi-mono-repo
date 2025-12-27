@@ -24,7 +24,7 @@ const Podcasts: React.FC = () => {
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { currentPodcast, isPlaying, playPodcast } = useAudioPlayer();
+  const { currentPodcast, isPlaying, playPodcast, currentTime, duration, seek, togglePlayPause } = useAudioPlayer();
 
   useEffect(() => {
     const fetchPodcasts = async () => {
@@ -63,8 +63,24 @@ const Podcasts: React.FC = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
+return (
+  <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
+    {currentPodcast && (
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-800 p-4 flex items-center">
+        <p className="text-white mr-4">{currentPodcast.title}</p>
+        <input
+          type="range"
+          min="0"
+          max={duration}
+          value={currentTime}
+          onChange={(e) => seek(parseFloat(e.target.value))}
+          className="w-1/3"
+        />
+        <button onClick={togglePlayPause} className="ml-4 px-4 py-2 bg-yellow-500">
+          {isPlaying ? '⏸ توقف' : '▶ پخش'}
+        </button>
+      </div>
+    )}
       {/* Hero Section */}
       <section className="relative min-h-[60vh] overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-[#0a0a0a]" />

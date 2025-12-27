@@ -1,26 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, IsOptional, Min } from 'class-validator';
 
 export class CreatePaymentLinkDto {
-  @ApiProperty({ example: 'علی احمدی', description: 'Customer name' })
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   customerName: string;
 
-  @ApiProperty({ example: '09123456789', description: 'Customer mobile (11 digits)' })
-  @IsNotEmpty()
   @IsString()
+  @IsNotEmpty()
   customerMobile: string;
 
-  @ApiProperty({ example: 5000000, description: 'Amount in Rials' })
-  @IsNotEmpty()
-  @IsNumber()
-  @Min(1000)
+  @IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 })
+  @Min(1)
   amount: number;
 
-  @ApiProperty({ example: 'پیش پرداخت کارگاه', required: false })
-  @IsOptional()
   @IsString()
+  @IsOptional()
   description?: string;
 }
-

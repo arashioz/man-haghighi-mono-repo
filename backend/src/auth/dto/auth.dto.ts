@@ -165,3 +165,37 @@ export class ChangePasswordDto {
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   newPassword: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
+  phone: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
+  phone: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d{5,6}$/, { message: 'OTP must be 5 or 6 digits' })
+  otp: string;
+
+  @ApiProperty({ example: 'newPassword123' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  newPassword: string;
+
+  @ApiProperty({ example: 'newPassword123' })
+  @IsString()
+  @IsNotEmpty()
+  @Match('newPassword', { message: 'Confirm password must match new password' })
+  confirmPassword: string;
+}

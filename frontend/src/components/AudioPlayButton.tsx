@@ -9,7 +9,6 @@ interface AudioPlayButtonProps {
 const AudioPlayButton: React.FC<AudioPlayButtonProps> = ({ audio }) => {
   const { playPodcast, currentPodcast, isPlaying } = useAudioPlayer();
 
-  // تبدیل اطلاعات Audio به Podcast برای سازگاری با AudioPlayerBar
   const podcastObj = {
     id: audio.id,
     title: audio.title,

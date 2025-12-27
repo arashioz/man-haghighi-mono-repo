@@ -108,6 +108,7 @@ export class VideosController {
       
       if (!video || !video.videoFile) {
         console.error(`[TEST] Video not found or videoFile is missing. Video ID: ${id}`);
+        res.setHeader('Content-Type', 'application/json');
         return res.status(404).json({ error: 'Video file not specified' });
       }
 
@@ -116,6 +117,7 @@ export class VideosController {
       // Reject external URLs - only internal uploads allowed
       if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
         console.error(`[TEST] External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+        res.setHeader('Content-Type', 'application/json');
         return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
       }
 
@@ -154,7 +156,8 @@ export class VideosController {
         
         if (!existsSync(videoPath)) {
           console.error(`[TEST] Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
-          return res.status(404).json({ 
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(404).json({
             error: 'Video file not found',
             videoFile: video.videoFile,
             attemptedPaths: [videoPath, ...altPaths]
@@ -169,7 +172,8 @@ export class VideosController {
       // Check if file is empty
       if (fileSize === 0) {
         console.error(`[TEST] Video file is empty (0 bytes) at path: ${videoPath}`);
-        return res.status(404).json({ 
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(404).json({
           error: 'Video file is empty or corrupted',
           videoFile: video.videoFile,
           path: videoPath,
@@ -194,6 +198,7 @@ export class VideosController {
         
         // Validate range
         if (start < 0 || start >= fileSize || end < start || end >= fileSize) {
+          res.setHeader('Content-Type', 'application/json');
           return res.status(416).json({
             error: 'Range Not Satisfiable',
             contentRange: `bytes */${fileSize}`
@@ -246,19 +251,28 @@ export class VideosController {
   @ApiOperation({ summary: 'Stream video with range support (requires access)' })
   @ApiResponse({ status: 200, description: 'Video stream started' })
   @ApiResponse({ status: 206, description: 'Partial content' })
-  @ApiResponse({ status: 403, description: 'Access denied' })
+  @ApiResponse({ status: 402, description: 'Payment required' })
   @ApiResponse({ status: 404, description: 'Video file not found' })
   async streamVideo(
-    @Param('id') id: string, 
-    @Request() req, 
+    @Param('id') id: string,
+    @Request() req,
     @Res() res: Response,
     @Headers('range') range?: string
   ) {
     try {
       const hasAccess = await this.videosService.checkVideoAccess(req.user.id, id);
-      
+
       if (!hasAccess) {
-        throw new ForbiddenException('You do not have access to this video');
+        // Get video details to provide payment link if available
+        const video = await this.videosService.findOneRaw(id);
+        const paymentLink = video?.courseId ? `${this.urlService.getBaseUrl()}/courses/${video.courseId}` : null;
+
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(402).json({
+          error: 'Payment required',
+          message: 'You need to purchase this course to access this video',
+          paymentLink: paymentLink
+        });
       }
 
       // Get raw video data (with filename, not URL) for file access
@@ -266,6 +280,7 @@ export class VideosController {
       
       if (!video || !video.videoFile) {
         console.error(`Video not found or videoFile is missing. Video ID: ${id}`);
+        res.setHeader('Content-Type', 'application/json');
         return res.status(404).json({ error: 'Video file not specified' });
       }
 
@@ -274,6 +289,7 @@ export class VideosController {
       // Reject external URLs - only internal uploads allowed
       if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
         console.error(`External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+        res.setHeader('Content-Type', 'application/json');
         return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
       }
 
@@ -312,7 +328,8 @@ export class VideosController {
         
         if (!existsSync(videoPath)) {
           console.error(`Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
-          return res.status(404).json({ 
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(404).json({
             error: 'Video file not found',
             videoFile: video.videoFile,
             attemptedPaths: [videoPath, ...altPaths]
@@ -327,7 +344,8 @@ export class VideosController {
       // Check if file is empty
       if (fileSize === 0) {
         console.error(`Video file is empty (0 bytes) at path: ${videoPath}`);
-        return res.status(404).json({ 
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(404).json({
           error: 'Video file is empty or corrupted',
           videoFile: video.videoFile,
           path: videoPath,
@@ -352,6 +370,7 @@ export class VideosController {
         
         // Validate range
         if (start < 0 || start >= fileSize || end < start || end >= fileSize) {
+          res.setHeader('Content-Type', 'application/json');
           return res.status(416).json({
             error: 'Range Not Satisfiable',
             contentRange: `bytes */${fileSize}`
@@ -390,10 +409,8 @@ export class VideosController {
       console.error('Video stream error:', error.message);
       console.error('Error stack:', error.stack);
       if (!res.headersSent) {
-        if (error instanceof ForbiddenException) {
-          throw error;
-        }
-        res.status(404).json({ 
+        res.setHeader('Content-Type', 'application/json');
+        res.status(404).json({
           error: 'Video file not found',
           message: error.message
         });

@@ -2,7 +2,7 @@ import { Injectable, Logger, UnauthorizedException, ConflictException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
 import { SmsService } from '../sms/sms.service';
@@ -677,5 +677,148 @@ export class AuthService {
     this.logger.log(`Password changed successfully for user ${userId}${mustChangePassword ? ' (forced password change)' : ''}`);
 
     return { message: 'Password changed successfully' };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const { phone } = forgotPasswordDto;
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      throw new UnauthorizedException('Invalid phone number format');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
+
+    if (!user) {
+      // Return generic message to prevent user enumeration
+      return { message: 'If the phone number is registered, a password reset OTP will be sent.' };
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('Password reset is only available for regular users');
+    }
+
+    // Generate password reset OTP (different from login OTP)
+    const resetOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes for password reset
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetOtp: resetOtpCode,
+        resetOtpExpiresAt,
+      } as any,
+    });
+
+    try {
+      const smsSent = await this.smsService.sendPasswordResetOtp(normalizedPhone, resetOtpCode);
+
+      if (!smsSent) {
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`Password reset SMS sending failed, but allowing in development. OTP: ${resetOtpCode} for phone: ${normalizedPhone}`);
+        } else {
+          this.logger.error(`Password reset SMS sending returned false for phone: ${normalizedPhone}`);
+          throw new UnauthorizedException('Failed to send password reset OTP. Please try again later.');
+        }
+      }
+    } catch (error) {
+      if (error.message === 'SMS service is not configured') {
+        this.logger.warn(`SMS service not configured. Password reset OTP generated: ${resetOtpCode} for phone: ${normalizedPhone} (for testing only)`);
+        if (process.env.NODE_ENV === 'production') {
+          throw new UnauthorizedException('SMS service is not configured. Please contact administrator.');
+        }
+      } else if (error instanceof UnauthorizedException) {
+        throw error;
+      } else {
+        // Log the full error details for debugging
+        this.logger.error(`Password reset SMS error in forgotPassword:`, {
+          message: error.message,
+          stack: error.stack,
+          phone: normalizedPhone,
+        });
+
+        if (process.env.NODE_ENV !== 'production') {
+          this.logger.warn(`Password reset SMS error occurred, but allowing in development. OTP: ${resetOtpCode} for phone: ${normalizedPhone}`);
+        } else {
+          // Include more details in production error message if available
+          const errorDetails = error.message || 'Unknown error';
+          throw new UnauthorizedException(`Failed to send password reset OTP. ${errorDetails}`);
+        }
+      }
+    }
+
+    return { message: 'Password reset OTP sent successfully' };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const { phone, otp, newPassword, confirmPassword } = resetPasswordDto;
+    const normalizedPhone = normalizePhone(phone);
+
+    if (!normalizedPhone) {
+      throw new UnauthorizedException('Invalid phone number format');
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new UnauthorizedException('Password and confirm password do not match');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+      select: {
+        id: true,
+        resetOtp: true,
+        resetOtpExpiresAt: true,
+        role: true,
+        isActive: true,
+      } as any,
+    }) as any;
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    if (user.role !== 'USER') {
+      throw new UnauthorizedException('Password reset is only available for regular users');
+    }
+
+    if (!user.resetOtp || !user.resetOtpExpiresAt) {
+      throw new UnauthorizedException('No password reset OTP found. Please request a new password reset OTP.');
+    }
+
+    if (new Date() > user.resetOtpExpiresAt) {
+      throw new UnauthorizedException('Password reset OTP has expired. Please request a new one.');
+    }
+
+    if (user.resetOtp !== otp) {
+      throw new UnauthorizedException('Invalid password reset OTP');
+    }
+
+    // Update password and clear reset OTP
+    const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetOtp: null,
+        resetOtpExpiresAt: null,
+        mustChangePassword: false, // Reset the flag after password reset
+      } as any,
+    });
+
+    this.logger.log(`Password reset successfully for user ${user.id} via phone ${normalizedPhone}`);
+
+    return { message: 'Password reset successfully' };
   }
 }

@@ -291,6 +291,11 @@ export const paymentsService = {
     const response = await api.get(`/payments/invoices/${invoiceId}`);
     return response.data;
   },
+
+  getPaymentLinkByCode: async (linkCode: string) => {
+    const response = await api.get(`/api/payments/pay/${linkCode}`);
+    return response.data;
+  },
 };
 
 export const workshopsService = {

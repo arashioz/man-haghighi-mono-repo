@@ -19,6 +19,8 @@ model User {
   password               String? // Optional: only required for ADMIN users
   otp                    String? // OTP code for regular users
   otpExpiresAt           DateTime? // OTP expiration time
+  resetOtp               String? // OTP code for password reset
+  resetOtpExpiresAt      DateTime? // Password reset OTP expiration time
   firstName              String?
   lastName               String?
   avatar                 String?

@@ -297,78 +297,307 @@ export class PaymentsController {
   }
 
   @Get('pay/:linkCode')
-  @ApiOperation({ summary: 'پرداخت از طریق لینک' })
+  @ApiOperation({ summary: 'نمایش صفحه فاکتور پرداخت' })
   @ApiParam({ name: 'linkCode', description: 'کد لینک پرداخت' })
-  async payWithLink(
+  async showPaymentInvoice(
     @Param('linkCode') linkCode: string,
     @Query('userId') userId: string | undefined,
     @Res() res: Response,
   ) {
     try {
-      const result = await this.paymentsService.initiatePaymentLinkPayment(linkCode, userId);
-      
-      // Return HTML page that auto-submits form to payment gateway
+      const invoiceData = await this.paymentsService.getPaymentLinkInvoice(linkCode, userId);
+
+      // Return HTML invoice page
       const html = `
         <!DOCTYPE html>
         <html dir="rtl" lang="fa">
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>در حال انتقال به درگاه پرداخت...</title>
+          <title>فاکتور پرداخت - ${invoiceData.invoiceNumber}</title>
+          <meta name="description" content="فاکتور پرداخت ${invoiceData.description || 'لینک پرداخت'}">
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              min-height: 100vh;
+              padding: 20px;
+              direction: rtl;
+            }
+
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              overflow: hidden;
+            }
+
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px 20px;
+              text-align: center;
+            }
+
+            .logo {
+              font-size: 2rem;
+              font-weight: bold;
+              margin-bottom: 10px;
+            }
+
+            .title {
+              font-size: 1.5rem;
+              opacity: 0.9;
+            }
+
+            .invoice-content {
+              padding: 30px 20px;
+            }
+
+            .invoice-details {
+              margin-bottom: 30px;
+            }
+
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 12px 0;
+              border-bottom: 1px solid #eee;
+            }
+
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+
+            .detail-label {
+              font-weight: 500;
+              color: #666;
+            }
+
+            .detail-value {
+              font-weight: 600;
+              color: #333;
+            }
+
+            .amount-highlight {
+              background: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              text-align: center;
+              border: 2px solid #667eea;
+            }
+
+            .amount-label {
+              font-size: 0.9rem;
+              color: #666;
+              margin-bottom: 5px;
+            }
+
+            .amount-value {
+              font-size: 2rem;
+              font-weight: bold;
+              color: #667eea;
+            }
+
+            .description {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              border-right: 4px solid #667eea;
+            }
+
+            .description-label {
+              font-weight: 600;
+              color: #333;
+              margin-bottom: 8px;
+            }
+
+            .description-text {
+              color: #666;
+              line-height: 1.6;
+            }
+
+            .pay-button {
+              display: block;
+              width: 100%;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border: none;
+              padding: 18px;
+              font-size: 1.2rem;
+              font-weight: bold;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              text-decoration: none;
+              text-align: center;
+              margin-top: 30px;
+            }
+
+            .pay-button:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            }
+
+            .footer {
+              background: #f8f9fa;
+              padding: 20px;
+              text-align: center;
+              border-top: 1px solid #eee;
+            }
+
+            .security-badges {
               display: flex;
               justify-content: center;
-              align-items: center;
-              min-height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: #fff;
+              gap: 15px;
+              margin-bottom: 15px;
             }
-            .container {
+
+            .badge {
+              background: white;
+              padding: 8px 12px;
+              border-radius: 6px;
+              box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+              font-size: 0.8rem;
+              color: #666;
+            }
+
+            .contact-info {
+              font-size: 0.9rem;
+              color: #666;
+            }
+
+            .error-container {
+              background: white;
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
               text-align: center;
-              padding: 2rem;
+              max-width: 500px;
+              margin: 0 auto;
             }
-            .spinner {
-              border: 4px solid rgba(255, 255, 255, 0.3);
-              border-top: 4px solid #fff;
-              border-radius: 50%;
-              width: 50px;
-              height: 50px;
-              animation: spin 1s linear infinite;
-              margin: 0 auto 1rem;
+
+            .error-icon {
+              font-size: 3rem;
+              color: #e74c3c;
+              margin-bottom: 20px;
             }
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-            h1 {
-              margin: 0;
+
+            .error-title {
+              color: #e74c3c;
               font-size: 1.5rem;
+              margin-bottom: 10px;
             }
-            p {
-              margin-top: 0.5rem;
-              opacity: 0.9;
+
+            .error-message {
+              color: #666;
+              line-height: 1.6;
+            }
+
+            @media (max-width: 768px) {
+              .container {
+                margin: 10px;
+              }
+
+              .header {
+                padding: 20px;
+              }
+
+              .invoice-content {
+                padding: 20px;
+              }
+
+              .security-badges {
+                flex-direction: column;
+                gap: 8px;
+              }
             }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="spinner"></div>
-            <h1>در حال انتقال به درگاه پرداخت...</h1>
-            <p>لطفاً صبر کنید</p>
+            <div class="header">
+              <div class="logo">مانه‌حقوقی</div>
+              <div class="title">فاکتور پرداخت</div>
+            </div>
+
+            <div class="invoice-content">
+              <div class="invoice-details">
+                <div class="detail-row">
+                  <span class="detail-label">شماره فاکتور:</span>
+                  <span class="detail-value">${invoiceData.invoiceNumber}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">تاریخ صدور:</span>
+                  <span class="detail-value">${new Date(invoiceData.createdAt).toLocaleDateString('fa-IR')}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">مشتری:</span>
+                  <span class="detail-value">${invoiceData.customerName || 'مشتری'}</span>
+                </div>
+              </div>
+
+              <div class="amount-highlight">
+                <div class="amount-label">مبلغ قابل پرداخت</div>
+                <div class="amount-value">${Number(invoiceData.amount).toLocaleString('fa-IR')} تومان</div>
+              </div>
+
+              ${invoiceData.description ? `
+              <div class="description">
+                <div class="description-label">توضیحات:</div>
+                <div class="description-text">${invoiceData.description}</div>
+              </div>
+              ` : ''}
+
+              <button class="pay-button" onclick="initiatePayment()">
+                پرداخت آنلاین
+              </button>
+            </div>
+
+            <div class="footer">
+              <div class="security-badges">
+                <div class="badge">🔒 پرداخت امن</div>
+                <div class="badge">✅ پشتیبانی 24 ساعته</div>
+                <div class="badge">💳 تمامی کارت‌ها</div>
+              </div>
+              <div class="contact-info">
+                برای پشتیبانی با ما تماس بگیرید: ۰۲۱-۱۲۳۴۵۶۷۸
+              </div>
+            </div>
           </div>
-          <form id="paymentForm" method="post" action="${result.paymentUrl}">
-            <input type="hidden" name="RefId" value="${result.refId}" />
+
+          <form id="paymentForm" method="post" action="${invoiceData.paymentUrl}" style="display: none;">
+            <input type="hidden" name="RefId" value="${invoiceData.refId}" />
           </form>
+
           <script>
-            document.getElementById('paymentForm').submit();
+            function initiatePayment() {
+              // Show loading state
+              const button = document.querySelector('.pay-button');
+              button.innerHTML = 'در حال انتقال به درگاه...';
+              button.disabled = true;
+
+              // Submit the form after a brief delay
+              setTimeout(() => {
+                document.getElementById('paymentForm').submit();
+              }, 500);
+            }
           </script>
         </body>
         </html>
       `;
-      
+
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.send(html);
     } catch (error: any) {
@@ -378,33 +607,77 @@ export class PaymentsController {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>خطا در پرداخت</title>
+          <title>خطا - لینک پرداخت نامعتبر</title>
           <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              display: flex;
-              justify-content: center;
-              align-items: center;
+              background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
               min-height: 100vh;
-              margin: 0;
-              background: #f5f5f5;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 20px;
+              direction: rtl;
             }
+
             .error-container {
               background: white;
-              padding: 2rem;
-              border-radius: 8px;
-              box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
               text-align: center;
               max-width: 500px;
+              width: 100%;
             }
-            h1 { color: #e74c3c; margin-top: 0; }
-            p { color: #666; }
+
+            .error-icon {
+              font-size: 4rem;
+              color: #e74c3c;
+              margin-bottom: 20px;
+            }
+
+            .error-title {
+              color: #e74c3c;
+              font-size: 1.8rem;
+              margin-bottom: 15px;
+              font-weight: bold;
+            }
+
+            .error-message {
+              color: #666;
+              line-height: 1.6;
+              margin-bottom: 25px;
+            }
+
+            .back-button {
+              display: inline-block;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 12px 30px;
+              border-radius: 8px;
+              text-decoration: none;
+              font-weight: 500;
+              transition: all 0.3s ease;
+            }
+
+            .back-button:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            }
           </style>
         </head>
         <body>
           <div class="error-container">
-            <h1>خطا در پرداخت</h1>
-            <p>${error.message || 'لینک پرداخت نامعتبر است یا منقضی شده است'}</p>
+            <div class="error-icon">❌</div>
+            <h1 class="error-title">لینک پرداخت نامعتبر</h1>
+            <p class="error-message">${error.message || 'این لینک پرداخت وجود ندارد یا منقضی شده است.'}</p>
+            <a href="https://manehaghighi.com" class="back-button">بازگشت به سایت</a>
           </div>
         </body>
         </html>
