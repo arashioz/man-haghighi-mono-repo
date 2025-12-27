@@ -1,7 +1,7 @@
 # ===============================
 # Stage 1: Builder
 # ===============================
-FROM node:18-alpine3.19 AS builder
+FROM  node:20-alpine3.19
 WORKDIR /app
 
 COPY package*.json ./
