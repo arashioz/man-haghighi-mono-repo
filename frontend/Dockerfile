@@ -1,5 +1,5 @@
 # Frontend Dockerfile - Multi-stage build with security headers
-FROM node:18-alpine3.19 AS builder
+FROM  node:20-alpine3.19
 
 WORKDIR /app
 
