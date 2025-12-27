@@ -4,9 +4,9 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class SmsService {
   private readonly logger = new Logger(SmsService.name);
-  private readonly apiKey: string = "KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=";
-  private readonly lineNumber: '+9810004150535353';
-  private readonly patternCode: 'yrw36my3bqoha54';
+  private apiKey: string = "KMHJGvYnKw7g1xSyeyV_sR2Ajb901eiDFUN3Y8nKJzM=";
+  private lineNumber: string = '+9810004150535353';
+  private patternCode: string = 'yrw36my3bqoha54';
   private readonly apiUrl = 'https://api.iranpayamak.com/ws/v1';
 
   constructor(private configService: ConfigService) {
@@ -15,8 +15,8 @@ export class SmsService {
     const rawPatternCode = process.env.IRANPAYAMAK_PATTERN_CODE || this.configService.get<string>('IRANPAYAMAK_PATTERN_CODE', 'verification-code');
     
     this.apiKey = (rawApiKey?.trim() || '') as string;
-    this.lineNumber = (rawLineNumber?.trim() || '+9810004150535353') as '+9810004150535353';
-    this.patternCode = (rawPatternCode?.trim() || 'yrw36my3bqoha54') as 'yrw36my3bqoha54';
+    this.lineNumber = (rawLineNumber?.trim() || '+9810004150535353') as string;
+    this.patternCode = (rawPatternCode?.trim() || 'yrw36my3bqoha54') as string;
 
     this.logger.log(`SMS Service initialized:`, {
       hasApiKey: !!this.apiKey,
