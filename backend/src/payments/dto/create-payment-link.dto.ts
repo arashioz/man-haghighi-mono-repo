@@ -16,4 +16,8 @@ export class CreatePaymentLinkDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  workshopTitle?: string;
 }

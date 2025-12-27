@@ -550,6 +550,7 @@ export class PaymentsService {
         customerName: dto.customerName,
         customerPhone: dto.customerMobile,
         description: dto.description,
+        workshopTitle: dto.workshopTitle,
         isActive: true,
       },
     });
@@ -733,6 +734,7 @@ export class PaymentsService {
         amount: invoice.amount,
         description: invoice.description,
         customerName: invoice.customerName,
+        workshopTitle: paymentLink.workshopTitle,
         createdAt: invoice.createdAt,
         paymentUrl: paymentRequest.paymentUrl,
         refId: paymentRequest.refId,

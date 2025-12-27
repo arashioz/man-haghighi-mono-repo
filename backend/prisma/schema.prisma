@@ -647,6 +647,7 @@ model PaymentLink {
   customerName  String?
   customerPhone String?
   description   String?
+  workshopTitle String? // عنوان کارگاه
   isActive      Boolean   @default(true)
   expiresAt     DateTime? // تاریخ انقضا (اختیاری)
 

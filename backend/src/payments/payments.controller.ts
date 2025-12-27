@@ -409,6 +409,22 @@ export class PaymentsController {
               color: #667eea;
             }
 
+            .workshop-info {
+              background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              text-align: center;
+              border: 2px solid #2196f3;
+            }
+
+            .workshop-title {
+              font-size: 1.4rem;
+              font-weight: bold;
+              color: #1976d2;
+              margin-bottom: 5px;
+            }
+
             .description {
               background: #f8f9fa;
               padding: 15px;
@@ -547,6 +563,12 @@ export class PaymentsController {
                   <span class="detail-value">${invoiceData.customerName || 'مشتری'}</span>
                 </div>
               </div>
+
+              ${invoiceData.workshopTitle ? `
+              <div class="workshop-info">
+                <div class="workshop-title">🏢 ${invoiceData.workshopTitle}</div>
+              </div>
+              ` : ''}
 
               <div class="amount-highlight">
                 <div class="amount-label">مبلغ قابل پرداخت</div>
