@@ -1,5 +1,5 @@
 # Frontend Dockerfile - Multi-stage build with security headers
-FROM docker.arvancloud.ir/node:18-alpine
+FROM docker.arvancloud.ir/node:18-alpine as Builder
 
 WORKDIR /app
 

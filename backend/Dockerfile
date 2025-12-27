@@ -1,7 +1,7 @@
 # ===============================
 # Stage 1: Builder
 # ===============================
-FROM docker.arvancloud.ir/node:18-alpine
+FROM docker.arvancloud.ir/node:18-alpine as Builder
 WORKDIR /app
 
 COPY package*.json ./
