@@ -237,6 +237,22 @@ export const usersService = {
     });
     return response.data;
   },
+
+  checkPhoneExists: async (phone: string): Promise<{ exists: boolean }> => {
+    const response = await api.get(`/users/check-phone/${phone}`);
+    return response.data;
+  },
+
+  createCustomer: async (data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    password: string;
+    role: string;
+  }): Promise<User> => {
+    const response = await api.post('/users/customer', data);
+    return response.data;
+  },
 };
 
 export const messagesService = {

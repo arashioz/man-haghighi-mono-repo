@@ -89,6 +89,9 @@ export class SalesTeamsService {
 
   async findAll() {
     return this.prisma.salesTeam.findMany({
+      where: {
+        isActive: true, // Only return active teams
+      },
       include: {
         manager: {
           select: {
@@ -121,7 +124,10 @@ export class SalesTeamsService {
 
   async findOne(id: string) {
     const team = await this.prisma.salesTeam.findUnique({
-      where: { id },
+      where: {
+        id,
+        isActive: true, // Only return active teams
+      },
       include: {
         manager: {
           select: {
@@ -206,10 +212,11 @@ export class SalesTeamsService {
 
   async remove(id: string) {
     await this.findOne(id);
-    
-    return this.prisma.salesTeam.update({
+
+    // Delete the team completely - Prisma will automatically delete all team members
+    // due to the Cascade delete rule in the schema
+    return this.prisma.salesTeam.delete({
       where: { id },
-      data: { isActive: false },
     });
   }
 

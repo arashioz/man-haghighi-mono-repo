@@ -247,6 +247,18 @@ export class UsersService {
     return user;
   }
 
+  async findByPhone(phone: string) {
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return null;
+    }
+
+    return this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+      select: baseUserSelect,
+    });
+  }
+
   // Get user with their old products and purchased courses
   async getUserWithProducts(id: string) {
     const user = await this.prisma.user.findUnique({

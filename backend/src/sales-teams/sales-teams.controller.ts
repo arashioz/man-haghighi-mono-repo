@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 import { SalesTeamsService } from './sales-teams.service';
 import { CreateSalesTeamDto, UpdateSalesTeamDto, AddTeamMemberDto, RemoveTeamMemberDto } from './dto/sales-team.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -46,6 +47,7 @@ export class SalesTeamsController {
 
   @Delete(':id')
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete sales team completely (frees all members)' })
   remove(@Param('id') id: string) {
     return this.salesTeamsService.remove(id);
   }

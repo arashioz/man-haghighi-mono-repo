@@ -279,4 +279,28 @@ export class UsersController {
     res.send(JSON.stringify(data, null, 2));
   }
 
+  @Get('check-phone/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check if phone number exists in system' })
+  @ApiResponse({ status: 200, description: 'Phone check result' })
+  async checkPhoneExists(@Param('phone') phone: string) {
+    const normalizedPhone = phone.replace(/^(\+98|98)/, '0');
+    const user = await this.usersService.findByPhone(normalizedPhone);
+    return { exists: !!user };
+  }
+
+  @Post('customer')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create new customer (for salespersons)' })
+  @ApiResponse({ status: 201, description: 'Customer created successfully' })
+  async createCustomer(@Body() createCustomerDto: CreateUserDto, @Req() req) {
+    // Ensure the role is USER for customers
+    const customerData = { ...createCustomerDto, role: 'USER' };
+    return this.usersService.create(customerData, req.user.id);
+  }
+
 }

@@ -63,6 +63,17 @@ const PaymentLinks: React.FC = () => {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [linkType, setLinkType] = useState<'manual' | 'workshop' | 'course'>('manual');
 
+  // New customer creation
+  const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+  const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
+  const [customerExists, setCustomerExists] = useState<boolean | null>(null);
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    password: '',
+    confirmPassword: '',
+  });
+
   useEffect(() => {
     fetchPaymentLinks();
     fetchAvailableItems();
@@ -98,6 +109,71 @@ const PaymentLinks: React.FC = () => {
       setError(err.response?.data?.message || 'خطا در دریافت لینک‌های پرداخت');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkPhoneExists = async (phone: string) => {
+    if (!phone || !/^09[0-9]{9}$/.test(phone)) return null;
+
+    try {
+      setPhoneCheckLoading(true);
+      const response = await usersService.checkPhoneExists(phone);
+      setCustomerExists(response.exists);
+      return response.exists;
+    } catch (error) {
+      console.error('Error checking phone:', error);
+      setCustomerExists(null);
+      return null;
+    } finally {
+      setPhoneCheckLoading(false);
+    }
+  };
+
+  const handlePhoneChange = async (phone: string) => {
+    setNewLink({...newLink, customerMobile: phone});
+
+    if (phone.length === 11 && /^09[0-9]{9}$/.test(phone)) {
+      const exists = await checkPhoneExists(phone);
+      if (exists === false) {
+        // Phone doesn't exist, show new customer modal
+        setIsNewCustomerModalOpen(true);
+      }
+    }
+  };
+
+  const handleCreateNewCustomer = async () => {
+    if (!newLink.customerMobile || !newCustomerData.firstName || !newCustomerData.password) {
+      setError('تمام فیلدها را پر کنید');
+      return;
+    }
+
+    if (newCustomerData.password !== newCustomerData.confirmPassword) {
+      setError('رمز عبور و تأیید آن یکسان نیستند');
+      return;
+    }
+
+    try {
+      await usersService.createCustomer({
+        firstName: newCustomerData.firstName,
+        lastName: newCustomerData.lastName,
+        phone: newLink.customerMobile,
+        password: newCustomerData.password,
+        role: 'USER',
+      });
+
+      setIsNewCustomerModalOpen(false);
+      setCustomerExists(true);
+      setNewCustomerData({
+        firstName: '',
+        lastName: '',
+        password: '',
+        confirmPassword: '',
+      });
+
+      // Show success message
+      alert('مشتری جدید با موفقیت ایجاد شد!');
+    } catch (error: any) {
+      setError(error.response?.data?.message || 'خطا در ایجاد مشتری جدید');
     }
   };
 
@@ -691,20 +767,56 @@ const PaymentLinks: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل</label>
-            <input
-              type="text"
-              value={newLink.customerMobile}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, '');
-                if (value.length <= 11) {
-                  setNewLink({...newLink, customerMobile: value});
-                }
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              placeholder="09123456789"
-              pattern="09[0-9]{9}"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={newLink.customerMobile}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d]/g, '');
+                  if (value.length <= 11) {
+                    handlePhoneChange(value);
+                  }
+                }}
+                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                placeholder="09123456789"
+                pattern="09[0-9]{9}"
+              />
+              {phoneCheckLoading && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              {customerExists !== null && !phoneCheckLoading && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  {customerExists ? (
+                    <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              )}
+            </div>
+            {customerExists === false && (
+              <p className="text-sm text-orange-600 mt-1 flex items-center">
+                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                این شماره در سیستم وجود ندارد. مشتری جدید ایجاد خواهد شد.
+              </p>
+            )}
+            {customerExists === true && (
+              <p className="text-sm text-green-600 mt-1 flex items-center">
+                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                مشتری موجود در سیستم
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان) *</label>
@@ -960,6 +1072,122 @@ const PaymentLinks: React.FC = () => {
               })}
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* مودال ایجاد مشتری جدید */}
+      <Modal
+        isOpen={isNewCustomerModalOpen}
+        onClose={() => {
+          setIsNewCustomerModalOpen(false);
+          setNewCustomerData({
+            firstName: '',
+            lastName: '',
+            password: '',
+            confirmPassword: '',
+          });
+        }}
+        title="ایجاد مشتری جدید"
+      >
+        <div className="space-y-4">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="mr-3">
+                <h3 className="text-sm font-medium text-orange-800">
+                  مشتری جدید شناسایی شد
+                </h3>
+                <div className="mt-2 text-sm text-orange-700">
+                  <p>شماره موبایل <strong>{newLink.customerMobile}</strong> در سیستم وجود ندارد.</p>
+                  <p>برای ایجاد مشتری جدید، اطلاعات زیر را تکمیل کنید:</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">نام</label>
+              <input
+                type="text"
+                value={newCustomerData.firstName}
+                onChange={(e) => setNewCustomerData({...newCustomerData, firstName: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                placeholder="مثال: علی"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">نام خانوادگی</label>
+              <input
+                type="text"
+                value={newCustomerData.lastName}
+                onChange={(e) => setNewCustomerData({...newCustomerData, lastName: e.target.value})}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                placeholder="مثال: احمدی"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">رمز عبور</label>
+            <input
+              type="password"
+              value={newCustomerData.password}
+              onChange={(e) => setNewCustomerData({...newCustomerData, password: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="حداقل 6 کاراکتر"
+              minLength={6}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">تأیید رمز عبور</label>
+            <input
+              type="password"
+              value={newCustomerData.confirmPassword}
+              onChange={(e) => setNewCustomerData({...newCustomerData, confirmPassword: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="تکرار رمز عبور"
+              minLength={6}
+            />
+            {newCustomerData.confirmPassword && newCustomerData.password !== newCustomerData.confirmPassword && (
+              <p className="text-sm text-red-600 mt-1">رمز عبور و تأیید آن یکسان نیستند</p>
+            )}
+          </div>
+
+          <div className="flex justify-end space-x-2 space-x-reverse pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => {
+                setIsNewCustomerModalOpen(false);
+                setNewCustomerData({
+                  firstName: '',
+                  lastName: '',
+                  password: '',
+                  confirmPassword: '',
+                });
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              انصراف
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateNewCustomer}
+              disabled={!newCustomerData.firstName || !newCustomerData.lastName || !newCustomerData.password || newCustomerData.password !== newCustomerData.confirmPassword}
+              className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            >
+              ایجاد مشتری جدید
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
