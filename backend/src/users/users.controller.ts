@@ -300,7 +300,7 @@ export class UsersController {
   async createCustomer(@Body() createCustomerDto: CreateUserDto, @Req() req) {
     // Ensure the role is USER for customers
     const customerData = { ...createCustomerDto, role: 'USER' };
-    return this.usersService.create(customerData, req.user.id);
+    return this.usersService.create(customerData);
   }
 
 }
