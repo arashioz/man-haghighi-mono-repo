@@ -32,19 +32,109 @@ export class SmsService {
   }
 
   async sendPasswordResetOtp(phoneNumber: string, otpCode: string): Promise<boolean> {
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
     // Use the specific pattern code for password reset OTP
     const passwordResetPatternCode = process.env.IRANPAYAMAK_PASSWORD_RESET_PATTERN_CODE || 'SJ3FgPrE0C';
-    const originalPatternCode = this.patternCode;
 
-    // Temporarily override the pattern code for password reset
-    this.patternCode = passwordResetPatternCode;
+    if (!this.apiKey || !this.lineNumber || !passwordResetPatternCode) {
+      if (isDevelopment) {
+        this.logger.warn(`SMS service not configured. Password reset OTP for ${phoneNumber}: ${otpCode} (development mode)`);
+        return true;
+      }
+      this.logger.error('IranPayamak SMS credentials are not configured');
+      throw new Error('SMS service is not configured');
+    }
 
     try {
-      const result = await this.sendOtp(phoneNumber, otpCode);
-      return result;
-    } finally {
-      // Restore the original pattern code
-      this.patternCode = originalPatternCode;
+      const formattedPhone = this.formatPhoneNumber(phoneNumber);
+
+      const requestBody = {
+        code: passwordResetPatternCode,
+        attributes: {
+          var1: otpCode,
+        },
+        recipient: formattedPhone,
+        line_number: this.lineNumber,
+        number_format: 'english',
+      };
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+
+      headers['Api-Key'] = this.apiKey;
+
+      const response = await fetch(`${this.apiUrl}/sms/pattern`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(requestBody),
+      });
+
+      const responseText = await response.text();
+      let responseData: any = null;
+
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        // Response is not JSON
+      }
+
+      if (!response.ok) {
+        const errorDetails: any = {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText,
+          requestBody: JSON.stringify(requestBody),
+          recipient: formattedPhone,
+          apiKeyLength: this.apiKey?.length || 0,
+        };
+
+        if (response.status === 401) {
+          errorDetails.apiKeyFull = this.apiKey;
+          errorDetails.apiKeyFromEnv = process.env.IRANPAYAMAK_API_KEY;
+          errorDetails.apiKeyFromConfig = this.configService.get<string>('IRANPAYAMAK_API_KEY');
+        }
+
+        this.logger.error(`Failed to send password reset SMS to IranPayamak API:`, errorDetails);
+
+        if (isDevelopment) {
+          this.logger.warn(`Password reset SMS sending failed, but allowing in development. OTP for ${phoneNumber}: ${otpCode}`);
+          return true;
+        }
+
+        const errorMessage = responseData?.message || responseData?.error || responseText || 'Unknown error';
+        throw new Error(`SMS API error (${response.status}): ${errorMessage}`);
+      }
+
+      this.logger.log(`Password reset SMS sent successfully to ${phoneNumber}`, {
+        response: responseData,
+      });
+      return true;
+    } catch (error) {
+      let formattedPhone = 'N/A';
+      try {
+        if (phoneNumber) {
+          formattedPhone = this.formatPhoneNumber(phoneNumber);
+        }
+      } catch {
+        // Ignore formatting errors in error handler
+      }
+
+      this.logger.error(`Error sending password reset SMS to ${phoneNumber}:`, {
+        error: error.message,
+        stack: error.stack,
+        phoneNumber: phoneNumber,
+        formattedPhone: formattedPhone,
+      });
+
+      if (isDevelopment) {
+        this.logger.warn(`Password reset SMS error occurred, but allowing in development. OTP for ${phoneNumber}: ${otpCode}`);
+        return true;
+      }
+
+      throw error;
     }
   }
 

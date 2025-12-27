@@ -210,7 +210,7 @@ Add the required environment variables to your `.env` file.
    { "phone": "09123456789" }
    ```
 
-2. **System sends SMS with OTP** to the user's phone
+2. **System sends SMS with OTP** to the user's phone using IranPayamak pattern `SJ3FgPrE0C`
 
 3. **User enters OTP and new password:**
    ```javascript
@@ -224,6 +224,15 @@ Add the required environment variables to your `.env` file.
    ```
 
 4. **Password is reset** and user can login with new credentials
+
+### SMS Configuration
+
+The system uses two different SMS patterns:
+
+1. **Login OTP**: Uses `IRANPAYAMAK_PATTERN_CODE` (default: `yrw36my3bqoha54`)
+2. **Password Reset OTP**: Uses `IRANPAYAMAK_PASSWORD_RESET_PATTERN_CODE` (default: `SJ3FgPrE0C`)
+
+Both patterns expect the OTP code in the `var1` attribute and use the same API endpoint format as specified in your original requirements.
 
 ### Development Mode
 
