@@ -9,6 +9,7 @@ import { Response } from 'express';
 import { createReadStream, statSync, existsSync } from 'fs';
 import { join } from 'path';
 import { UrlService } from '../common/services/url.service';
+import { ConfigService } from '@nestjs/config';
 
 @ApiTags('Videos')
 @Controller('videos')
@@ -16,6 +17,7 @@ export class VideosController {
   constructor(
     private readonly videosService: VideosService,
     private readonly urlService: UrlService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post()
@@ -113,17 +115,32 @@ export class VideosController {
       }
 
       console.log(`[TEST] Video file: ${video.videoFile}`);
-      
-      // Reject external URLs - only internal uploads allowed
-      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-        console.error(`[TEST] External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
-      }
 
-      // Check if videoFile is a local file path
+      // Handle different video file formats
       let videoPath: string;
-      if (video.videoFile.startsWith('/')) {
+      let isExternalUrl = false;
+
+      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
+        // Check if it's an internal URL (same domain)
+        const baseUrl = this.urlService.getBaseUrl();
+        if (video.videoFile.startsWith(baseUrl)) {
+          // Try to find the file locally first
+          const urlPath = new URL(video.videoFile).pathname;
+          videoPath = join('/app', urlPath);
+          console.log(`[TEST] Converted internal URL to local path: ${videoPath}`);
+
+          // If local file doesn't exist, redirect to the URL
+          if (!existsSync(videoPath)) {
+            console.log(`[TEST] Local file not found, redirecting to: ${video.videoFile}`);
+            return res.redirect(video.videoFile);
+          }
+        } else {
+          // External URL - reject
+          console.error(`[TEST] External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+        }
+      } else if (video.videoFile.startsWith('/')) {
         // Absolute path
         videoPath = video.videoFile;
       } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
@@ -140,10 +157,13 @@ export class VideosController {
       if (!existsSync(videoPath)) {
         console.error(`[TEST] Video file does not exist at path: ${videoPath}`);
         // Try alternative paths
+        const urlObj = new URL(video.videoFile);
+        const urlPath = urlObj.pathname;
         const altPaths = [
-          join(process.cwd(), video.videoFile),
-          join('/app/uploads', video.videoFile),
-          join('/app', video.videoFile),
+          join('/app', urlPath), // Docker path
+          join(process.cwd(), urlPath.replace(/^\//, '')), // Relative to cwd
+          join(process.cwd(), 'uploads', urlPath.replace(/^\/uploads\//, '')), // In uploads folder
+          join('/app/uploads', urlPath.replace(/^\/uploads\//, '')), // Docker uploads
         ];
         
         for (const altPath of altPaths) {
@@ -285,17 +305,33 @@ export class VideosController {
       }
 
       console.log(`Streaming video ID: ${id}, videoFile: ${video.videoFile}`);
-      
-      // Reject external URLs - only internal uploads allowed
-      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-        console.error(`External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
-      }
 
-      // Check if videoFile is a local file path
+      // Handle different video file formats
       let videoPath: string;
-      if (video.videoFile.startsWith('/')) {
+      let isExternalUrl = false;
+
+      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
+        // Check if it's an internal URL (same domain)
+        const baseUrl = this.urlService.getBaseUrl();
+        if (video.videoFile.startsWith(baseUrl)) {
+          // Convert internal URL to local file path
+          const urlPath = new URL(video.videoFile).pathname;
+          // In Docker, files are typically in /app/uploads/
+          videoPath = join('/app', urlPath);
+          console.log(`Converted internal URL to local path: ${videoPath}`);
+
+          // If local file doesn't exist, redirect to the URL
+          if (!existsSync(videoPath)) {
+            console.log(`Local file not found, redirecting to: ${video.videoFile}`);
+            return res.redirect(video.videoFile);
+          }
+        } else {
+          // External URL - reject
+          console.error(`External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
+        }
+      } else if (video.videoFile.startsWith('/')) {
         // Absolute path
         videoPath = video.videoFile;
       } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
@@ -312,10 +348,13 @@ export class VideosController {
       if (!existsSync(videoPath)) {
         console.error(`Video file does not exist at path: ${videoPath}`);
         // Try alternative paths
+        const urlObj = new URL(video.videoFile);
+        const urlPath = urlObj.pathname;
         const altPaths = [
-          join(process.cwd(), video.videoFile),
-          join('/app/uploads', video.videoFile),
-          join('/app', video.videoFile),
+          join('/app', urlPath), // Docker path
+          join(process.cwd(), urlPath.replace(/^\//, '')), // Relative to cwd
+          join(process.cwd(), 'uploads', urlPath.replace(/^\/uploads\//, '')), // In uploads folder
+          join('/app/uploads', urlPath.replace(/^\/uploads\//, '')), // Docker uploads
         ];
         
         for (const altPath of altPaths) {
@@ -436,5 +475,115 @@ export class VideosController {
   @ApiResponse({ status: 200, description: 'Video deleted successfully' })
   async remove(@Param('id') id: string) {
     return this.videosService.remove(id);
+  }
+
+  private async proxyVideoStream(videoUrl: string, res: Response, range?: string) {
+    try {
+      console.log(`Proxying video from URL: ${videoUrl}`);
+
+      // Prepare headers for the request
+      const headers: Record<string, string> = {
+        'User-Agent': 'VideoStreamProxy/1.0',
+      };
+
+      if (range) {
+        headers['Range'] = range;
+      }
+
+      const response = await fetch(videoUrl, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        console.error(`Failed to fetch video: ${response.status} ${response.statusText}`);
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(response.status).json({
+          error: 'Failed to fetch video from remote server',
+          status: response.status
+        });
+      }
+
+      // Get content type
+      const contentType = response.headers.get('content-type') || 'video/mp4';
+      const contentLength = response.headers.get('content-length');
+      const acceptRanges = response.headers.get('accept-ranges');
+
+      // Set response headers
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Range');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+
+      if (contentLength) {
+        res.setHeader('Content-Length', contentLength);
+      }
+
+      if (acceptRanges) {
+        res.setHeader('Accept-Ranges', acceptRanges);
+      }
+
+      // Handle range requests
+      if (range && response.status === 206) {
+        const contentRange = response.headers.get('content-range');
+        if (contentRange) {
+          res.setHeader('Content-Range', contentRange);
+        }
+        res.status(206);
+      } else {
+        res.status(200);
+      }
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      const stream = new ReadableStream({
+        start(controller) {
+          function pump() {
+            reader.read().then(({ done, value }) => {
+              if (done) {
+                controller.close();
+                return;
+              }
+              controller.enqueue(value);
+              pump();
+            }).catch(err => {
+              console.error('Stream error:', err);
+              controller.error(err);
+            });
+          }
+          pump();
+        }
+      });
+
+      // Convert ReadableStream to Node.js stream and pipe to response
+      const webStream = stream;
+      const nodeStream = new (require('stream').Readable)();
+
+      const reader2 = webStream.getReader();
+      reader2.read().then(function process({ done, value }) {
+        if (done) {
+          nodeStream.push(null);
+          return;
+        }
+        nodeStream.push(Buffer.from(value));
+        return reader2.read().then(process);
+      });
+
+      nodeStream.pipe(res);
+
+    } catch (error) {
+      console.error('Proxy streaming error:', error);
+      if (!res.headersSent) {
+        res.setHeader('Content-Type', 'application/json');
+        res.status(500).json({
+          error: 'Video streaming failed',
+          message: error.message
+        });
+      }
+    }
   }
 }
