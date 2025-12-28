@@ -53,6 +53,11 @@ const PaymentLinks: React.FC = () => {
   const [expandedPhones, setExpandedPhones] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<any>(null);
 
+  // Loading states for operations
+  const [toggleLinkLoading, setToggleLinkLoading] = useState<string | null>(null);
+  const [copyLoading, setCopyLoading] = useState<string | null>(null);
+  const [createLinkLoading, setCreateLinkLoading] = useState(false);
+
   const [newLink, setNewLink] = useState({
     customerName: '',
     customerMobile: '',
@@ -146,10 +151,28 @@ const PaymentLinks: React.FC = () => {
 
     if (phone.length === 11 && /^09[0-9]{9}$/.test(phone)) {
       const exists = await checkPhoneExists(phone);
-      if (exists === false) {
-        // Phone doesn't exist, show new customer modal
+      if (exists === true) {
+        // Phone exists, try to get customer info
+        try {
+          const customer = await usersService.getUserByPhone(phone);
+          if (customer && customer.firstName && customer.lastName) {
+            setNewLink(prev => ({
+              ...prev,
+              customerMobile: phone,
+              customerName: `${customer.firstName} ${customer.lastName || ''}`.trim()
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching customer info:', error);
+        }
+      } else if (exists === false) {
+        // Phone doesn't exist, clear name and show new customer modal
+        setNewLink(prev => ({...prev, customerMobile: phone, customerName: ''}));
         setIsNewCustomerModalOpen(true);
       }
+    } else {
+      // Invalid phone, clear name
+      setNewLink(prev => ({...prev, customerMobile: phone, customerName: ''}));
     }
   };
 
@@ -170,6 +193,7 @@ const PaymentLinks: React.FC = () => {
         lastName: newCustomerData.lastName,
         phone: newLink.customerMobile,
         password: newCustomerData.password,
+        confirmPassword: newCustomerData.confirmPassword,
         role: 'USER',
       });
 
@@ -192,6 +216,7 @@ const PaymentLinks: React.FC = () => {
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setCreateLinkLoading(true);
 
     try {
       // Amount is always manual - workshop/course prices are just for reference
@@ -235,6 +260,8 @@ const PaymentLinks: React.FC = () => {
       await fetchPaymentLinks();
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ایجاد لینک پرداخت');
+    } finally {
+      setCreateLinkLoading(false);
     }
   };
 
@@ -256,15 +283,15 @@ const PaymentLinks: React.FC = () => {
     return `${siteUrl}/api/payments/pay/${linkCode}`;
   };
 
-  const copyToClipboard = async (link: string, customerName: string, amount: number, message: string = 'کپی شد!') => {
+  const copyToClipboard = async (link: string, customerName: string, amount: number, linkId: string, message: string = 'کپی شد!') => {
+    setCopyLoading(linkId);
     let textToCopy = link;
 
     // Use message template if enabled
     if (settings?.messageTemplateEnabled && settings?.messageTemplateText) {
-      const amountInToman = Math.round(amount / 10);
       textToCopy = settings.messageTemplateText
         .replace(/\{name\}/g, customerName)
-        .replace(/\{amount\}/g, amountInToman.toLocaleString('fa-IR'))
+        .replace(/\{amount\}/g, amount.toLocaleString('fa-IR'))
         .replace(/\{link\}/g, link);
     }
 
@@ -279,6 +306,8 @@ const PaymentLinks: React.FC = () => {
       document.execCommand('copy');
       document.body.removeChild(textArea);
       alert(message);
+    } finally {
+      setCopyLoading(null);
     }
   };
 
@@ -286,14 +315,13 @@ const PaymentLinks: React.FC = () => {
     const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
     const whatsappPhone = `98${cleanPhone}`;
 
-    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} ریال (${formatAmount(Math.round(amount / 10))} تومان)\nلینک پرداخت:\n${link}`;
+    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} تومان (${formatAmount(amount * 10)} ریال)\nلینک پرداخت:\n${link}`;
 
     // Use WhatsApp template if enabled
     if (settings?.messageTemplateEnabled && settings?.whatsappTemplateText) {
-      const amountInToman = Math.round(amount / 10);
       message = settings.whatsappTemplateText
         .replace(/\{name\}/g, name)
-        .replace(/\{amount\}/g, amountInToman.toLocaleString('fa-IR'))
+        .replace(/\{amount\}/g, amount.toLocaleString('fa-IR'))
         .replace(/\{link\}/g, link);
     }
 
@@ -342,6 +370,7 @@ const PaymentLinks: React.FC = () => {
   };
 
   const handleToggleLink = async (linkId: string) => {
+    setToggleLinkLoading(linkId);
     try {
       await paymentsService.togglePaymentLink(linkId);
       await fetchPaymentLinks();
@@ -352,6 +381,8 @@ const PaymentLinks: React.FC = () => {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در تغییر وضعیت لینک');
+    } finally {
+      setToggleLinkLoading(null);
     }
   };
 
@@ -529,7 +560,7 @@ const PaymentLinks: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-3xl font-bold">{formatAmount(Math.round(stats.paidAmount / 10))}</p>
+          <p className="text-3xl font-bold">{formatAmount(stats.paidAmount)}</p>
         </div>
       </div>
 
@@ -627,8 +658,8 @@ const PaymentLinks: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount)} ریال</div>
-                        <div className="text-sm text-gray-500">{formatAmount(Math.round(group.totalAmount / 10))} تومان</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount)} تومان</div>
+                        <div className="text-sm text-gray-500">{formatAmount(group.totalAmount * 10)} ریال</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -701,8 +732,8 @@ const PaymentLinks: React.FC = () => {
                     return (
                       <tr key={link.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} ریال</div>
-                          <div className="text-sm text-gray-500">{formatAmount(Math.round(link.amount / 10))} تومان</div>
+                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} تومان</div>
+                          <div className="text-sm text-gray-500">{formatAmount(link.amount * 10)} ریال</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -745,11 +776,12 @@ const PaymentLinks: React.FC = () => {
                             >
                               {link.isActive ? 'غیرفعال' : 'فعال'}
                             </button>
-                            <button
-                              onClick={() => copyToClipboard(paymentUrl, link.customerName, link.amount, 'پیام کپی شد!')}
-                              className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
-                              title="کپی پیام"
-                            >
+                        <button
+                          onClick={() => copyToClipboard(paymentUrl, link.customerName, link.amount, link.id, 'پیام کپی شد!')}
+                          disabled={copyLoading === link.id}
+                          className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="کپی پیام"
+                        >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
@@ -794,6 +826,74 @@ const PaymentLinks: React.FC = () => {
         title="ایجاد لینک پرداخت جدید"
       >
         <form onSubmit={handleCreateLink} className="space-y-4">
+          {/* شماره موبایل - اول */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل مشتری</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={newLink.customerMobile}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d]/g, '');
+                  if (value.length <= 11) {
+                    handlePhoneChange(value);
+                  }
+                }}
+                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                placeholder="09123456789"
+                pattern="09[0-9]{9}"
+              />
+              {phoneCheckLoading && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              {customerExists !== null && !phoneCheckLoading && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  {customerExists ? (
+                    <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+              )}
+            </div>
+            {customerExists === false && (
+              <p className="text-sm text-orange-600 mt-1 flex items-center">
+                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                این شماره در سیستم وجود ندارد. مشتری جدید ایجاد خواهد شد.
+              </p>
+            )}
+            {customerExists === true && (
+              <p className="text-sm text-green-600 mt-1 flex items-center">
+                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                مشتری موجود در سیستم
+              </p>
+            )}
+          </div>
+
+          {/* نام مشتری */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی مشتری</label>
+            <input
+              type="text"
+              value={newLink.customerName}
+              onChange={(e) => setNewLink({...newLink, customerName: e.target.value})}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              placeholder="مثال: علی احمدی"
+            />
+          </div>
+
           {/* نوع لینک */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">نوع لینک</label>
@@ -916,70 +1016,6 @@ const PaymentLinks: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی مشتری</label>
-            <input
-              type="text"
-              value={newLink.customerName}
-              onChange={(e) => setNewLink({...newLink, customerName: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              placeholder="مثال: علی احمدی"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={newLink.customerMobile}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^\d]/g, '');
-                  if (value.length <= 11) {
-                    handlePhoneChange(value);
-                  }
-                }}
-                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-                placeholder="09123456789"
-                pattern="09[0-9]{9}"
-              />
-              {phoneCheckLoading && (
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              {customerExists !== null && !phoneCheckLoading && (
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  {customerExists ? (
-                    <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-              )}
-            </div>
-            {customerExists === false && (
-              <p className="text-sm text-orange-600 mt-1 flex items-center">
-                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                این شماره در سیستم وجود ندارد. مشتری جدید ایجاد خواهد شد.
-              </p>
-            )}
-            {customerExists === true && (
-              <p className="text-sm text-green-600 mt-1 flex items-center">
-                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                مشتری موجود در سیستم
-              </p>
-            )}
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان) *</label>
             <input
               type="text"
@@ -1035,9 +1071,13 @@ const PaymentLinks: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
+              disabled={createLinkLoading}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ایجاد لینک
+              {createLinkLoading && (
+                <div className="animate-spin rounded-full h-4 w-4 border border-white border-t-transparent"></div>
+              )}
+              {createLinkLoading ? 'در حال ایجاد...' : 'ایجاد لینک'}
             </button>
           </div>
         </form>
@@ -1064,7 +1104,7 @@ const PaymentLinks: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600">مبلغ</p>
                   <p className="text-base font-medium text-gray-900">
-                    {formatAmount(selectedLink.amount)} ریال ({formatAmount(Math.round(selectedLink.amount / 10))} تومان)
+                    {formatAmount(selectedLink.amount)} تومان ({formatAmount(selectedLink.amount * 10)} ریال)
                   </p>
                 </div>
                 <div>
@@ -1169,6 +1209,7 @@ const PaymentLinks: React.FC = () => {
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {customerLinks.map((link) => {
                 const paymentStatus = getPaymentStatus(link);
+                const paymentUrl = getPaymentUrl(link.linkCode);
                 return (
                   <div
                     key={link.id}
@@ -1178,7 +1219,7 @@ const PaymentLinks: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-sm font-medium text-gray-900">
-                            مبلغ: {formatAmount(link.amount)} ریال ({formatAmount(Math.round(link.amount / 10))} تومان)
+                            مبلغ: {formatAmount(link.amount)} تومان ({formatAmount(link.amount * 10)} ریال)
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mb-2">
@@ -1206,25 +1247,46 @@ const PaymentLinks: React.FC = () => {
                           ایجاد شده: {formatPersianDateTime(link.createdAt)}
                         </p>
                       </div>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-1">
                         <button
                           onClick={() => handleToggleLink(link.id)}
-                          className={`px-3 py-1 text-xs rounded transition-colors ${
+                          disabled={toggleLinkLoading === link.id}
+                          className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
                             link.isActive
                               ? 'bg-red-100 text-red-700 hover:bg-red-200'
                               : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          }`}
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
+                          {toggleLinkLoading === link.id && (
+                            <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
+                          )}
                           {link.isActive ? 'غیرفعال' : 'فعال'}
                         </button>
                         <button
                           onClick={() => {
                             setSelectedLink(link);
                             setIsDetailsModalOpen(true);
+                            setIsCustomerLinksModalOpen(false); // Close previous modal
                           }}
                           className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         >
                           جزئیات
+                        </button>
+                        <button
+                          onClick={() => copyToClipboard(paymentUrl, link.customerName, link.amount, link.id, 'پیام کپی شد!')}
+                          disabled={copyLoading === link.id}
+                          className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                          {copyLoading === link.id && (
+                            <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
+                          )}
+                          کپی
+                        </button>
+                        <button
+                          onClick={() => sendWhatsApp(link.customerPhone, link.customerName, link.amount, paymentUrl)}
+                          className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                        >
+                          واتس‌اپ
                         </button>
                       </div>
                     </div>
@@ -1297,31 +1359,25 @@ const PaymentLinks: React.FC = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">رمز عبور</label>
-            <input
-              type="password"
-              value={newCustomerData.password}
-              onChange={(e) => setNewCustomerData({...newCustomerData, password: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              placeholder="حداقل 6 کاراکتر"
-              minLength={6}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">تأیید رمز عبور</label>
-            <input
-              type="password"
-              value={newCustomerData.confirmPassword}
-              onChange={(e) => setNewCustomerData({...newCustomerData, confirmPassword: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-              placeholder="تکرار رمز عبور"
-              minLength={6}
-            />
-            {newCustomerData.confirmPassword && newCustomerData.password !== newCustomerData.confirmPassword && (
-              <p className="text-sm text-red-600 mt-1">رمز عبور و تأیید آن یکسان نیستند</p>
-            )}
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={newCustomerData.password}
+                onChange={(e) => setNewCustomerData({...newCustomerData, password: e.target.value, confirmPassword: e.target.value})}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+                placeholder="حداقل 6 کاراکتر"
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setNewCustomerData({...newCustomerData, password: 'user123', confirmPassword: 'user123'})}
+                className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+              >
+                رمز پیش‌فرض
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">رمز پیش‌فرض: user123</p>
           </div>
 
           <div className="flex justify-end space-x-2 space-x-reverse pt-4 border-t">

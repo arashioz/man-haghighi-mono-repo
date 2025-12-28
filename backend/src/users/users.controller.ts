@@ -291,6 +291,26 @@ export class UsersController {
     return { exists: !!user };
   }
 
+  @Get('by-phone/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user info by phone number' })
+  @ApiResponse({ status: 200, description: 'User info' })
+  async getUserByPhone(@Param('phone') phone: string) {
+    const normalizedPhone = phone.replace(/^(\+98|98)/, '0');
+    const user = await this.usersService.findByPhone(normalizedPhone);
+    if (!user) {
+      throw new Error('کاربر یافت نشد');
+    }
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+    };
+  }
+
   @Post('customer')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')

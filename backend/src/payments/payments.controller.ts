@@ -307,6 +307,415 @@ export class PaymentsController {
     try {
       const invoiceData = await this.paymentsService.getPaymentLinkInvoice(linkCode, userId);
 
+      // Check if link is inactive
+      if (invoiceData.isInactive) {
+        const settings = await this.prisma.settings.findUnique({
+          where: { id: 'settings' },
+        });
+        const supportPhone = settings?.sitePhone || '021-12345678';
+
+        const disabledLinkHtml = `
+          <!DOCTYPE html>
+          <html dir="rtl" lang="fa">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>لینک غیرفعال - من حقیقی</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
+
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+
+              body {
+                font-family: 'Vazirmatn', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background:
+                  radial-gradient(circle at 20% 50%, rgba(244, 67, 54, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(255, 87, 34, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 80%, rgba(255, 152, 0, 0.1) 0%, transparent 50%),
+                  linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+                background-attachment: fixed;
+                min-height: 100vh;
+                padding: 20px;
+                direction: rtl;
+                position: relative;
+              }
+
+              body::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(244,67,54,0.03)"/><circle cx="75" cy="75" r="1" fill="rgba(244,67,54,0.03)"/><circle cx="50" cy="10" r="0.5" fill="rgba(244,67,54,0.02)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+                pointer-events: none;
+                z-index: -1;
+              }
+
+              .container {
+                max-width: 500px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border-radius: 24px;
+                box-shadow:
+                  0 25px 50px rgba(244, 67, 54, 0.15),
+                  0 0 0 1px rgba(255,255,255,0.2),
+                  inset 0 1px 0 rgba(255,255,255,0.3);
+                overflow: hidden;
+                border: 1px solid rgba(255,255,255,0.2);
+                position: relative;
+              }
+
+              .container::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: linear-gradient(90deg, #f44336, #ff5722, #ff9800, #e91e63);
+                background-size: 300% 100%;
+                animation: gradientShift 4s ease infinite;
+              }
+
+              @keyframes gradientShift {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+              }
+
+              .header {
+                background: linear-gradient(135deg, rgba(244, 67, 54, 0.9) 0%, rgba(255, 87, 34, 0.9) 100%);
+                backdrop-filter: blur(10px);
+                color: white;
+                padding: 40px 30px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+              }
+
+              .header::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                animation: shine 6s ease-in-out infinite;
+              }
+
+              @keyframes shine {
+                0%, 100% { transform: rotate(0deg) translate(-50%, -50%); }
+                50% { transform: rotate(180deg) translate(-50%, -50%); }
+              }
+
+              .logo {
+                font-size: 2.8rem;
+                font-weight: 800;
+                margin-bottom: 15px;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                background: linear-gradient(45deg, #ffffff, #ffebee, #ffffff);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                letter-spacing: 1px;
+                position: relative;
+              }
+
+              .logo::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 60px;
+                height: 3px;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+                border-radius: 2px;
+              }
+
+              .title {
+                font-size: 1.3rem;
+                opacity: 0.95;
+                font-weight: 500;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+              }
+
+              .content {
+                padding: 40px 30px;
+                text-align: center;
+              }
+
+              .warning-icon {
+                font-size: 4rem;
+                color: #f44336;
+                margin-bottom: 20px;
+                animation: shake 2s ease-in-out infinite;
+              }
+
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+              }
+
+              .message {
+                font-size: 1.2rem;
+                color: #424242;
+                margin-bottom: 30px;
+                line-height: 1.6;
+                font-weight: 500;
+              }
+
+              .support-section {
+                background: rgba(244, 67, 54, 0.05);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                padding: 25px 20px;
+                border-radius: 16px;
+                margin: 25px 0;
+                text-align: center;
+                border: 1px solid rgba(244, 67, 54, 0.3);
+                box-shadow:
+                  0 8px 25px rgba(244, 67, 54, 0.1),
+                  inset 0 1px 0 rgba(255,255,255,0.6);
+                position: relative;
+                overflow: hidden;
+              }
+
+              .support-section::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(244, 67, 54, 0.1), transparent);
+                animation: shimmer 3s ease-in-out infinite;
+              }
+
+              @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+              }
+
+              .support-title {
+                font-size: 1.4rem;
+                font-weight: 700;
+                color: #d32f2f;
+                margin-bottom: 15px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                position: relative;
+                z-index: 1;
+              }
+
+              .support-text {
+                font-size: 1rem;
+                color: #666;
+                margin-bottom: 15px;
+                position: relative;
+                z-index: 1;
+              }
+
+              .support-phone {
+                font-size: 1.3rem;
+                font-weight: 800;
+                background: linear-gradient(135deg, #f44336 0%, #ff5722 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                text-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+                position: relative;
+                z-index: 1;
+                direction: ltr;
+                display: inline-block;
+              }
+
+              .back-button {
+                display: inline-block;
+                background: linear-gradient(135deg, #f44336 0%, #ff5722 100%);
+                background-size: 200% 200%;
+                animation: gradientMove 3s ease infinite;
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                font-size: 1rem;
+                font-weight: 600;
+                border-radius: 12px;
+                cursor: pointer;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                text-decoration: none;
+                text-align: center;
+                margin-top: 20px;
+                box-shadow:
+                  0 8px 25px rgba(244, 67, 54, 0.3),
+                  0 0 0 1px rgba(255,255,255,0.2),
+                  inset 0 1px 0 rgba(255,255,255,0.3);
+                position: relative;
+                overflow: hidden;
+                letter-spacing: 1px;
+              }
+
+              .back-button::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                transition: left 0.5s;
+              }
+
+              .back-button:hover::before {
+                left: 100%;
+              }
+
+              .back-button:hover {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow:
+                  0 15px 40px rgba(244, 67, 54, 0.4),
+                  0 0 0 1px rgba(255,255,255,0.3),
+                  inset 0 1px 0 rgba(255,255,255,0.4);
+                animation-duration: 1.5s;
+              }
+
+              .back-button:active {
+                transform: translateY(-1px) scale(1.01);
+              }
+
+              @keyframes gradientMove {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+              }
+
+              .footer {
+                background: rgba(248, 249, 250, 0.8);
+                backdrop-filter: blur(15px);
+                -webkit-backdrop-filter: blur(15px);
+                padding: 20px;
+                text-align: center;
+                border-top: 1px solid rgba(244, 67, 54, 0.2);
+                position: relative;
+                overflow: hidden;
+              }
+
+              .footer::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, rgba(244, 67, 54, 0.5), transparent);
+              }
+
+              @media (max-width: 768px) {
+                body {
+                  padding: 10px;
+                }
+
+                .container {
+                  margin: 5px;
+                  border-radius: 20px;
+                }
+
+                .header {
+                  padding: 30px 20px;
+                }
+
+                .logo {
+                  font-size: 2.2rem;
+                }
+
+                .title {
+                  font-size: 1.1rem;
+                }
+
+                .content {
+                  padding: 30px 20px;
+                }
+
+                .warning-icon {
+                  font-size: 3rem;
+                }
+
+                .message {
+                  font-size: 1.1rem;
+                }
+
+                .support-title {
+                  font-size: 1.2rem;
+                }
+
+                .support-phone {
+                  font-size: 1.2rem;
+                }
+
+                .back-button {
+                  padding: 12px 25px;
+                  font-size: 0.9rem;
+                  margin-top: 15px;
+                }
+              }
+
+              @media (max-width: 480px) {
+                .logo {
+                  font-size: 2rem;
+                }
+
+                .warning-icon {
+                  font-size: 2.5rem;
+                }
+
+                .support-phone {
+                  font-size: 1.1rem;
+                }
+
+                .back-button {
+                  padding: 10px 20px;
+                  font-size: 0.85rem;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <div class="logo">من حقیقی</div>
+                <div class="title">لینک پرداخت</div>
+              </div>
+
+              <div class="content">
+                <div class="warning-icon">⚠️</div>
+                <div class="message">این لینک پرداخت غیرفعال شده است</div>
+
+                <div class="support-section">
+                  <div class="support-title">نیاز به کمک دارید؟</div>
+                  <div class="support-text">برای دریافت پشتیبانی با شماره زیر تماس بگیرید:</div>
+                  <div class="support-phone">${supportPhone}</div>
+                </div>
+
+                <a href="https://manehaghighi.com" class="back-button">بازگشت به سایت</a>
+              </div>
+
+              <div class="footer">
+                <div>© ۲۰۲۴ من حقیقی - تمامی حقوق محفوظ است</div>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        return res.status(200).send(disabledLinkHtml);
+      }
+
       // Return HTML invoice page
       const html = `
         <!DOCTYPE html>
@@ -817,7 +1226,7 @@ export class PaymentsController {
         <body>
           <div class="container">
             <div class="header">
-              <div class="logo">مانه‌حقوقی</div>
+              <div class="logo">من حقیقی</div>
               <div class="title">پیش فاکتور پرداخت</div>
             </div>
 

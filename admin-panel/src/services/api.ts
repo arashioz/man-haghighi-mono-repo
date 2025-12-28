@@ -243,11 +243,17 @@ export const usersService = {
     return response.data;
   },
 
+  getUserByPhone: async (phone: string): Promise<{ id: string; firstName: string; lastName: string; phone: string }> => {
+    const response = await api.get(`/users/by-phone/${phone}`);
+    return response.data;
+  },
+
   createCustomer: async (data: {
     firstName: string;
     lastName: string;
     phone: string;
     password: string;
+    confirmPassword: string;
     role: string;
   }): Promise<User> => {
     const response = await api.post('/users/customer', data);

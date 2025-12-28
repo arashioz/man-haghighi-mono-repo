@@ -634,10 +634,6 @@ export class PaymentsService {
       throw new NotFoundException('لینک پرداخت یافت نشد');
     }
 
-    if (!paymentLink.isActive) {
-      throw new BadRequestException('این لینک پرداخت غیرفعال است');
-    }
-
     if (paymentLink.expiresAt && paymentLink.expiresAt < new Date()) {
       throw new BadRequestException('این لینک پرداخت منقضی شده است');
     }
@@ -647,6 +643,15 @@ export class PaymentsService {
 
   async getPaymentLinkInvoice(linkCode: string, userId?: string) {
     const paymentLink = await this.getPaymentLinkByCode(linkCode);
+
+    // Check if link is inactive
+    if (!paymentLink.isActive) {
+      return {
+        isInactive: true,
+        linkCode: paymentLink.linkCode,
+        customerName: paymentLink.customerName,
+      };
+    }
 
     // If user is provided, use it; otherwise find by phone
     let customerUser = userId
@@ -766,6 +771,11 @@ export class PaymentsService {
 
   async initiatePaymentLinkPayment(linkCode: string, userId?: string) {
     const paymentLink = await this.getPaymentLinkByCode(linkCode);
+
+    // Check if link is inactive
+    if (!paymentLink.isActive) {
+      throw new BadRequestException('این لینک پرداخت غیرفعال است');
+    }
 
     // If user is provided, use it; otherwise find by phone
     let customerUser = userId
