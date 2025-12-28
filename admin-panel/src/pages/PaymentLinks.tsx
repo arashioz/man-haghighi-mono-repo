@@ -52,6 +52,8 @@ const PaymentLinks: React.FC = () => {
   const [isCustomerLinksModalOpen, setIsCustomerLinksModalOpen] = useState(false);
   const [expandedPhones, setExpandedPhones] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<any>(null);
+  const [existingCustomerLinks, setExistingCustomerLinks] = useState<PaymentLink[]>([]);
+  const [loadingCustomerLinks, setLoadingCustomerLinks] = useState(false);
 
   // Loading states for operations
   const [toggleLinkLoading, setToggleLinkLoading] = useState<string | null>(null);
@@ -136,10 +138,28 @@ const PaymentLinks: React.FC = () => {
       setPhoneCheckLoading(true);
       const response = await usersService.checkPhoneExists(phone);
       setCustomerExists(response.exists);
+
+      // If customer exists, fetch their payment links
+      if (response.exists) {
+        setLoadingCustomerLinks(true);
+        try {
+          const links = await paymentsService.getCustomerPaymentLinks(phone);
+          setExistingCustomerLinks(links);
+        } catch (error) {
+          console.error('Error fetching customer links:', error);
+          setExistingCustomerLinks([]);
+        } finally {
+          setLoadingCustomerLinks(false);
+        }
+      } else {
+        setExistingCustomerLinks([]);
+      }
+
       return response.exists;
     } catch (error) {
       console.error('Error checking phone:', error);
       setCustomerExists(null);
+      setExistingCustomerLinks([]);
       return null;
     } finally {
       setPhoneCheckLoading(false);
@@ -171,8 +191,10 @@ const PaymentLinks: React.FC = () => {
         setIsNewCustomerModalOpen(true);
       }
     } else {
-      // Invalid phone, clear name
+      // Invalid phone, clear name and customer data
       setNewLink(prev => ({...prev, customerMobile: phone, customerName: ''}));
+      setCustomerExists(null);
+      setExistingCustomerLinks([]);
     }
   };
 
@@ -822,6 +844,8 @@ const PaymentLinks: React.FC = () => {
           });
           setLinkType('manual');
           setError('');
+          setCustomerExists(null);
+          setExistingCustomerLinks([]);
         }}
         title="ایجاد لینک پرداخت جدید"
       >
@@ -872,12 +896,64 @@ const PaymentLinks: React.FC = () => {
               </p>
             )}
             {customerExists === true && (
-              <p className="text-sm text-green-600 mt-1 flex items-center">
-                <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                مشتری موجود در سیستم
-              </p>
+              <div className="mt-1">
+                <p className="text-sm text-green-600 flex items-center mb-2">
+                  <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  مشتری موجود در سیستم
+                </p>
+
+                {/* Existing payment links */}
+                {loadingCustomerLinks ? (
+                  <div className="text-xs text-gray-500 flex items-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-gray-500 ml-2"></div>
+                    در حال بررسی لینک‌های موجود...
+                  </div>
+                ) : existingCustomerLinks.length > 0 ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-blue-800">
+                        لینک‌های پرداخت موجود ({existingCustomerLinks.length})
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCustomerPhone(newLink.customerMobile);
+                          setCustomerLinks(existingCustomerLinks);
+                          setIsCustomerLinksModalOpen(true);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                      >
+                        مشاهده همه
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {existingCustomerLinks.slice(0, 2).map((link) => (
+                        <div key={link.id} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">
+                            {formatAmount(link.amount)} - {link.description || 'بدون توضیحات'}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            link.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {link.isActive ? 'فعال' : 'غیرفعال'}
+                          </span>
+                        </div>
+                      ))}
+                      {existingCustomerLinks.length > 2 && (
+                        <p className="text-xs text-gray-500 text-center">
+                          و {existingCustomerLinks.length - 2} لینک دیگر...
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    هیچ لینک پرداختی برای این مشتری وجود ندارد
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
