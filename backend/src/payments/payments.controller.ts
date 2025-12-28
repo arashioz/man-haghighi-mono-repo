@@ -317,6 +317,8 @@ export class PaymentsController {
           <title>فاکتور پرداخت - ${invoiceData.invoiceNumber}</title>
           <meta name="description" content="فاکتور پرداخت ${invoiceData.description || 'لینک پرداخت'}">
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap');
+
             * {
               margin: 0;
               padding: 0;
@@ -324,38 +326,120 @@ export class PaymentsController {
             }
 
             body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+              font-family: 'Vazirmatn', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background:
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.3) 0%, transparent 50%),
+                linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background-attachment: fixed;
               min-height: 100vh;
               padding: 20px;
               direction: rtl;
+              position: relative;
+            }
+
+            body::before {
+              content: '';
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.03)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.03)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.02)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+              pointer-events: none;
+              z-index: -1;
             }
 
             .container {
-              max-width: 600px;
+              max-width: 650px;
               margin: 0 auto;
-              background: white;
-              border-radius: 12px;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+              background: rgba(255, 255, 255, 0.95);
+              backdrop-filter: blur(20px);
+              -webkit-backdrop-filter: blur(20px);
+              border-radius: 24px;
+              box-shadow:
+                0 25px 50px rgba(0,0,0,0.15),
+                0 0 0 1px rgba(255,255,255,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
               overflow: hidden;
+              border: 1px solid rgba(255,255,255,0.2);
+              position: relative;
+            }
+
+            .container::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+              background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+              background-size: 300% 100%;
+              animation: gradientShift 4s ease infinite;
+            }
+
+            @keyframes gradientShift {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
             }
 
             .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+              backdrop-filter: blur(10px);
               color: white;
-              padding: 30px 20px;
+              padding: 40px 30px;
               text-align: center;
+              position: relative;
+              overflow: hidden;
+            }
+
+            .header::before {
+              content: '';
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+              animation: shine 6s ease-in-out infinite;
+            }
+
+            @keyframes shine {
+              0%, 100% { transform: rotate(0deg) translate(-50%, -50%); }
+              50% { transform: rotate(180deg) translate(-50%, -50%); }
             }
 
             .logo {
-              font-size: 2rem;
-              font-weight: bold;
-              margin-bottom: 10px;
+              font-size: 2.8rem;
+              font-weight: 800;
+              margin-bottom: 15px;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              background: linear-gradient(45deg, #ffffff, #e8f4fd, #ffffff);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              letter-spacing: 1px;
+              position: relative;
+            }
+
+            .logo::after {
+              content: '';
+              position: absolute;
+              bottom: -5px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 60px;
+              height: 3px;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+              border-radius: 2px;
             }
 
             .title {
-              font-size: 1.5rem;
-              opacity: 0.9;
+              font-size: 1.3rem;
+              opacity: 0.95;
+              font-weight: 500;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.2);
             }
 
             .invoice-content {
@@ -389,40 +473,100 @@ export class PaymentsController {
             }
 
             .amount-highlight {
-              background: #f8f9fa;
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
+              background: rgba(248, 249, 250, 0.9);
+              backdrop-filter: blur(15px);
+              -webkit-backdrop-filter: blur(15px);
+              padding: 30px 25px;
+              border-radius: 20px;
+              margin: 25px 0;
               text-align: center;
-              border: 2px solid #667eea;
+              border: 2px solid rgba(102, 126, 234, 0.4);
+              box-shadow:
+                0 12px 35px rgba(102, 126, 234, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.8),
+                0 0 0 1px rgba(102, 126, 234, 0.1);
+              position: relative;
+              overflow: hidden;
+            }
+
+            .amount-highlight::before {
+              content: '';
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: conic-gradient(from 0deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+              animation: rotate 8s linear infinite;
+              z-index: 0;
+            }
+
+            @keyframes rotate {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
             }
 
             .amount-label {
-              font-size: 0.9rem;
-              color: #666;
-              margin-bottom: 5px;
+              font-size: 1rem;
+              color: #5c6bc0;
+              margin-bottom: 10px;
+              font-weight: 500;
+              position: relative;
+              z-index: 1;
             }
 
             .amount-value {
-              font-size: 2rem;
-              font-weight: bold;
-              color: #667eea;
+              font-size: 2.5rem;
+              font-weight: 800;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              -webkit-background-clip: text;
+              -webkit-text-fill-color: transparent;
+              background-clip: text;
+              text-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+              position: relative;
+              z-index: 1;
             }
 
             .workshop-info {
-              background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-              padding: 20px;
-              border-radius: 8px;
-              margin: 20px 0;
+              background: rgba(227, 242, 253, 0.8);
+              backdrop-filter: blur(15px);
+              -webkit-backdrop-filter: blur(15px);
+              padding: 25px 20px;
+              border-radius: 16px;
+              margin: 25px 0;
               text-align: center;
-              border: 2px solid #2196f3;
+              border: 1px solid rgba(33, 150, 243, 0.3);
+              box-shadow:
+                0 8px 25px rgba(33, 150, 243, 0.1),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+              position: relative;
+              overflow: hidden;
+            }
+
+            .workshop-info::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: -100%;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(90deg, transparent, rgba(33, 150, 243, 0.1), transparent);
+              animation: shimmer 3s ease-in-out infinite;
+            }
+
+            @keyframes shimmer {
+              0% { left: -100%; }
+              100% { left: 100%; }
             }
 
             .workshop-title {
-              font-size: 1.4rem;
-              font-weight: bold;
-              color: #1976d2;
-              margin-bottom: 5px;
+              font-size: 1.6rem;
+              font-weight: 700;
+              color: #1565c0;
+              margin-bottom: 8px;
+              text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+              position: relative;
+              z-index: 1;
             }
 
             .description {
@@ -448,50 +592,124 @@ export class PaymentsController {
               display: block;
               width: 100%;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background-size: 200% 200%;
+              animation: gradientMove 3s ease infinite;
               color: white;
               border: none;
-              padding: 18px;
-              font-size: 1.2rem;
-              font-weight: bold;
-              border-radius: 8px;
+              padding: 20px 25px;
+              font-size: 1.3rem;
+              font-weight: 700;
+              border-radius: 16px;
               cursor: pointer;
-              transition: all 0.3s ease;
+              transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
               text-decoration: none;
               text-align: center;
-              margin-top: 30px;
+              margin-top: 35px;
+              box-shadow:
+                0 8px 25px rgba(102, 126, 234, 0.3),
+                0 0 0 1px rgba(255,255,255,0.2),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+              position: relative;
+              overflow: hidden;
+              letter-spacing: 1px;
+            }
+
+            .pay-button::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: -100%;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+              transition: left 0.5s;
+            }
+
+            .pay-button:hover::before {
+              left: 100%;
             }
 
             .pay-button:hover {
-              transform: translateY(-2px);
-              box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+              transform: translateY(-3px) scale(1.02);
+              box-shadow:
+                0 15px 40px rgba(102, 126, 234, 0.4),
+                0 0 0 1px rgba(255,255,255,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.4);
+              animation-duration: 1.5s;
+            }
+
+            .pay-button:active {
+              transform: translateY(-1px) scale(1.01);
+            }
+
+            @keyframes gradientMove {
+              0%, 100% { background-position: 0% 50%; }
+              50% { background-position: 100% 50%; }
             }
 
             .footer {
-              background: #f8f9fa;
-              padding: 20px;
+              background: rgba(248, 249, 250, 0.8);
+              backdrop-filter: blur(15px);
+              -webkit-backdrop-filter: blur(15px);
+              padding: 30px 25px;
               text-align: center;
-              border-top: 1px solid #eee;
+              border-top: 1px solid rgba(102, 126, 234, 0.2);
+              position: relative;
+              overflow: hidden;
+            }
+
+            .footer::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.5), transparent);
             }
 
             .security-badges {
               display: flex;
               justify-content: center;
-              gap: 15px;
-              margin-bottom: 15px;
+              gap: 20px;
+              margin-bottom: 20px;
+              flex-wrap: wrap;
             }
 
             .badge {
-              background: white;
-              padding: 8px 12px;
-              border-radius: 6px;
-              box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-              font-size: 0.8rem;
-              color: #666;
+              background: rgba(255, 255, 255, 0.9);
+              backdrop-filter: blur(10px);
+              padding: 12px 18px;
+              border-radius: 12px;
+              box-shadow:
+                0 4px 15px rgba(0,0,0,0.1),
+                0 0 0 1px rgba(102, 126, 234, 0.1),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+              font-size: 0.85rem;
+              color: #424242;
+              font-weight: 500;
+              transition: all 0.3s ease;
+              border: 1px solid rgba(102, 126, 234, 0.2);
+            }
+
+            .badge:hover {
+              transform: translateY(-2px);
+              box-shadow:
+                0 8px 25px rgba(102, 126, 234, 0.2),
+                0 0 0 1px rgba(102, 126, 234, 0.2),
+                inset 0 1px 0 rgba(255,255,255,0.9);
             }
 
             .contact-info {
-              font-size: 0.9rem;
-              color: #666;
+              font-size: 1rem;
+              color: #616161;
+              font-weight: 500;
+              margin-top: 15px;
+              padding: 15px 20px;
+              background: rgba(102, 126, 234, 0.05);
+              border-radius: 12px;
+              border: 1px solid rgba(102, 126, 234, 0.1);
+              display: inline-block;
             }
 
             .error-container {
@@ -522,21 +740,76 @@ export class PaymentsController {
             }
 
             @media (max-width: 768px) {
+              body {
+                padding: 10px;
+              }
+
               .container {
-                margin: 10px;
+                margin: 5px;
+                border-radius: 20px;
               }
 
               .header {
-                padding: 20px;
+                padding: 30px 20px;
+              }
+
+              .logo {
+                font-size: 2.2rem;
+              }
+
+              .title {
+                font-size: 1.1rem;
               }
 
               .invoice-content {
-                padding: 20px;
+                padding: 25px 15px;
+              }
+
+              .workshop-title {
+                font-size: 1.4rem;
+              }
+
+              .amount-value {
+                font-size: 2.2rem;
+              }
+
+              .pay-button {
+                padding: 18px 20px;
+                font-size: 1.1rem;
+                margin-top: 25px;
               }
 
               .security-badges {
-                flex-direction: column;
-                gap: 8px;
+                gap: 10px;
+              }
+
+              .badge {
+                padding: 10px 15px;
+                font-size: 0.8rem;
+              }
+
+              .contact-info {
+                font-size: 0.9rem;
+                padding: 12px 18px;
+              }
+            }
+
+            @media (max-width: 480px) {
+              .logo {
+                font-size: 2rem;
+              }
+
+              .amount-value {
+                font-size: 2rem;
+              }
+
+              .workshop-title {
+                font-size: 1.3rem;
+              }
+
+              .badge {
+                padding: 8px 12px;
+                font-size: 0.75rem;
               }
             }
           </style>
@@ -545,7 +818,7 @@ export class PaymentsController {
           <div class="container">
             <div class="header">
               <div class="logo">مانه‌حقوقی</div>
-              <div class="title">فاکتور پرداخت</div>
+              <div class="title">پیش فاکتور پرداخت</div>
             </div>
 
             <div class="invoice-content">

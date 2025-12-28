@@ -545,8 +545,12 @@ model Settings {
   gatewayCallbackUrl String?
   gatewayAutoVerify  Boolean  @default(true)
   gatewayAutoSettle  Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  // Message Template Settings
+  messageTemplateEnabled Boolean @default(true)
+  messageTemplateText    String? @default("سلام {name}\nمبلغ: {amount} تومان\nلینک پرداخت:\n{link}")
+  whatsappTemplateText   String? @default("سلام {name}!\nلینک پرداخت شما آماده است:\n{link}\nمبلغ: {amount} تومان")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@map("settings")
 }

@@ -118,6 +118,21 @@ export class UpdateSettingsDto {
   @IsOptional()
   @IsBoolean()
   gatewayAutoSettle?: boolean;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  messageTemplateEnabled?: boolean;
+
+  @ApiProperty({ example: 'سلام {name}\nمبلغ: {amount} تومان\nلینک پرداخت:\n{link}', required: false })
+  @IsOptional()
+  @IsString()
+  messageTemplateText?: string;
+
+  @ApiProperty({ example: 'سلام {name}!\nلینک پرداخت شما آماده است:\n{link}\nمبلغ: {amount} تومان', required: false })
+  @IsOptional()
+  @IsString()
+  whatsappTemplateText?: string;
 }
 
 

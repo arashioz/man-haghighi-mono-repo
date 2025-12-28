@@ -21,6 +21,9 @@ interface Settings {
   backupFrequency?: string;
   maxUploadSize?: number;
   allowedFileTypes?: string[];
+  messageTemplateEnabled?: boolean;
+  messageTemplateText?: string;
+  whatsappTemplateText?: string;
 }
 
 const SettingsIcon = () => (
@@ -348,6 +351,70 @@ const Settings: React.FC = () => {
               placeholder="مثلاً: image/jpeg, image/png, video/mp4"
             />
           </div>
+        </div>
+
+        {/* Message Template Settings */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">تنظیمات قالب پیام</h2>
+          <div className="flex items-center mb-4">
+            <input
+              type="checkbox"
+              checked={settings.messageTemplateEnabled || false}
+              onChange={(e) => setSettings({...settings, messageTemplateEnabled: e.target.checked})}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label className="mr-2 block text-sm text-gray-900">
+              فعال کردن استفاده از قالب پیام برای کپی و ارسال لینک‌ها
+            </label>
+          </div>
+          {settings.messageTemplateEnabled && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  قالب پیام کپی
+                  <span className="text-xs text-gray-500 mr-2">
+                    (از متغیرهای {'{name}'}, {'{amount}'}, {'{link}'} استفاده کنید)
+                  </span>
+                </label>
+                <textarea
+                  value={settings.messageTemplateText || ''}
+                  onChange={(e) => setSettings({...settings, messageTemplateText: e.target.value})}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="سلام {name}
+مبلغ: {amount} تومان
+لینک پرداخت:
+{link}"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  قالب پیام واتساپ
+                  <span className="text-xs text-gray-500 mr-2">
+                    (از متغیرهای {'{name}'}, {'{amount}'}, {'{link}'} استفاده کنید)
+                  </span>
+                </label>
+                <textarea
+                  value={settings.whatsappTemplateText || ''}
+                  onChange={(e) => setSettings({...settings, whatsappTemplateText: e.target.value})}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="سلام {name}!
+لینک پرداخت شما آماده است:
+{link}
+مبلغ: {amount} تومان"
+                />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">راهنما متغیرها:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li><strong>{'{name}'}</strong>: نام مشتری</li>
+                  <li><strong>{'{amount}'}</strong>: مبلغ به تومان</li>
+                  <li><strong>{'{link}'}</strong>: لینک پرداخت کامل</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end space-x-2 space-x-reverse pt-4">

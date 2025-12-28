@@ -24,6 +24,9 @@ export class SettingsService {
           backupFrequency: 'daily',
           maxUploadSize: 104857600, // 100MB
           allowedFileTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg'],
+          messageTemplateEnabled: true,
+          messageTemplateText: 'سلام {name}\nمبلغ: {amount} تومان\nلینک پرداخت:\n{link}',
+          whatsappTemplateText: 'سلام {name}!\nلینک پرداخت شما آماده است:\n{link}\nمبلغ: {amount} تومان',
         },
       });
     }

@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
-import { paymentsService, usersService, workshopsService, coursesService, API_ORIGIN } from '../services/api';
+import { paymentsService, usersService, workshopsService, coursesService, settingsService, API_ORIGIN } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
 import { Workshop, Course } from '../types';
@@ -50,6 +50,8 @@ const PaymentLinks: React.FC = () => {
   const [selectedCustomerPhone, setSelectedCustomerPhone] = useState<string>('');
   const [customerLinks, setCustomerLinks] = useState<PaymentLink[]>([]);
   const [isCustomerLinksModalOpen, setIsCustomerLinksModalOpen] = useState(false);
+  const [expandedPhones, setExpandedPhones] = useState<Set<string>>(new Set());
+  const [settings, setSettings] = useState<any>(null);
 
   const [newLink, setNewLink] = useState({
     customerName: '',
@@ -77,7 +79,17 @@ const PaymentLinks: React.FC = () => {
   useEffect(() => {
     fetchPaymentLinks();
     fetchAvailableItems();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const data = await settingsService.getSettings();
+      setSettings(data);
+    } catch (err: any) {
+      console.error('Error fetching settings:', err);
+    }
+  };
 
   const fetchAvailableItems = async () => {
     try {
@@ -244,13 +256,24 @@ const PaymentLinks: React.FC = () => {
     return `${siteUrl}/api/payments/pay/${linkCode}`;
   };
 
-  const copyToClipboard = async (text: string, message: string = 'کپی شد!') => {
+  const copyToClipboard = async (link: string, customerName: string, amount: number, message: string = 'کپی شد!') => {
+    let textToCopy = link;
+
+    // Use message template if enabled
+    if (settings?.messageTemplateEnabled && settings?.messageTemplateText) {
+      const amountInToman = Math.round(amount / 10);
+      textToCopy = settings.messageTemplateText
+        .replace(/\{name\}/g, customerName)
+        .replace(/\{amount\}/g, amountInToman.toLocaleString('fa-IR'))
+        .replace(/\{link\}/g, link);
+    }
+
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(textToCopy);
       alert(message);
     } catch (err) {
       const textArea = document.createElement('textarea');
-      textArea.value = text;
+      textArea.value = textToCopy;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
@@ -262,7 +285,18 @@ const PaymentLinks: React.FC = () => {
   const sendWhatsApp = (phone: string, name: string, amount: number, link: string) => {
     const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
     const whatsappPhone = `98${cleanPhone}`;
-    const message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} ریال (${formatAmount(Math.round(amount / 10))} تومان)\nلینک پرداخت:\n${link}`;
+
+    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} ریال (${formatAmount(Math.round(amount / 10))} تومان)\nلینک پرداخت:\n${link}`;
+
+    // Use WhatsApp template if enabled
+    if (settings?.messageTemplateEnabled && settings?.whatsappTemplateText) {
+      const amountInToman = Math.round(amount / 10);
+      message = settings.whatsappTemplateText
+        .replace(/\{name\}/g, name)
+        .replace(/\{amount\}/g, amountInToman.toLocaleString('fa-IR'))
+        .replace(/\{link\}/g, link);
+    }
+
     const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -321,7 +355,17 @@ const PaymentLinks: React.FC = () => {
     }
   };
 
-  const getFilteredLinks = () => {
+  const togglePhoneExpansion = (phone: string) => {
+    const newExpanded = new Set(expandedPhones);
+    if (newExpanded.has(phone)) {
+      newExpanded.delete(phone);
+    } else {
+      newExpanded.add(phone);
+    }
+    setExpandedPhones(newExpanded);
+  };
+
+  const getGroupedLinks = () => {
     let filtered = paymentLinks;
 
     if (searchTerm) {
@@ -345,7 +389,41 @@ const PaymentLinks: React.FC = () => {
         break;
     }
 
-    return filtered;
+    // Group links by phone number
+    const grouped = filtered.reduce((acc, link) => {
+      const phone = link.customerPhone;
+      if (!acc[phone]) {
+        acc[phone] = {
+          phone,
+          customerName: link.customerName,
+          links: [],
+          totalAmount: 0,
+          activeLinks: 0,
+          paidLinks: 0,
+          lastCreated: link.createdAt,
+        };
+      }
+
+      acc[phone].links.push(link);
+      acc[phone].totalAmount += link.amount;
+      if (link.isActive) acc[phone].activeLinks++;
+      if (getPaymentStatus(link) === 'paid') acc[phone].paidLinks++;
+      if (new Date(link.createdAt) > new Date(acc[phone].lastCreated)) {
+        acc[phone].lastCreated = link.createdAt;
+      }
+
+      return acc;
+    }, {} as Record<string, {
+      phone: string;
+      customerName: string;
+      links: PaymentLink[];
+      totalAmount: number;
+      activeLinks: number;
+      paidLinks: number;
+      lastCreated: string;
+    }>);
+
+    return Object.values(grouped).sort((a, b) => new Date(b.lastCreated).getTime() - new Date(a.lastCreated).getTime());
   };
 
   const getStats = () => {
@@ -489,130 +567,214 @@ const PaymentLinks: React.FC = () => {
       </div>
 
       {/* لیست لینک‌ها */}
-      {filteredLinks.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12">
-          <EmptyState
-            icon={
-              <svg className="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            }
-            title="لینک پرداختی یافت نشد"
-            description={searchTerm ? 'نتیجه‌ای برای جستجوی شما یافت نشد' : 'هنوز لینک پرداختی ایجاد نشده است'}
-          />
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مشتری</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مبلغ</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت لینک</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت پرداخت</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">تاریخ ایجاد</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">عملیات</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredLinks.map((link) => {
-                  const paymentUrl = getPaymentUrl(link.linkCode);
-                  const isPaid = link.invoices?.some(inv => inv.status === 'PAID');
-                  
-                  return (
-                    <tr key={link.id} className="hover:bg-gray-50 transition-colors">
+      {(() => {
+        const groupedLinks = getGroupedLinks();
+        return groupedLinks.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-12">
+            <EmptyState
+              icon={
+                <svg className="h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              }
+              title="لینک پرداختی یافت نشد"
+              description={searchTerm ? 'نتیجه‌ای برای جستجوی شما یافت نشد' : 'هنوز لینک پرداختی ایجاد نشده است'}
+            />
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مشتری</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">تعداد لینک</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مجموع مبلغ</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">آمار لینک‌ها</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">آخرین فعالیت</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {groupedLinks.map((group) => (
+                    <tr key={group.phone} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
+                          <button
+                            onClick={() => togglePhoneExpansion(group.phone)}
+                            className="ml-2 p-1 hover:bg-gray-200 rounded transition-colors"
+                          >
+                            <svg
+                              className={`w-4 h-4 transform transition-transform ${expandedPhones.has(group.phone) ? 'rotate-180' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
                           <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold">
-                            {link.customerName?.[0] || '?'}
+                            {group.customerName?.[0] || '?'}
                           </div>
                           <div className="mr-4">
-                            <button
-                              onClick={() => openCustomerLinksModal(link.customerPhone, link.customerName)}
-                              className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-right"
-                            >
-                              {link.customerName}
-                            </button>
-                            <div className="text-sm text-gray-500">{link.customerPhone}</div>
+                            <div className="text-sm font-medium text-gray-900">{group.customerName}</div>
+                            <div className="text-sm text-gray-500">{group.phone}</div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} ریال</div>
-                        <div className="text-sm text-gray-500">{formatAmount(Math.round(link.amount / 10))} تومان</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                          link.isActive
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                          {group.links.length} لینک
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {(() => {
-                          const paymentStatus = getPaymentStatus(link);
-                          return (
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                              paymentStatus === 'paid'
-                                ? 'bg-green-100 text-green-800'
-                                : paymentStatus === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {paymentStatus === 'paid' ? '✅ پرداخت شده' : paymentStatus === 'pending' ? '⏳ در انتظار' : '❌ ناموفق'}
+                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount)} ریال</div>
+                        <div className="text-sm text-gray-500">{formatAmount(Math.round(group.totalAmount / 10))} تومان</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {group.activeLinks} فعال
                             </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatPersianDateTime(link.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedLink(link);
-                              setIsDetailsModalOpen(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="جزئیات"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => copyToClipboard(paymentUrl, 'لینک پرداخت کپی شد!')}
-                            className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="کپی لینک"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => sendWhatsApp(link.customerPhone, link.customerName, link.amount, paymentUrl)}
-                            className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
-                            title="ارسال واتساپ"
-                          >
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                            </svg>
-                          </button>
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                              {group.paidLinks} پرداخت شده
+                            </span>
+                          </div>
                         </div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatPersianDateTime(group.lastCreated)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => openCustomerLinksModal(group.phone, group.customerName)}
+                          className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="مشاهده همه لینک‌ها"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                      </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* لینک‌های گسترده شده */}
+      {getGroupedLinks().map((group) => {
+        if (!expandedPhones.has(group.phone)) return null;
+
+        return (
+          <div key={`expanded-${group.phone}`} className="bg-white rounded-2xl shadow-lg border border-gray-200 mt-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  لینک‌های پرداخت {group.customerName} ({group.phone})
+                </h3>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">مبلغ</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت لینک</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">وضعیت پرداخت</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">تاریخ ایجاد</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">عملیات</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {group.links.map((link) => {
+                    const paymentUrl = getPaymentUrl(link.linkCode);
+                    const isPaid = link.invoices?.some(inv => inv.status === 'PAID');
+
+                    return (
+                      <tr key={link.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} ریال</div>
+                          <div className="text-sm text-gray-500">{formatAmount(Math.round(link.amount / 10))} تومان</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            link.isActive
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {link.isActive ? '🟢 فعال' : '⚫ غیرفعال'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {(() => {
+                            const paymentStatus = getPaymentStatus(link);
+                            return (
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                paymentStatus === 'paid'
+                                  ? 'bg-green-100 text-green-800'
+                                  : paymentStatus === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {paymentStatus === 'paid' ? '✅ پرداخت شده' : paymentStatus === 'pending' ? '⏳ در انتظار' : '❌ ناموفق'}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatPersianDateTime(link.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleLink(link.id)}
+                              className={`px-3 py-1 text-xs rounded transition-colors ${
+                                link.isActive
+                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+                              }`}
+                              title={link.isActive ? 'غیرفعال کردن' : 'فعال کردن'}
+                            >
+                              {link.isActive ? 'غیرفعال' : 'فعال'}
+                            </button>
+                            <button
+                              onClick={() => copyToClipboard(paymentUrl, link.customerName, link.amount, 'پیام کپی شد!')}
+                              className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="کپی پیام"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => sendWhatsApp(link.customerPhone, link.customerName, link.amount, paymentUrl)}
+                              className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                              title="ارسال واتساپ"
+                            >
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
 
       {/* مودال ایجاد لینک */}
       <Modal
@@ -941,7 +1103,7 @@ const PaymentLinks: React.FC = () => {
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-xl bg-gray-50 font-mono text-sm"
                 />
                 <button
-                  onClick={() => copyToClipboard(getPaymentUrl(selectedLink.linkCode), 'لینک کپی شد!')}
+                  onClick={() => copyToClipboard(getPaymentUrl(selectedLink.linkCode), selectedLink.customerName, selectedLink.amount, 'پیام کپی شد!')}
                   className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
                 >
                   کپی
