@@ -580,7 +580,7 @@ export class CoursesService {
     return this.findOne(id);
   }
 
-  async enrollUser(enrollCourseDto: EnrollCourseDto) {
+  async enrollUser(enrollCourseDto: EnrollCourseDto, skipInvoiceCheck = false) {
     const { userId, courseId } = enrollCourseDto;
 
     // Check if already enrolled
@@ -594,6 +594,19 @@ export class CoursesService {
     });
 
     if (existingEnrollment) {
+      // Even if already enrolled, ensure video access exists (in case it was missed)
+      const course = await this.findOne(courseId);
+      if (course.videos && course.videos.length > 0) {
+        const videoAccessData = course.videos.map(video => ({
+          userId,
+          videoId: video.id,
+        }));
+
+        await this.prisma.videoAccess.createMany({
+          data: videoAccessData,
+          skipDuplicates: true,
+        });
+      }
       return existingEnrollment;
     }
 
@@ -606,8 +619,8 @@ export class CoursesService {
 
     const coursePrice = Number(course.price);
 
-    // If course is paid, check if user has purchased it
-    if (coursePrice > 0) {
+    // If course is paid, check if user has purchased it (unless skipInvoiceCheck is true)
+    if (coursePrice > 0 && !skipInvoiceCheck) {
       const paidInvoice = await this.prisma.invoice.findFirst({
         where: {
           userId,

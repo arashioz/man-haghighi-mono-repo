@@ -442,10 +442,11 @@ export class PaymentsService {
 
         // Enroll in course
         try {
+          // Enroll the user (skip invoice check since we just updated the invoice status)
           await this.coursesService.enrollUser({
             userId: transaction.userId,
             courseId: transaction.invoice.courseId,
-          });
+          }, true); // Skip invoice check since we just updated it
 
           await this.prisma.transaction.update({
             where: { id: transaction.id },
