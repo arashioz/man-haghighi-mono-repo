@@ -55,6 +55,11 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
       return null;
     }
 
+    // If value is ISO string, parse it as UTC
+    if (value.includes('T') && value.includes('Z')) {
+      return moment.utc(value);
+    }
+
     const parsed = parseValue(value);
     return parsed.isValid() ? parsed : null;
   }, [value]);
@@ -66,8 +71,9 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
   const handleDateSelect = (date: moment.Moment) => {
     setSelectedDate(date);
 
-    const persianDateString = date.format('jYYYY/jMM/jDD HH:mm');
-    onChange(persianDateString);
+    // ذخیره تاریخ به صورت UTC ISO string برای جلوگیری از مشکل timezone
+    const isoString = date.toISOString();
+    onChange(isoString);
     setIsOpen(false);
   };
 
@@ -174,14 +180,15 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
               <label className="text-sm text-gray-600">ساعت:</label>
               <input
                 type="time"
-                value={selectedDate.format('HH:mm')}
+                value={currentValueMoment ? currentValueMoment.format('HH:mm') : selectedDate.format('HH:mm')}
                 onChange={(e) => {
                   const [hours, minutes] = e.target.value.split(':');
-                  const newDate = selectedDate.clone().hours(parseInt(hours)).minutes(parseInt(minutes));
+                  const baseDate = currentValueMoment || selectedDate;
+                  const newDate = baseDate.clone().hours(parseInt(hours)).minutes(parseInt(minutes));
                   setSelectedDate(newDate);
-                  // استفاده از local time برای جلوگیری از مشکل timezone
-                  const persianDateString = newDate.format('jYYYY/jMM/jDD HH:mm');
-                  onChange(persianDateString);
+                  // ذخیره به صورت ISO string برای جلوگیری از مشکل timezone
+                  const isoString = newDate.toISOString();
+                  onChange(isoString);
                 }}
                 className="px-2 py-1 border border-gray-300 rounded text-sm"
               />
