@@ -443,7 +443,6 @@ const PaymentLinks: React.FC = () => {
   }
 
   const stats = getStats();
-  const filteredLinks = getFilteredLinks();
 
   const isInDashboard = window.location.pathname.includes('sales-dashboard');
 
