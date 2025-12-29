@@ -172,18 +172,28 @@ const PaymentLinks: React.FC = () => {
     if (phone.length === 11 && /^09[0-9]{9}$/.test(phone)) {
       const exists = await checkPhoneExists(phone);
       if (exists === true) {
-        // Phone exists, try to get customer info
+        // Phone exists, try to get customer info and auto-fill name
         try {
           const customer = await usersService.getUserByPhone(phone);
-          if (customer && customer.firstName && customer.lastName) {
+          if (customer && customer.firstName) {
+            // Auto-fill customer name from existing user data
+            const fullName = `${customer.firstName} ${customer.lastName || ''}`.trim();
             setNewLink(prev => ({
               ...prev,
               customerMobile: phone,
-              customerName: `${customer.firstName} ${customer.lastName || ''}`.trim()
+              customerName: fullName
             }));
+            console.log(`Auto-filled customer name: ${fullName}`);
           }
         } catch (error) {
           console.error('Error fetching customer info:', error);
+          // Even if we can't fetch customer info, keep the phone number
+          setNewLink(prev => ({
+            ...prev,
+            customerMobile: phone
+          }));
+          // Show a warning that name couldn't be auto-filled
+          console.warn('Could not auto-fill customer name. User may need to enter it manually.');
         }
       } else if (exists === false) {
         // Phone doesn't exist, clear name and show new customer modal
@@ -543,46 +553,46 @@ const PaymentLinks: React.FC = () => {
         </div>
       )}
 
-      {/* آمار کلی */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">کل لینک‌ها</h3>
-            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {/* آمار کلی - Mobile Optimized */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <h3 className="text-xs sm:text-sm font-medium opacity-90">کل لینک‌ها</h3>
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
           </div>
-          <p className="text-3xl font-bold">{stats.total}</p>
+          <p className="text-xl sm:text-3xl font-bold">{stats.total}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">فعال</h3>
-            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <h3 className="text-xs sm:text-sm font-medium opacity-90">فعال</h3>
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-3xl font-bold">{stats.active}</p>
+          <p className="text-xl sm:text-3xl font-bold">{stats.active}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">پرداخت شده</h3>
-            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <h3 className="text-xs sm:text-sm font-medium opacity-90">پرداخت شده</h3>
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <p className="text-3xl font-bold">{stats.paid}</p>
+          <p className="text-xl sm:text-3xl font-bold">{stats.paid}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">کل فروش (تومان)</h3>
-            <svg className="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-lg col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between mb-1 sm:mb-2">
+            <h3 className="text-xs sm:text-sm font-medium opacity-90">کل فروش</h3>
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-3xl font-bold">{formatAmount(stats.paidAmount)}</p>
+          <p className="text-lg sm:text-3xl font-bold break-all">{formatAmount(stats.paidAmount)}</p>
         </div>
       </div>
 
@@ -901,7 +911,7 @@ const PaymentLinks: React.FC = () => {
                   <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  مشتری موجود در سیستم
+                  مشتری موجود در سیستم {newLink.customerName ? `(${newLink.customerName})` : ''}
                 </p>
 
                 {/* Existing payment links */}
@@ -959,14 +969,23 @@ const PaymentLinks: React.FC = () => {
 
           {/* نام مشتری */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی مشتری</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              نام و نام خانوادگی مشتری
+              {customerExists === true && newLink.customerName && (
+                <span className="text-xs text-green-600 mr-2">(به طور خودکار پر شد)</span>
+              )}
+            </label>
             <input
               type="text"
               value={newLink.customerName}
               onChange={(e) => setNewLink({...newLink, customerName: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                customerExists === true && newLink.customerName
+                  ? 'border-green-300 bg-green-50'
+                  : 'border-gray-300'
+              }`}
               required
-              placeholder="مثال: علی احمدی"
+              placeholder={customerExists === true ? "نام مشتری به طور خودکار پر می‌شود..." : "مثال: علی احمدی"}
             />
           </div>
 

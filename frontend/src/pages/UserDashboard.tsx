@@ -284,21 +284,41 @@ const UserDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:py-6 gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">داشبورد من</h1>
-              <p className="text-gray-600 mt-1 text-sm sm:text-base">خوش آمدید، {user?.firstName} {user?.lastName}</p>
-            </div>
-            <div className="flex items-center space-x-4 space-x-reverse w-full sm:w-auto justify-between sm:justify-end">
-              <div className="text-right">
-                <p className="text-xs sm:text-sm text-gray-500">کیف پول</p>
-                <p className="text-lg sm:text-xl font-bold text-green-600">۰ تومان</p>
+      {/* Header - Mobile Optimized */}
+      <div className="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          {/* Mobile Header - Compact */}
+          <div className="flex lg:hidden items-center justify-between py-3">
+            <div className="flex items-center space-x-3 space-x-reverse">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-sm">
+                  {user?.firstName?.[0]}{user?.lastName?.[0]}
+                </span>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-base sm:text-lg">
+              <div>
+                <h1 className="text-lg font-bold text-gray-900 truncate max-w-[120px]">داشبورد من</h1>
+                <p className="text-gray-600 text-xs truncate max-w-[120px]">خوش آمدید، {user?.firstName}</p>
+              </div>
+            </div>
+            <div className="text-left">
+              <p className="text-xs text-gray-500">کیف پول</p>
+              <p className="text-sm font-bold text-green-600">۰ تومان</p>
+            </div>
+          </div>
+
+          {/* Desktop Header - Full */}
+          <div className="hidden lg:flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">داشبورد من</h1>
+              <p className="text-gray-600 mt-1">خوش آمدید، {user?.firstName} {user?.lastName}</p>
+            </div>
+            <div className="flex items-center space-x-4 space-x-reverse">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">کیف پول</p>
+                <p className="text-xl font-bold text-green-600">۰ تومان</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </span>
               </div>
@@ -307,32 +327,33 @@ const UserDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Main Tabs */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-6 overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 sm:px-6 py-4">
-            <nav className="flex gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 lg:py-8">
+        {/* Main Tabs - Mobile Optimized */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-4 sm:mb-6 overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 py-3 sm:px-6 sm:py-4">
+            {/* Mobile Tabs - Horizontal Scroll */}
+            <nav className="flex gap-2 sm:gap-4 overflow-x-auto pb-1">
               <button
                 onClick={() => setMainTab('dashboard')}
-                className={`flex items-center space-x-2 space-x-reverse px-6 py-3 text-base font-medium rounded-lg transition-all ${
+                className={`flex items-center space-x-2 space-x-reverse px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
                   mainTab === 'dashboard'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className="text-xl">📊</span>
-                <span>داشبورد اصلی</span>
+                <span className="text-lg sm:text-xl">📊</span>
+                <span>داشبورد</span>
               </button>
               <button
                 onClick={() => setMainTab('profile')}
-                className={`flex items-center space-x-2 space-x-reverse px-6 py-3 text-base font-medium rounded-lg transition-all ${
+                className={`flex items-center space-x-2 space-x-reverse px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
                   mainTab === 'profile'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className="text-xl">👤</span>
-                <span>اطلاعات کاربری</span>
+                <span className="text-lg sm:text-xl">👤</span>
+                <span>پروفایل</span>
               </button>
             </nav>
           </div>
@@ -341,19 +362,49 @@ const UserDashboard: React.FC = () => {
         {/* Main Dashboard Tab Content */}
         {mainTab === 'dashboard' && (
           <>
-            {/* Navigation Tabs */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-6 overflow-hidden">
-          <div className="border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-3 sm:px-6 py-3">
-            <nav className="custom-scrollbar flex gap-3 sm:gap-4 overflow-x-auto">
+            {/* Navigation Tabs - Mobile Grid Layout */}
+        <div className="bg-white rounded-xl border border-gray-100 shadow-xl mb-4 sm:mb-6 overflow-hidden">
+          {/* Mobile: Grid Layout for better touch interaction */}
+          <div className="lg:hidden border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 p-3">
+            <div className="grid grid-cols-3 gap-2">
               {tabsConfig.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`tab-pill flex items-center space-x-2 space-x-reverse whitespace-nowrap px-4 py-2 sm:px-5 sm:py-3 text-sm sm:text-base ${
+                  className={`flex flex-col items-center justify-center space-y-1 p-3 rounded-lg transition-all min-h-[70px] ${
+                    activeTab === tab.id
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <span className="text-xl">{tab.icon}</span>
+                  <span className="text-xs font-medium text-center leading-tight">{tab.name}</span>
+                  {tab.count > 0 && (
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                        activeTab === tab.id ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop: Horizontal Scroll Layout */}
+          <div className="hidden lg:block border-b border-gray-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 px-6 py-3">
+            <nav className="custom-scrollbar flex gap-4 overflow-x-auto">
+              {tabsConfig.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`tab-pill flex items-center space-x-2 space-x-reverse whitespace-nowrap px-5 py-3 text-base ${
                     activeTab === tab.id ? 'tab-pill-active' : 'tab-pill-inactive hover:text-gray-700'
                   }`}
                 >
-                  <span className="text-lg sm:text-xl">{tab.icon}</span>
+                  <span className="text-xl">{tab.icon}</span>
                   <span className="font-medium">{tab.name}</span>
                   {tab.count > 0 && (
                     <span
@@ -370,15 +421,15 @@ const UserDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden">
-          <div className="max-h-[82vh] sm:max-h-[86vh] overflow-y-auto custom-scrollbar">
+        {/* Content - Mobile Optimized */}
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-xl sm:shadow-2xl overflow-hidden">
+          <div className="max-h-[75vh] sm:max-h-[82vh] lg:max-h-[86vh] overflow-y-auto custom-scrollbar">
             {activeTab === 'messages' && (
-              <div className="p-4 sm:p-6 space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
+              <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 lg:mb-6 gap-3">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">صندوق پیام‌ها</h2>
-                    <p className="text-gray-600 text-sm">پیام‌های ارسالی توسط تیم ما برای شما</p>
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">صندوق پیام‌ها</h2>
+                    <p className="text-gray-600 text-xs sm:text-sm">پیام‌های ارسالی توسط تیم ما برای شما</p>
                   </div>
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <span className="px-3 py-1 rounded-full text-sm bg-indigo-50 text-indigo-700">
