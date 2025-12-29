@@ -232,7 +232,11 @@ export class PaymentsController {
       },
     });
 
-    return links;
+    // Convert rial amounts back to toman for frontend display
+    return links.map(link => ({
+      ...link,
+      amount: Math.round(Number(link.amount) / 10),
+    }));
   }
 
   @Get('links/customer/:phone')
@@ -264,7 +268,11 @@ export class PaymentsController {
       },
     });
 
-    return links;
+    // Convert rial amounts back to toman for frontend display
+    return links.map(link => ({
+      ...link,
+      amount: Math.round(Number(link.amount) / 10),
+    }));
   }
 
   @Patch('links/:id/toggle')
@@ -1399,6 +1407,44 @@ export class PaymentsController {
   @ApiParam({ name: 'courseId', description: 'شناسه دوره' })
   async getCourseInvoices(@Param('courseId') courseId: string) {
     return this.invoiceService.getCourseInvoices(courseId);
+  }
+
+  @Get('reports/payment-links')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'گزارش واریزی‌های لینک‌های پرداخت' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'تاریخ شروع (ISO string)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'تاریخ پایان (ISO string)' })
+  @ApiQuery({ name: 'salesPersonId', required: false, description: 'شناسه کارشناس فروش' })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'], description: 'وضعیت پرداخت' })
+  @ApiQuery({ name: 'format', required: false, enum: ['json', 'excel'], description: 'فرمت خروجی' })
+  async getPaymentLinksReport(
+    @Req() req,
+    @Res() res,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('salesPersonId') salesPersonId?: string,
+    @Query('status') status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED',
+    @Query('format') format?: 'json' | 'excel'
+  ) {
+    const reportData = await this.paymentsService.getPaymentLinksReport({
+      startDate,
+      endDate,
+      salesPersonId,
+      status,
+      userId: req.user.role === 'SALES_MANAGER' ? req.user.id : undefined,
+      userRole: req.user.role
+    });
+
+    if (format === 'excel') {
+      const excelBuffer = await this.paymentsService.generatePaymentLinksExcelReport(reportData);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=payment-links-report.xlsx');
+      return res.send(excelBuffer);
+    }
+
+    return res.json(reportData);
   }
 }
 

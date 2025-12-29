@@ -373,6 +373,19 @@ export class PaymentsService {
               settleDate: new Date(),
             },
           });
+
+          // Update payment link with payment details for reporting
+          if (transaction.paymentLinkId) {
+            await this.prisma.paymentLink.update({
+              where: { id: transaction.paymentLinkId },
+              data: {
+                status: 'PAID',
+                paidAt: new Date(),
+                cardNumber: transaction.cardHolderPan,
+                trackingNumber: transaction.saleReferenceId,
+              },
+            });
+          }
         }
       } catch (settleError) {
         this.logger.error(`Settle error: ${settleError.message}`);
@@ -542,17 +555,22 @@ export class PaymentsService {
     // Generate unique link code
     const linkCode = `PL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Create payment link
+    // Convert toman to rial for storage (amount comes in toman from frontend)
+    const amountInRial = this.tomanToRial(dto.amount);
+
+    // Create payment link with report fields
     const paymentLink = await this.prisma.paymentLink.create({
       data: {
         linkCode,
         createdById: userId,
-        amount: new Decimal(dto.amount),
+        amount: new Decimal(amountInRial),
         customerName: dto.customerName,
         customerPhone: dto.customerMobile,
         description: dto.description,
         workshopTitle: dto.workshopTitle,
         isActive: true,
+        gatewayName: 'بانک پارسیان', // Default gateway
+        requestTime: new Date(), // Time when link is created
       },
     });
 
@@ -595,6 +613,8 @@ export class PaymentsService {
       success: true,
       paymentLink: {
         ...paymentLink,
+        // Convert rial back to toman for frontend display
+        amount: new Decimal(Math.round(Number(paymentLink.amount) / 10)),
         paymentUrl,
       },
       invoice,
@@ -737,7 +757,7 @@ export class PaymentsService {
 
       return {
         invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
+        amount: Math.round(Number(invoice.amount) / 10), // Convert rial to toman for display
         description: invoice.description,
         customerName: invoice.customerName,
         workshopTitle: paymentLink.workshopTitle,
@@ -897,6 +917,165 @@ export class PaymentsService {
     }
 
     return transaction;
+  }
+
+  async getPaymentLinksReport(filters: {
+    startDate?: string;
+    endDate?: string;
+    salesPersonId?: string;
+    status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+    userId?: string; // For sales manager filtering
+    userRole?: string;
+  }) {
+    const where: any = {
+      // Only payment link transactions
+      paymentLinkId: { not: null },
+    };
+
+    // Date filtering
+    if (filters.startDate || filters.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) {
+        where.createdAt.gte = new Date(filters.startDate);
+      }
+      if (filters.endDate) {
+        where.createdAt.lte = new Date(filters.endDate);
+      }
+    }
+
+    // Status filtering
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    // Sales person filtering
+    if (filters.userRole === 'SALES_MANAGER' && filters.userId) {
+      where.createdBySalesPersonId = filters.userId;
+    } else if (filters.salesPersonId) {
+      where.createdBySalesPersonId = filters.salesPersonId;
+    }
+
+    const transactions = await this.prisma.transaction.findMany({
+      where,
+      include: {
+        paymentLink: {
+          include: {
+            creator: {
+              select: {
+                firstName: true,
+                lastName: true,
+                username: true,
+              }
+            }
+          }
+        },
+        invoice: true,
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Convert to report format
+    return transactions.map(transaction => ({
+      gatewayName: transaction.paymentLink?.gatewayName || 'بانک پارسیان',
+      customerPhone: transaction.paymentLink?.customerPhone || '',
+      orderId: transaction.orderId || '',
+      transactionDate: transaction.createdAt,
+      requestTime: transaction.bpPayRequestDate || transaction.createdAt,
+      amount: Math.round(Number(transaction.amount) / 10), // Convert rial to toman
+      cardNumber: transaction.cardHolderPan || '',
+      trackingNumber: transaction.saleReferenceId || '',
+      status: transaction.status,
+      description: transaction.description || '',
+      salesPerson: transaction.paymentLink?.creator ?
+        `${transaction.paymentLink.creator.firstName || ''} ${transaction.paymentLink.creator.lastName || ''}`.trim() ||
+        transaction.paymentLink.creator.username : '',
+    }));
+  }
+
+  async generatePaymentLinksExcelReport(reportData: any[]) {
+    const ExcelJS = require('exceljs');
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('گزارش واریزی‌ها');
+
+    // Set RTL direction
+    worksheet.views = [{ rightToLeft: true }];
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'بابت (نام درگاه)', key: 'gatewayName', width: 15 },
+      { header: 'شماره همراه', key: 'customerPhone', width: 15 },
+      { header: 'شماره درخواست', key: 'orderId', width: 20 },
+      { header: 'تاریخ تراکنش', key: 'transactionDate', width: 20 },
+      { header: 'زمان درخواست', key: 'requestTime', width: 20 },
+      { header: 'مبلغ (تومان)', key: 'amount', width: 15 },
+      { header: 'شماره کارت', key: 'cardNumber', width: 20 },
+      { header: 'شماره پیگیری', key: 'trackingNumber', width: 20 },
+      { header: 'وضعیت', key: 'status', width: 15 },
+      { header: 'توضیحات', key: 'description', width: 30 },
+      { header: 'کارشناس فروش', key: 'salesPerson', width: 20 },
+    ];
+
+    // Style headers
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6F3FF' }
+    };
+
+    // Add data
+    reportData.forEach(item => {
+      worksheet.addRow({
+        gatewayName: item.gatewayName,
+        customerPhone: item.customerPhone,
+        orderId: item.orderId,
+        transactionDate: this.formatPersianDateTime(item.transactionDate),
+        requestTime: this.formatPersianDateTime(item.requestTime),
+        amount: item.amount.toLocaleString('fa-IR'),
+        cardNumber: item.cardNumber,
+        trackingNumber: item.trackingNumber,
+        status: this.getStatusText(item.status),
+        description: item.description,
+        salesPerson: item.salesPerson,
+      });
+    });
+
+    // Auto-fit columns
+    worksheet.columns.forEach(column => {
+      if (column.width) {
+        column.width = Math.max(column.width, 15);
+      }
+    });
+
+    return await workbook.xlsx.writeBuffer();
+  }
+
+  private formatPersianDateTime(date: Date): string {
+    // Simple Persian date formatting (you might want to use a proper Persian date library)
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZone: 'Asia/Tehran'
+    };
+
+    return new Intl.DateTimeFormat('fa-IR', options).format(date);
+  }
+
+  private getStatusText(status: string): string {
+    const statusMap = {
+      'PENDING': 'در انتظار',
+      'PAID': 'پرداخت شده',
+      'FAILED': 'ناموفق',
+      'CANCELLED': 'لغو شده'
+    };
+    return statusMap[status] || status;
   }
 }
 

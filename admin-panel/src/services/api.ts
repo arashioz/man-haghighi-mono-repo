@@ -259,6 +259,11 @@ export const usersService = {
     const response = await api.post('/users/customer', data);
     return response.data;
   },
+
+  getUsersByRole: async (role: string): Promise<User[]> => {
+    const response = await api.get(`/users?role=${role}&limit=1000`);
+    return response.data.data || [];
+  },
 };
 
 export const messagesService = {
@@ -1594,6 +1599,12 @@ export const paymentsService = {
 
   getCourseInvoices: async (courseId: string) => {
     const response = await api.get(`/payments/course/${courseId}/invoices`);
+    return response.data;
+  },
+
+  getPaymentLinksReport: async (params?: string) => {
+    const url = params ? `/payments/reports/payment-links?${params}` : '/payments/reports/payment-links';
+    const response = await api.get(url);
     return response.data;
   },
 };

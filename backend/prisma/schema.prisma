@@ -659,6 +659,12 @@ model PaymentLink {
   status PaymentStatus @default(PENDING)
   paidAt DateTime?
 
+  // Report fields - ذخیره اطلاعات برای گزارش‌گیری
+  gatewayName         String? // نام درگاه پرداخت (مثل: بانک پارسیان)
+  requestTime         DateTime? // زمان درخواست پرداخت
+  cardNumber          String? // شماره کارت مشتری (در صورت وجود)
+  trackingNumber      String? // شماره پیگیری (در صورت وجود)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
