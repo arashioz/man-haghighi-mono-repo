@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Clean npm cache and install dependencies with legacy peer deps to handle React 19 compatibility
-RUN npm cache clean --force && rm -f package-lock.json yarn.lock && npm install --legacy-peer-deps --force
+RUN  npm install --legacy-peer-deps --force
 
 # Copy source code
 COPY . .
