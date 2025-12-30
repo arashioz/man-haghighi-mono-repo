@@ -4,7 +4,7 @@ echo "🔧 اجرای مستقیم روی سرور - رفع مشکلات دیت�
 echo "⚠️  مطمئن شوید که در دایرکتوری backend هستید!"
 
 # تنظیم متغیرهای محیطی (تغییر دهید)
-DB_PASSWORD="your-actual-db-password"  # پسورد واقعی دیتابیس خود را وارد کنید
+DB_PASSWORD="ChangeThisPassword123!"  # پسورد واقعی دیتابیس خود را وارد کنید
 
 export PGPASSWORD="$DB_PASSWORD"
 
