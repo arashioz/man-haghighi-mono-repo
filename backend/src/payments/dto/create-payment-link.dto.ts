@@ -3,7 +3,7 @@ import { IsNumber, IsString, IsNotEmpty, IsOptional, Min, Matches } from 'class-
 export class CreatePaymentLinkDto {
   @IsString()
   @IsNotEmpty()
-@Matches(/^[^0-9]*$/, {
+@Matches(/^[^0-9\u0660-\u0669\u06F0-\u06F9]+$/, {
   message: 'نام و نام خانوادگی نمی‌تواند شامل عدد باشد'
 })
   customerName: string;

@@ -546,8 +546,8 @@ export class PaymentsService {
       throw new UnauthorizedException('فقط کارشناسان فروش می‌توانند لینک پرداخت ایجاد کنند');
     }
 
-    // Validate customer name (no numbers allowed)
-    const noNumbersRegex = /^[^0-9]*$/;
+    // Validate customer name (no numbers allowed - including Persian numerals)
+    const noNumbersRegex = /^[^0-9\u0660-\u0669\u06F0-\u06F9]+$/;
     if (!noNumbersRegex.test(dto.customerName)) {
       throw new BadRequestException('نام و نام خانوادگی نمی‌تواند شامل عدد باشد');
     }
