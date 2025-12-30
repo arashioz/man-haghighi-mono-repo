@@ -3,10 +3,10 @@
 echo "🔧 اسکریپت رفع مشکلات دیتابیس برای سرور Production"
 echo "⚠️  مطمئن شوید که از دیتابیس backup گرفته‌اید!"
 
-# تنظیم متغیرهای production
-PRODUCTION_HOST="your-production-server.com"
-PRODUCTION_USER="your-ssh-user"
-DB_PASSWORD="your-actual-db-password"
+# تنظیم متغیرهای production (بر اساس server.env)
+PRODUCTION_HOST="185.231.112.84"  # از SERVER_IP در server.env
+PRODUCTION_USER="root"  # تغییر دهید به یوزر واقعی SSH
+DB_PASSWORD="ChangeThisPassword123!"  # از server.env
 
 echo "🔗 اتصال به سرور production..."
 

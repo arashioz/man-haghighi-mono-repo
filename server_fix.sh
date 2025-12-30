@@ -3,8 +3,12 @@
 echo "🔧 اجرای مستقیم روی سرور - رفع مشکلات دیتابیس"
 echo "⚠️  مطمئن شوید که در دایرکتوری backend هستید!"
 
-# تنظیم متغیرهای محیطی (تغییر دهید)
-DB_PASSWORD="ChangeThisPassword123!"  # پسورد واقعی دیتابیس خود را وارد کنید
+# تنظیم متغیرهای محیطی (بر اساس server.env)
+DB_HOST="localhost"
+DB_PORT="5432"
+DB_USER="haghighi_user"
+DB_NAME="haghighi_db"
+DB_PASSWORD="ChangeThisPassword123!"
 
 export PGPASSWORD="$DB_PASSWORD"
 
