@@ -6,7 +6,6 @@ import Dashboard from './pages/Dashboard';
 import UsersManagement from './pages/UsersManagement';
 import SalesPersons from './pages/SalesPersons';
 import SalesManagement from './pages/SalesManagement';
-import MyTeam from './pages/MyTeam';
 import Workshops from './pages/Workshops';
 import MyWorkshops from './pages/MyWorkshops';
 import MyCustomers from './pages/MyCustomers';
@@ -45,7 +44,6 @@ function App() {
                     <Route path="/users-management" element={<UsersManagement />} />
                     <Route path="/sales-persons" element={<SalesPersons />} />
                     <Route path="/sales-management" element={<SalesManagement />} />
-                    <Route path="/my-team" element={<MyTeam />} />
                     <Route path="/workshops" element={<Workshops />} />
                     <Route path="/my-workshops" element={<MyWorkshops />} />
                     <Route path="/my-customers" element={<MyCustomers />} />

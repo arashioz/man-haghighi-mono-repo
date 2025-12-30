@@ -1578,6 +1578,11 @@ export const paymentsService = {
     return response.data;
   },
 
+  getAllPaymentLinks: async () => {
+    const response = await api.get('/payments/links');
+    return response.data;
+  },
+
   togglePaymentLink: async (linkId: string) => {
     const response = await api.patch(`/payments/links/${linkId}/toggle`);
     return response.data;

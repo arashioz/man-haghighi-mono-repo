@@ -4,6 +4,25 @@ import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { formatPersianDateTime } from '../utils/dateUtils';
 
+// تابع تبدیل تاریخ به فارسی
+const formatPersianDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fa-IR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+};
+
+const formatPersianTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fa-IR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date);
+};
+
 interface ReportItem {
   gatewayName: string;
   customerPhone: string;
@@ -134,6 +153,21 @@ const PaymentReports: React.FC = () => {
             جستجو
           </button>
           <button
+            onClick={() => {
+              setFilters({
+                startDate: '',
+                endDate: '',
+                salesPersonId: '',
+                status: '',
+              });
+              fetchReports();
+            }}
+            disabled={loading}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            گزارش کلی
+          </button>
+          <button
             onClick={exportToExcel}
             disabled={exporting || reports.length === 0}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -254,11 +288,11 @@ const PaymentReports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
                       {report.orderId}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatPersianDateTime(new Date(report.transactionDate))}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                      {formatPersianDate(report.transactionDate)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatPersianDateTime(new Date(report.requestTime))}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                      {formatPersianTime(report.requestTime)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                       {formatAmount(report.amount)}

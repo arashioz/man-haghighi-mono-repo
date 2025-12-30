@@ -26,12 +26,12 @@ const SalesPersons: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const [personsResponse, managersData] = await Promise.all([
         usersService.getAll(),
         usersService.getSalesManagers(),
       ]);
-      
+
       const sellers = personsResponse.data.filter(user => user.role === 'SALES_PERSON');
       setSalesPersons(sellers);
       setSalesManagers(managersData);
