@@ -1,13 +1,13 @@
 # Admin Panel Dockerfile - Multi-stage build with security headers
-FROM docker.arvancloud.ir/node:18-alpine as Builder
+FROM docker.arvancloud.ir/node:20-alpine as Builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies with legacy peer deps to handle React 19 compatibility
-RUN npm install --legacy-peer-deps && npm cache clean --force
+# Clean npm cache and install dependencies with legacy peer deps to handle React 19 compatibility
+RUN npm cache clean --force && rm -f package-lock.json && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -20,7 +20,7 @@ ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 RUN npm run build
 
 # Production stage with nginx
-FROM docker.arvancloud.ir/nginx:stable-alpine
+FROM docker.arvancloud.ir/nginx:alpine
 
 # Copy built files with correct ownership
 COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
