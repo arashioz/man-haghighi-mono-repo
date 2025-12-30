@@ -546,10 +546,16 @@ export class PaymentsService {
       throw new UnauthorizedException('فقط کارشناسان فروش می‌توانند لینک پرداخت ایجاد کنند');
     }
 
-    // Validate mobile number
+    // Validate customer name (only Persian characters)
+    const persianNameRegex = /^[\u0600-\u06FF\s]+$/;
+    if (!persianNameRegex.test(dto.customerName)) {
+      throw new BadRequestException('نام و نام خانوادگی باید فقط شامل حروف فارسی باشد');
+    }
+
+    // Validate mobile number (only numbers, starts with 09, 11 digits)
     const mobileRegex = /^09[0-9]{9}$/;
     if (!mobileRegex.test(dto.customerMobile)) {
-      throw new BadRequestException('شماره موبایل نامعتبر است');
+      throw new BadRequestException('شماره موبایل باید با ۰۹ شروع شود و فقط شامل اعداد باشد (۱۱ رقم)');
     }
 
     // Generate unique link code

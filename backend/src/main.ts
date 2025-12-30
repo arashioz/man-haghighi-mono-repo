@@ -66,14 +66,54 @@ async function bootstrap() {
 
   // Enable CORS with simplified configuration
   app.enableCors({
-    origin: [
-      'https://admin.manehaghighi.com',
-      'https://sales.manehaghighi.com',
-      'https://manehaghighi.com',
-      'https://www.manehaghighi.com',
-      'https://api.manehaghighi.com',
-      /\.manehaghighi\.com$/,
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) {
+        logger.log('✅ Allowing request with no origin (mobile app or curl)');
+        return callback(null, true);
+      }
+
+      // Log the incoming origin for debugging
+      logger.log(`🔍 CORS request from origin: ${origin}`);
+
+      // Define allowed origins for both production and development
+      const allowedOrigins = [
+        'https://admin.manehaghighi.com',
+        'https://sales.manehaghighi.com',
+        'https://manehaghighi.com',
+        'https://www.manehaghighi.com',
+        'https://api.manehaghighi.com',
+        // Local development origins
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:3002',
+        /\.manehaghighi\.com$/,
+      ];
+
+      // Check if origin is allowed
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') {
+          const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
+          const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
+          return normalizedAllowed === normalizedOrigin;
+        } else if (allowed instanceof RegExp) {
+          return allowed.test(origin);
+        }
+        return false;
+      });
+
+      if (isAllowed) {
+        logger.log(`✅ CORS allowed for origin: ${origin}`);
+        callback(null, true);
+      } else {
+        logger.warn(`🚫 CORS blocked for origin: ${origin}`);
+        logger.warn(`📋 Allowed origins: ${allowedOrigins.filter(o => typeof o === 'string').join(', ')}`);
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [

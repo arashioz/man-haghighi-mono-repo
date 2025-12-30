@@ -236,7 +236,6 @@ export class PaymentsController {
       },
     });
 
-    // Convert rial amounts back to toman for frontend display
     return links.map(link => ({
       ...link,
       amount: Math.round(Number(link.amount) / 10),
@@ -284,7 +283,6 @@ export class PaymentsController {
           },
         });
 
-        // آمار پرداخت شده و نشده
         const totalLinks = links.length;
         const paidLinks = links.filter(link => link.status === 'PAID').length;
         const unpaidLinks = totalLinks - paidLinks;
@@ -293,7 +291,6 @@ export class PaymentsController {
           .filter(link => link.status === 'PAID')
           .reduce((sum, link) => sum + Number(link.amount), 0);
 
-        // Convert amounts to toman for display
         return {
           salesPerson: {
             ...salesPerson,
