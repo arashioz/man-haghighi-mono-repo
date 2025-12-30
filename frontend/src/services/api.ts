@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { AuthResponse, LoginCredentials, RegisterCredentials, UpdateProfilePayload, User, Slider, Article, Podcast, VideoPodcast, Course, Video, VideoStreamInfo, Audio, AudioStreamInfo, Workshop, Comment, UserMessage } from '../types';
+import { ApiError } from '../contexts/ErrorContext';
 
 const DEFAULT_LOCAL_API = 'http://localhost:3000/api';
 const DEFAULT_SERVER_API = 'https://api.manehaghighi.com/api';
@@ -46,6 +47,13 @@ const getApiBaseUrl = () => {
 export const API_BASE_URL = getApiBaseUrl();
 export const API_ORIGIN = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
 
+// Global error handler that can be set by React components
+let globalErrorHandler: ((error: ApiError) => void) | null = null;
+
+export const setGlobalErrorHandler = (handler: (error: ApiError) => void) => {
+  globalErrorHandler = handler;
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -90,6 +98,24 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle API errors globally
+    if (error.response?.data) {
+      const apiError: ApiError = {
+        message: error.response.data.message || 'خطای نامشخص سرور',
+        statusCode: error.response.data.statusCode,
+        path: error.response.data.path,
+        method: error.response.data.method,
+        timestamp: error.response.data.timestamp,
+        error: error.response.data.error,
+        stack: error.response.data.stack,
+      };
+
+      // Call global error handler if set
+      if (globalErrorHandler) {
+        globalErrorHandler(apiError);
+      }
+    }
+
     // Only redirect to login for 401 errors, not validation errors (400)
     if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
       localStorage.removeItem('token');

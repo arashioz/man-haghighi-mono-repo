@@ -786,7 +786,7 @@ export class PaymentsService {
 
       return {
         invoiceNumber: invoice.invoiceNumber,
-        amount: invoice.amount,
+        amount: Math.round(Number(invoice.amount) / 10), // Convert rial to toman for display
         description: invoice.description,
         customerName: invoice.customerName,
         createdAt: invoice.createdAt,

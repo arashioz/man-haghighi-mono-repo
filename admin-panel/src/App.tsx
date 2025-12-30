@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ErrorProvider } from './contexts/ErrorContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UsersManagement from './pages/UsersManagement';
@@ -25,51 +26,57 @@ import Messages from './pages/Messages';
 import PaymentLinks from './pages/PaymentLinks';
 import SalesDashboard from './pages/SalesDashboard';
 import NotFound from './pages/NotFound';
+import ErrorDisplay from './components/ErrorDisplay';
+import APIErrorHandler from './components/APIErrorHandler';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/sales-dashboard" element={<SalesDashboard />} />
-                    <Route path="/users-management" element={<UsersManagement />} />
-                    <Route path="/sales-persons" element={<SalesPersons />} />
-                    <Route path="/sales-management" element={<SalesManagement />} />
-                    <Route path="/workshops" element={<Workshops />} />
-                    <Route path="/my-workshops" element={<MyWorkshops />} />
-                    <Route path="/my-customers" element={<MyCustomers />} />
-                    <Route path="/sales-report" element={<Dashboard />} />
-                    <Route path="/my-sales-report" element={<Dashboard />} />
-                    <Route path="/sliders" element={<Sliders />} />
-                    <Route path="/articles" element={<Articles />} />
-                    <Route path="/podcasts" element={<Podcasts />} />
-                    <Route path="/courses" element={<Courses />} />
-                    <Route path="/invoices" element={<Invoices />} />
-                    <Route path="/video-podcasts" element={<VideoPodcasts />} />
-                    <Route path="/comments" element={<Comments />} />
-                    <Route path="/messages" element={<Messages />} />
-                    <Route path="/payment-links" element={<PaymentLinks />} />
-                    <Route path="/upload-center" element={<UploadCenter />} />
-                    <Route path="/logs" element={<Logs />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <ErrorProvider>
+      <AuthProvider>
+        <APIErrorHandler />
+        <ErrorDisplay />
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Routes>
+                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/sales-dashboard" element={<SalesDashboard />} />
+                      <Route path="/users-management" element={<UsersManagement />} />
+                      <Route path="/sales-persons" element={<SalesPersons />} />
+                      <Route path="/sales-management" element={<SalesManagement />} />
+                      <Route path="/workshops" element={<Workshops />} />
+                      <Route path="/my-workshops" element={<MyWorkshops />} />
+                      <Route path="/my-customers" element={<MyCustomers />} />
+                      <Route path="/sales-report" element={<Dashboard />} />
+                      <Route path="/my-sales-report" element={<Dashboard />} />
+                      <Route path="/sliders" element={<Sliders />} />
+                      <Route path="/articles" element={<Articles />} />
+                      <Route path="/podcasts" element={<Podcasts />} />
+                      <Route path="/courses" element={<Courses />} />
+                      <Route path="/invoices" element={<Invoices />} />
+                      <Route path="/video-podcasts" element={<VideoPodcasts />} />
+                      <Route path="/comments" element={<Comments />} />
+                      <Route path="/messages" element={<Messages />} />
+                      <Route path="/payment-links" element={<PaymentLinks />} />
+                      <Route path="/upload-center" element={<UploadCenter />} />
+                      <Route path="/logs" element={<Logs />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ErrorProvider>
   );
 }
 

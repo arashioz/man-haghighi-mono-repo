@@ -11,7 +11,6 @@ const Login: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const navigate = useNavigate();
@@ -20,7 +19,6 @@ const Login: React.FC = () => {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
@@ -37,7 +35,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'ارسال کد تایید ناموفق');
+      // Error will be handled globally
     } finally {
       setLoading(false);
     }
@@ -46,7 +44,6 @@ const Login: React.FC = () => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
@@ -54,7 +51,7 @@ const Login: React.FC = () => {
       setSession(response);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'کد تایید نامعتبر است');
+      // Error will be handled globally
     } finally {
       setLoading(false);
     }
@@ -63,21 +60,20 @@ const Login: React.FC = () => {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       // Normalize phone number if login input is a phone number
-      const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput) 
-        ? normalizePhoneNumber(loginInput) 
+      const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
+        ? normalizePhoneNumber(loginInput)
         : loginInput;
-      
+
       await authLogin({
         login: normalizedLogin,
         password: loginPassword,
       });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'ورود ناموفق');
+      // Error will be handled globally
     } finally {
       setLoading(false);
     }
@@ -86,7 +82,6 @@ const Login: React.FC = () => {
   const handleResendOtp = async () => {
     if (countdown > 0) return;
     setLoading(true);
-    setError('');
 
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
@@ -102,7 +97,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'ارسال مجدد کد تایید ناموفق');
+      // Error will be handled globally
     } finally {
       setLoading(false);
     }
@@ -129,7 +124,6 @@ const Login: React.FC = () => {
               type="button"
               onClick={() => {
                 setMode('otp');
-                setError('');
               }}
               className={`px-3 py-1 text-sm rounded-md border ${mode === 'otp' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
             >
@@ -139,7 +133,6 @@ const Login: React.FC = () => {
               type="button"
               onClick={() => {
                 setMode('password');
-                setError('');
               }}
               className={`px-3 py-1 text-sm rounded-md border ${mode === 'password' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
             >
@@ -151,11 +144,6 @@ const Login: React.FC = () => {
         {mode === 'password' ? (
           // Password Login Form
           <form className="mt-8 space-y-6" onSubmit={handlePasswordLogin}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                {error}
-              </div>
-            )}
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
                 <label htmlFor="login" className="sr-only">
@@ -206,7 +194,6 @@ const Login: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setMode('otp');
-                  setError('');
                 }}
                 className="text-sm text-indigo-600 hover:text-indigo-500"
               >
@@ -217,11 +204,6 @@ const Login: React.FC = () => {
         ) : step === 'phone' ? (
           // Phone Number Step
           <form className="mt-8 space-y-6" onSubmit={handleSendOtp}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                {error}
-              </div>
-            )}
             <div>
               <label htmlFor="phone" className="sr-only">
                 شماره تلفن همراه
@@ -253,11 +235,6 @@ const Login: React.FC = () => {
         ) : (
           // OTP Verification Step
           <form className="mt-8 space-y-6" onSubmit={handleVerifyOtp}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
-                {error}
-              </div>
-            )}
             <div>
               <p className="text-sm text-gray-600 mb-2 text-center">
                 کد تایید به شماره {phone} ارسال شد
@@ -311,7 +288,6 @@ const Login: React.FC = () => {
                   onClick={() => {
                     setStep('phone');
                     setOtp('');
-                    setError('');
                   }}
                   className="text-sm text-gray-600 hover:text-gray-800"
                 >
