@@ -211,6 +211,10 @@ export class PaymentsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'لیست لینک‌های پرداخت' })
   async getPaymentLinks(@Req() req) {
+    if (req.user.role === 'SALES_MANAGER' || req.user.role === 'ADMIN') {
+      return this.getAllSalesPersonsPaymentLinks(req);
+    }
+
     const links = await this.prisma.paymentLink.findMany({
       where: {
         createdById: req.user.id,
@@ -237,6 +241,91 @@ export class PaymentsController {
       ...link,
       amount: Math.round(Number(link.amount) / 10),
     }));
+  }
+
+  private async getAllSalesPersonsPaymentLinks(req) {
+    const salesPersons = await this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        isActive: true,
+      },
+    });
+
+    // برای هر فروشنده، لینک‌های پرداخت و آمار را می‌گیریم
+    const salesPersonsWithLinks = await Promise.all(
+      salesPersons.map(async (salesPerson) => {
+        // لینک‌های پرداخت فروشنده
+        const links = await this.prisma.paymentLink.findMany({
+          where: {
+            createdById: salesPerson.id,
+          },
+          include: {
+            invoices: {
+              include: {
+                transactions: {
+                  orderBy: {
+                    createdAt: 'desc',
+                  },
+                  take: 1,
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        // آمار پرداخت شده و نشده
+        const totalLinks = links.length;
+        const paidLinks = links.filter(link => link.status === 'PAID').length;
+        const unpaidLinks = totalLinks - paidLinks;
+        const totalAmount = links.reduce((sum, link) => sum + Number(link.amount), 0);
+        const paidAmount = links
+          .filter(link => link.status === 'PAID')
+          .reduce((sum, link) => sum + Number(link.amount), 0);
+
+        // Convert amounts to toman for display
+        return {
+          salesPerson: {
+            ...salesPerson,
+            fullName: `${salesPerson.firstName || ''} ${salesPerson.lastName || ''}`.trim() || salesPerson.username,
+          },
+          statistics: {
+            totalLinks,
+            paidLinks,
+            unpaidLinks,
+            totalAmount: Math.round(totalAmount / 10), // Convert to toman
+            paidAmount: Math.round(paidAmount / 10), // Convert to toman
+          },
+          links: links.map(link => ({
+            ...link,
+            amount: Math.round(Number(link.amount) / 10), // Convert to toman
+          })),
+        };
+      })
+    );
+
+    return {
+      type: 'sales_manager_view',
+      salesPersons: salesPersonsWithLinks,
+      summary: {
+        totalSalesPersons: salesPersonsWithLinks.length,
+        totalLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.totalLinks, 0),
+        totalPaidLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.paidLinks, 0),
+        totalUnpaidLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.unpaidLinks, 0),
+        totalAmount: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.totalAmount, 0),
+        totalPaidAmount: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.paidAmount, 0),
+      },
+    };
   }
 
   @Get('links/customer/:phone')
