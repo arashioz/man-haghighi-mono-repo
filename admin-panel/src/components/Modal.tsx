@@ -44,7 +44,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
               <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900 flex-1 text-right mr-2 sm:mr-0">{title}</h3>
             </div>
             <div className="max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
-              {children}
+            {children}
             </div>
           </div>
         </div>

@@ -295,10 +295,10 @@ const UserDashboard: React.FC = () => {
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </span>
               </div>
-              <div>
+            <div>
                 <h1 className="text-lg font-bold text-gray-900 truncate max-w-[120px]">داشبورد من</h1>
                 <p className="text-gray-600 text-xs truncate max-w-[120px]">خوش آمدید، {user?.firstName}</p>
-              </div>
+            </div>
             </div>
             <div className="text-left">
               <p className="text-xs text-gray-500">کیف پول</p>

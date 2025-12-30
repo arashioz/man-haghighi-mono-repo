@@ -186,8 +186,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
         <h1 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">من حقیقی</h1>
         <p className="text-xs sm:text-sm text-[#8E8E93]">
-          {user?.role === 'ADMIN' ? 'پنل مدیریت' :
-           user?.role === 'SALES_MANAGER' ? 'پنل مدیر فروش' :
+          {user?.role === 'ADMIN' ? 'پنل مدیریت' : 
+           user?.role === 'SALES_MANAGER' ? 'پنل مدیر فروش' : 
            user?.role === 'SALES_PERSON' ? 'پنل فروشنده' : 'پنل کاربری'}
         </p>
       </div>
@@ -232,9 +232,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <p className="text-xs text-[#8E8E93] flex items-center mt-0.5">
               <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full ml-1.5 sm:ml-1.5"></span>
               <span className="text-xs">
-                {user?.role === 'ADMIN' ? 'مدیر' :
-                 user?.role === 'SALES_MANAGER' ? 'مدیر فروش' :
-                 user?.role === 'SALES_PERSON' ? 'فروشنده' : 'کاربر'}
+              {user?.role === 'ADMIN' ? 'مدیر' : 
+               user?.role === 'SALES_MANAGER' ? 'مدیر فروش' : 
+               user?.role === 'SALES_PERSON' ? 'فروشنده' : 'کاربر'}
               </span>
             </p>
           </div>

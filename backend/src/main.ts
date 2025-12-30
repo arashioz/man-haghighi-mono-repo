@@ -69,17 +69,24 @@ async function bootstrap() {
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl)
       if (!origin) {
+        logger.log('✅ Allowing request with no origin (mobile app or curl)');
         return callback(null, true);
       }
+
+      // Log the incoming origin for debugging
+      logger.log(`🔍 CORS request from origin: ${origin}`);
 
       // Check if origin is allowed
       const isAllowed = allowedOrigins.some(allowed => {
         const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
         const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
-        
+
         // Exact match
-        if (normalizedAllowed === normalizedOrigin) return true;
-        
+        if (normalizedAllowed === normalizedOrigin) {
+          logger.log(`✅ Exact match: ${origin} matches ${allowed}`);
+          return true;
+        }
+
         return false;
       }) || origin.toLowerCase().endsWith('.manehaghighi.com') || origin.toLowerCase() === 'https://manehaghighi.com';
 
@@ -87,10 +94,8 @@ async function bootstrap() {
         callback(null, true);
       } else {
         logger.warn(`🚫 CORS blocked for origin: ${origin}`);
-        logger.debug(`Allowed origins: ${allowedOrigins.join(', ')}`);
-        // We still call callback(null, false) so the browser handles it, 
-        // but it won't have the Access-Control-Allow-Origin header
-        callback(null, false);
+        logger.warn(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
+        callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
