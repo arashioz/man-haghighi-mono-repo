@@ -546,10 +546,10 @@ export class PaymentsService {
       throw new UnauthorizedException('فقط کارشناسان فروش می‌توانند لینک پرداخت ایجاد کنند');
     }
 
-    // Validate customer name (only Persian characters)
-    const persianNameRegex = /^[\u0600-\u06FF\s]+$/;
-    if (!persianNameRegex.test(dto.customerName)) {
-      throw new BadRequestException('نام و نام خانوادگی باید فقط شامل حروف فارسی باشد');
+    // Validate customer name (no numbers allowed)
+    const noNumbersRegex = /^[^0-9]*$/;
+    if (!noNumbersRegex.test(dto.customerName)) {
+      throw new BadRequestException('نام و نام خانوادگی نمی‌تواند شامل عدد باشد');
     }
 
     // Validate mobile number (only numbers, starts with 09, 11 digits)

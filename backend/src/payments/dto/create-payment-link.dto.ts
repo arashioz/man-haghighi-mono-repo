@@ -3,9 +3,9 @@ import { IsNumber, IsString, IsNotEmpty, IsOptional, Min, Matches } from 'class-
 export class CreatePaymentLinkDto {
   @IsString()
   @IsNotEmpty()
-  @Matches(/^[\u0600-\u06FF\s]+$/, {
-    message: 'نام و نام خانوادگی باید فقط شامل حروف فارسی باشد'
-  })
+@Matches(/^[^0-9]*$/, {
+  message: 'نام و نام خانوادگی نمی‌تواند شامل عدد باشد'
+})
   customerName: string;
 
   @IsString()
