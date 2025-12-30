@@ -64,40 +64,16 @@ async function bootstrap() {
 
   logger.log(`✅ CORS enabled for ${allowedOrigins.length} origin(s)`);
 
-  // Enable CORS first (before helmet)
+  // Enable CORS with simplified configuration
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl)
-      if (!origin) {
-        logger.log('✅ Allowing request with no origin (mobile app or curl)');
-        return callback(null, true);
-      }
-
-      // Log the incoming origin for debugging
-      logger.log(`🔍 CORS request from origin: ${origin}`);
-
-      // Check if origin is allowed
-      const isAllowed = allowedOrigins.some(allowed => {
-        const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
-        const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
-
-        // Exact match
-        if (normalizedAllowed === normalizedOrigin) {
-          logger.log(`✅ Exact match: ${origin} matches ${allowed}`);
-          return true;
-        }
-
-        return false;
-      }) || origin.toLowerCase().endsWith('.manehaghighi.com') || origin.toLowerCase() === 'https://manehaghighi.com';
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        logger.warn(`🚫 CORS blocked for origin: ${origin}`);
-        logger.warn(`📋 Allowed origins: ${allowedOrigins.join(', ')}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: [
+      'https://admin.manehaghighi.com',
+      'https://sales.manehaghighi.com',
+      'https://manehaghighi.com',
+      'https://www.manehaghighi.com',
+      'https://api.manehaghighi.com',
+      /\.manehaghighi\.com$/,
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
@@ -118,15 +94,14 @@ async function bootstrap() {
       'X-HTTP-Method-Override',
     ],
     exposedHeaders: [
-      'Content-Length', 
+      'Content-Length',
       'Content-Type',
-      'Content-Range', // Important for video streaming
-      'Accept-Ranges', // Important for video streaming
+      'Content-Range',
+      'Accept-Ranges',
       'Content-Location'
     ],
-    preflightContinue: false,
     optionsSuccessStatus: 204,
-    maxAge: 86400, // Cache preflight requests for 24 hours
+    maxAge: 86400,
   });
 
   app.use(require('express').json({ limit: '10gb' }));
