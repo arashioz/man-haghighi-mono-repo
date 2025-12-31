@@ -48,6 +48,12 @@ const Users: React.FC = () => {
   const [selectedUserForDetails, setSelectedUserForDetails] = useState<User | null>(null);
   const [selectedUserForProducts, setSelectedUserForProducts] = useState<User | null>(null);
   const [selectedUserProductsData, setSelectedUserProductsData] = useState<any>(null);
+
+  // Validation states
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+  const [editFirstNameError, setEditFirstNameError] = useState('');
+  const [editLastNameError, setEditLastNameError] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     phone: '',
@@ -334,6 +340,54 @@ const Users: React.FC = () => {
       });
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در ایجاد کاربر');
+    }
+  };
+
+  // Validation functions
+  const validateName = (name: string): string => {
+    if (!name.trim()) return '';
+
+    // Check if name contains numbers or phone-like patterns
+    const hasNumbers = /\d/.test(name);
+    const looksLikePhone = /^(\+98|0)?9\d{9}$/.test(name.replace(/\s/g, ''));
+
+    if (hasNumbers || looksLikePhone) {
+      return 'نام و نام خانوادگی نمی‌تواند شامل عدد یا شماره تلفن باشد';
+    }
+
+    // Check for very short names (less than 2 characters)
+    if (name.trim().length < 2) {
+      return 'نام و نام خانوادگی باید حداقل ۲ کاراکتر باشد';
+    }
+
+    return '';
+  };
+
+  const handleFirstNameChange = (firstName: string) => {
+    const error = validateName(firstName);
+    setFirstNameError(error);
+    setNewUser({...newUser, firstName});
+  };
+
+  const handleLastNameChange = (lastName: string) => {
+    const error = validateName(lastName);
+    setLastNameError(error);
+    setNewUser({...newUser, lastName});
+  };
+
+  const handleEditFirstNameChange = (firstName: string) => {
+    const error = validateName(firstName);
+    setEditFirstNameError(error);
+    if (editingUser) {
+      setEditingUser({...editingUser, firstName});
+    }
+  };
+
+  const handleEditLastNameChange = (lastName: string) => {
+    const error = validateName(lastName);
+    setEditLastNameError(error);
+    if (editingUser) {
+      setEditingUser({...editingUser, lastName});
     }
   };
 
@@ -941,10 +995,15 @@ const Users: React.FC = () => {
             <input
               type="text"
               value={newUser.firstName}
-              onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleFirstNameChange(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                firstNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              }`}
               required
             />
+            {firstNameError && (
+              <p className="text-sm text-red-600 mt-1">{firstNameError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -953,9 +1012,14 @@ const Users: React.FC = () => {
             <input
               type="text"
               value={newUser.lastName}
-              onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleLastNameChange(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                lastNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+              }`}
             />
+            {lastNameError && (
+              <p className="text-sm text-red-600 mt-1">{lastNameError}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1205,10 +1269,15 @@ const Users: React.FC = () => {
               <input
                 type="text"
                 value={editingUser.firstName || ''}
-                onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleEditFirstNameChange(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  editFirstNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
                 required
               />
+              {editFirstNameError && (
+                <p className="text-sm text-red-600 mt-1">{editFirstNameError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1217,9 +1286,14 @@ const Users: React.FC = () => {
               <input
                 type="text"
                 value={editingUser.lastName || ''}
-                onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleEditLastNameChange(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  editLastNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
               />
+              {editLastNameError && (
+                <p className="text-sm text-red-600 mt-1">{editLastNameError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

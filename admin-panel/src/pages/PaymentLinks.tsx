@@ -75,6 +75,11 @@ const PaymentLinks: React.FC = () => {
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [linkType, setLinkType] = useState<'manual' | 'workshop' | 'course'>('manual');
 
+  // Validation states
+  const [nameError, setNameError] = useState('');
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+
   // New customer creation
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
@@ -429,6 +434,44 @@ const PaymentLinks: React.FC = () => {
       newExpanded.add(phone);
     }
     setExpandedPhones(newExpanded);
+  };
+
+  // Validation functions
+  const validateName = (name: string): string => {
+    if (!name.trim()) return '';
+
+    // Check if name contains numbers or phone-like patterns
+    const hasNumbers = /\d/.test(name);
+    const looksLikePhone = /^(\+98|0)?9\d{9}$/.test(name.replace(/\s/g, ''));
+
+    if (hasNumbers || looksLikePhone) {
+      return 'نام و نام خانوادگی نمی‌تواند شامل عدد یا شماره تلفن باشد';
+    }
+
+    // Check for very short names (less than 2 characters)
+    if (name.trim().length < 2) {
+      return 'نام و نام خانوادگی باید حداقل ۲ کاراکتر باشد';
+    }
+
+    return '';
+  };
+
+  const handleNameChange = (name: string) => {
+    const error = validateName(name);
+    setNameError(error);
+    setNewLink({...newLink, customerName: name});
+  };
+
+  const handleFirstNameChange = (firstName: string) => {
+    const error = validateName(firstName);
+    setFirstNameError(error);
+    setNewCustomerData({...newCustomerData, firstName});
+  };
+
+  const handleLastNameChange = (lastName: string) => {
+    const error = validateName(lastName);
+    setLastNameError(error);
+    setNewCustomerData({...newCustomerData, lastName});
   };
 
   const getGroupedLinks = () => {
@@ -985,15 +1028,20 @@ const PaymentLinks: React.FC = () => {
             <input
               type="text"
               value={newLink.customerName}
-              onChange={(e) => setNewLink({...newLink, customerName: e.target.value})}
+              onChange={(e) => handleNameChange(e.target.value)}
               className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                customerExists === true && newLink.customerName
+                nameError
+                  ? 'border-red-300 focus:ring-red-500'
+                  : customerExists === true && newLink.customerName
                   ? 'border-green-300 bg-green-50'
                   : 'border-gray-300'
               }`}
               required
               placeholder={customerExists === true ? "نام مشتری به طور خودکار پر می‌شود..." : "مثال: علی احمدی"}
             />
+            {nameError && (
+              <p className="text-sm text-red-600 mt-1">{nameError}</p>
+            )}
           </div>
 
           {/* نوع لینک */}
@@ -1444,22 +1492,32 @@ const PaymentLinks: React.FC = () => {
               <input
                 type="text"
                 value={newCustomerData.firstName}
-                onChange={(e) => setNewCustomerData({...newCustomerData, firstName: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleFirstNameChange(e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  firstNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
                 required
                 placeholder="مثال: علی"
               />
+              {firstNameError && (
+                <p className="text-sm text-red-600 mt-1">{firstNameError}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">نام خانوادگی</label>
               <input
                 type="text"
                 value={newCustomerData.lastName}
-                onChange={(e) => setNewCustomerData({...newCustomerData, lastName: e.target.value})}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleLastNameChange(e.target.value)}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  lastNameError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300'
+                }`}
                 required
                 placeholder="مثال: احمدی"
               />
+              {lastNameError && (
+                <p className="text-sm text-red-600 mt-1">{lastNameError}</p>
+              )}
             </div>
           </div>
 
