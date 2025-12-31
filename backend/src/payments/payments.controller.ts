@@ -90,6 +90,19 @@ export class PaymentsController {
     return this.handlePaymentCallback(body, res);
   }
 
+  @Get('receipts/:transactionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'رسید کامل پرداخت (برای فروشندگان و مدیران)' })
+  @ApiParam({ name: 'transactionId', description: 'شناسه تراکنش' })
+  async getPaymentReceipt(
+    @Param('transactionId') transactionId: string,
+    @Req() req,
+  ) {
+    return this.paymentsService.getPaymentReceipt(transactionId, req.user);
+  }
+
   @Get('transactions/:transactionId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -283,13 +296,13 @@ export class PaymentsController {
           },
         });
 
-        const totalLinks = links.length;
-        const paidLinks = links.filter(link => link.status === 'PAID').length;
+        const totalLinks = links?.length || 0;
+        const paidLinks = links?.filter(link => link?.status === 'PAID')?.length || 0;
         const unpaidLinks = totalLinks - paidLinks;
-        const totalAmount = links.reduce((sum, link) => sum + Number(link.amount), 0);
+        const totalAmount = links?.reduce((sum, link) => sum + Number(link?.amount || 0), 0) || 0;
         const paidAmount = links
-          .filter(link => link.status === 'PAID')
-          .reduce((sum, link) => sum + Number(link.amount), 0);
+          ?.filter(link => link?.status === 'PAID')
+          ?.reduce((sum, link) => sum + Number(link?.amount || 0), 0) || 0;
 
         return {
           salesPerson: {
@@ -313,14 +326,14 @@ export class PaymentsController {
 
     return {
       type: 'sales_manager_view',
-      salesPersons: salesPersonsWithLinks,
+      salesPersons: salesPersonsWithLinks || [],
       summary: {
-        totalSalesPersons: salesPersonsWithLinks.length,
-        totalLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.totalLinks, 0),
-        totalPaidLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.paidLinks, 0),
-        totalUnpaidLinks: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.unpaidLinks, 0),
-        totalAmount: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.totalAmount, 0),
-        totalPaidAmount: salesPersonsWithLinks.reduce((sum, sp) => sum + sp.statistics.paidAmount, 0),
+        totalSalesPersons: salesPersonsWithLinks?.length || 0,
+        totalLinks: salesPersonsWithLinks?.reduce((sum, sp) => sum + (sp?.statistics?.totalLinks || 0), 0) || 0,
+        totalPaidLinks: salesPersonsWithLinks?.reduce((sum, sp) => sum + (sp?.statistics?.paidLinks || 0), 0) || 0,
+        totalUnpaidLinks: salesPersonsWithLinks?.reduce((sum, sp) => sum + (sp?.statistics?.unpaidLinks || 0), 0) || 0,
+        totalAmount: salesPersonsWithLinks?.reduce((sum, sp) => sum + (sp?.statistics?.totalAmount || 0), 0) || 0,
+        totalPaidAmount: salesPersonsWithLinks?.reduce((sum, sp) => sum + (sp?.statistics?.paidAmount || 0), 0) || 0,
       },
     };
   }

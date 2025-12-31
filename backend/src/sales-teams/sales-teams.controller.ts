@@ -39,6 +39,16 @@ export class SalesTeamsController {
     return this.salesTeamsService.findOne(id);
   }
 
+  @Get(':id/available-sales-persons')
+  getAvailableSalesPersonsForTeam(@Param('id') id: string) {
+    return this.salesTeamsService.getAvailableSalesPersonsForTeam(id);
+  }
+
+  @Get(':id/all-members')
+  getAllTeamMembers(@Param('id') id: string) {
+    return this.salesTeamsService.getAllTeamMembers(id);
+  }
+
   @Patch(':id')
   @Roles(UserRole.ADMIN)
   update(@Param('id') id: string, @Body() updateSalesTeamDto: UpdateSalesTeamDto) {

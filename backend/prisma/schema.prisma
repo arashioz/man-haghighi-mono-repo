@@ -563,6 +563,9 @@ enum UserRole {
 }
 
 enum PaymentStatus {
+  CREATED
+  GATEWAY_REDIRECTED
+  PAYMENT_TIMEOUT
   PENDING
   PAID
   FAILED

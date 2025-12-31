@@ -53,17 +53,19 @@ export class UsersController {
   @Roles('ADMIN', 'SALES_MANAGER')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get sales persons' })
+  @ApiQuery({ name: 'includeInactive', required: false, type: Boolean, description: 'Include inactive sales persons' })
   @ApiResponse({ status: 200, description: 'Sales persons retrieved successfully' })
-  async getSalesPersons(@Req() req: any) {
+  async getSalesPersons(@Req() req: any, @Query('includeInactive') includeInactive?: string) {
     const userRole = req.user.role;
     const userId = req.user.id;
-    
+    const includeInactiveBool = includeInactive === 'true';
+
     if (userRole === 'ADMIN') {
-      return this.usersService.getSalesPersons();
+      return this.usersService.getSalesPersons(includeInactiveBool);
     } else if (userRole === 'SALES_MANAGER') {
-      return this.usersService.getSalesPersonsByManager(userId);
+      return this.usersService.getSalesPersonsByManager(userId, includeInactiveBool);
     }
-    
+
     return [];
   }
 

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Logger,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -385,6 +386,39 @@ export class PaymentsService {
                 trackingNumber: transaction.saleReferenceId,
               },
             });
+
+            // Send success message to user
+            try {
+              const paymentLink = await this.prisma.paymentLink.findUnique({
+                where: { id: transaction.paymentLinkId },
+                include: { creator: true },
+              });
+
+              if (paymentLink) {
+                const messageTitle = 'پرداخت موفق';
+                const messageBody = `پرداخت شما با موفقیت انجام شد.
+
+اطلاعات پرداخت:
+- مبلغ: ${Math.round(Number(transaction.amount) / 10).toLocaleString('fa-IR')} تومان
+- شماره تراکنش: ${transaction.orderId || 'N/A'}
+- شماره پیگیری: ${transaction.saleReferenceId || 'N/A'}
+- شماره کارت: ${transaction.cardHolderPan ? transaction.cardHolderPan.replace(/\d(?=\d{4})/g, '*') : 'N/A'}
+
+لینک پرداخت: ${paymentLink.linkCode}
+برای مشاهده جزئیات بیشتر به پنل کاربری خود مراجعه کنید.`;
+
+                // Create in-app message
+                await this.prisma.userMessage.create({
+                  data: {
+                    userId: transaction.userId,
+                    messageId: await this.createPaymentSuccessMessage(messageTitle, messageBody, transaction.userId),
+                  },
+                });
+              }
+            } catch (messageError) {
+              this.logger.error(`Failed to send success message: ${messageError.message}`);
+              // Don't fail the payment because of message error
+            }
           }
         }
       } catch (settleError) {
@@ -575,6 +609,7 @@ export class PaymentsService {
         description: dto.description,
         workshopTitle: dto.workshopTitle,
         isActive: true,
+        status: 'CREATED', // New status tracking
         gatewayName: 'بانک پارسیان', // Default gateway
         requestTime: new Date(), // Time when link is created
       },
@@ -998,6 +1033,104 @@ export class PaymentsService {
         `${transaction.paymentLink.creator.firstName || ''} ${transaction.paymentLink.creator.lastName || ''}`.trim() ||
         transaction.paymentLink.creator.username : '',
     }));
+  }
+
+  private async createPaymentSuccessMessage(title: string, body: string, sentById: string): Promise<string> {
+    const message = await this.prisma.message.create({
+      data: {
+        title,
+        body,
+        sendInApp: true,
+        sendSms: false,
+        status: 'SENT',
+        totalRecipients: 1,
+        sentById,
+        createdAt: new Date(),
+      },
+    });
+    return message.id;
+  }
+
+  async getPaymentReceipt(transactionId: string, user: any) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        paymentLink: {
+          include: {
+            creator: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                username: true,
+              },
+            },
+            invoices: true,
+          },
+        },
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('تراکنش یافت نشد');
+    }
+
+    // Get payment link separately
+    const paymentLink = transaction.paymentLink;
+    if (!paymentLink) {
+      throw new NotFoundException('لینک پرداخت یافت نشد');
+    }
+
+    // Check if user has access to this receipt
+    if (user.role !== 'ADMIN') {
+      if (user.role === 'SALES_MANAGER') {
+        // Check if the sales person who created the link is under this manager
+        const salesPerson = await this.prisma.user.findUnique({
+          where: { id: paymentLink.createdById },
+          select: { parentId: true },
+        });
+        if (!salesPerson || salesPerson.parentId !== user.id) {
+          throw new ForbiddenException('شما دسترسی به این رسید ندارید');
+        }
+      } else if (user.role === 'SALES_PERSON' && paymentLink.createdById !== user.id) {
+        throw new ForbiddenException('شما دسترسی به این رسید ندارید');
+      }
+    }
+
+    return {
+      transaction: {
+        id: transaction.id,
+        orderId: transaction.orderId,
+        status: transaction.status,
+        cardNumber: transaction.cardHolderPan,
+        trackingNumber: transaction.saleReferenceId,
+        refId: transaction.refId,
+        amount: Math.round(Number(transaction.amount) / 10), // toman
+        amountRial: Number(transaction.amount), // rial
+        transactionDate: transaction.createdAt,
+        paidAt: transaction.verifyDate || transaction.createdAt,
+        description: transaction.description,
+      },
+      paymentLink: {
+        id: paymentLink.id,
+        linkCode: paymentLink.linkCode,
+        amount: Math.round(Number(paymentLink.amount) / 10), // toman
+        amountRial: Number(paymentLink.amount), // rial
+        customerName: paymentLink.customerName,
+        customerPhone: paymentLink.customerPhone,
+        description: paymentLink.description,
+        workshopTitle: paymentLink.workshopTitle,
+      },
+      invoice: paymentLink.invoices && paymentLink.invoices.length > 0 ? {
+        invoiceNumber: paymentLink.invoices[0].invoiceNumber,
+        status: paymentLink.invoices[0].status,
+        createdAt: paymentLink.invoices[0].createdAt,
+      } : null,
+      salesPerson: paymentLink.creator ? {
+        id: paymentLink.creator.id,
+        name: `${paymentLink.creator.firstName || ''} ${paymentLink.creator.lastName || ''}`.trim() || paymentLink.creator.username,
+      } : null,
+    };
   }
 
   async generatePaymentLinksExcelReport(reportData: any[]) {

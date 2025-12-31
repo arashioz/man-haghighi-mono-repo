@@ -490,7 +490,7 @@ export class WorkshopsService {
 
   async getWorkshopSalesPersonAccess(workshopId: string) {
     const workshop = await this.findOne(workshopId);
-    
+
     return this.prisma.salesPersonWorkshopAccess.findMany({
       where: { workshopId },
       include: {
@@ -513,6 +513,71 @@ export class WorkshopsService {
       },
       orderBy: {
         createdAt: 'desc',
+      },
+    });
+  }
+
+  async getAllWorkshopAccess(workshopId: string) {
+    const workshop = await this.findOne(workshopId);
+
+    return this.prisma.salesPersonWorkshopAccess.findMany({
+      where: { workshopId },
+      include: {
+        salesPerson: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            phone: true,
+            isActive: true,
+          },
+        },
+        granter: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async getAvailableSalesPersonsForWorkshop(workshopId: string) {
+    // فروشنده‌هایی که هنوز به این کارگاه دسترسی ندارند یا دسترسی غیرفعال دارند
+    const existingAccess = await this.prisma.salesPersonWorkshopAccess.findMany({
+      where: {
+        workshopId,
+        isActive: true, // فقط دسترسی‌های فعال را در نظر بگیر
+      },
+      select: { salesPersonId: true },
+    });
+
+    const excludedIds = existingAccess.map(access => access.salesPersonId);
+
+    return this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        // فروشنده‌های غیرفعال را هم شامل شود تا بتوان دوباره اضافه کرد
+        id: {
+          notIn: excludedIds,
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        phone: true,
+        isActive: true,
+      },
+      orderBy: {
+        firstName: 'asc',
       },
     });
   }

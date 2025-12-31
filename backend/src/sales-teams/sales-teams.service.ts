@@ -234,17 +234,46 @@ export class SalesTeamsService {
       throw new BadRequestException('فروشنده معتبر نیست');
     }
 
-    const existingMember = await this.prisma.salesTeamMember.findFirst({
+    // چک کردن عضویت فعال در تیم‌های دیگر
+    const existingActiveMember = await this.prisma.salesTeamMember.findFirst({
       where: {
         salesPersonId,
         isActive: true,
       },
     });
 
-    if (existingMember) {
+    if (existingActiveMember && existingActiveMember.teamId !== teamId) {
       throw new ConflictException('این فروشنده قبلاً در تیم دیگری است');
     }
 
+    // اگر عضو غیرفعال در این تیم وجود دارد، دوباره فعال کن
+    const existingInactiveMember = await this.prisma.salesTeamMember.findFirst({
+      where: {
+        teamId,
+        salesPersonId,
+        isActive: false,
+      },
+    });
+
+    if (existingInactiveMember) {
+      return this.prisma.salesTeamMember.update({
+        where: { id: existingInactiveMember.id },
+        data: { isActive: true },
+        include: {
+          salesPerson: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              username: true,
+              phone: true,
+            },
+          },
+        },
+      });
+    }
+
+    // اگر عضو جدید است، ایجاد کن
     return this.prisma.salesTeamMember.create({
       data: {
         teamId,
@@ -261,6 +290,60 @@ export class SalesTeamsService {
             phone: true,
           },
         },
+      },
+    });
+  }
+
+  async getAvailableSalesPersonsForTeam(teamId: string) {
+    // فروشنده‌هایی که هنوز عضو این تیم نیستند یا عضو غیرفعال هستند
+    const existingMembers = await this.prisma.salesTeamMember.findMany({
+      where: {
+        teamId,
+        isActive: true,
+      },
+      select: { salesPersonId: true },
+    });
+
+    const excludedIds = existingMembers.map(member => member.salesPersonId);
+
+    return this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        isActive: true,
+        id: {
+          notIn: excludedIds,
+        },
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        phone: true,
+      },
+      orderBy: {
+        firstName: 'asc',
+      },
+    });
+  }
+
+  async getAllTeamMembers(teamId: string) {
+    return this.prisma.salesTeamMember.findMany({
+      where: { teamId },
+      include: {
+        salesPerson: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+            phone: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: {
+        joinedAt: 'desc',
       },
     });
   }

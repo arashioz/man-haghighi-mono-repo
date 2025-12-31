@@ -580,10 +580,15 @@ export class UsersService {
       if (password !== confirmPassword) {
         throw new ConflictException('Password and confirm password do not match');
       }
-      
+
       const saltRounds = process.env.NODE_ENV === 'production' ? 12 : 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
       updateData.password = hashedPassword;
+    }
+
+    // اگر کاربر غیرفعال می‌شود، روابط را پاک کن
+    if (isActive === false) {
+      await this.deactivateUserRelations(id);
     }
 
     return this.prisma.user.update({
@@ -591,6 +596,38 @@ export class UsersService {
       data: updateData,
       select: baseUserSelect,
     });
+  }
+
+  async deactivateUserRelations(id: string) {
+    const user = await this.findOne(id);
+
+    // اگر فروشنده است، از تیم‌ها و دسترسی‌های کارگاه حذف شود
+    if (user.role === 'SALES_PERSON') {
+      // حذف از تیم‌های فروش
+      await this.prisma.salesTeamMember.deleteMany({
+        where: { salesPersonId: id },
+      });
+
+      // حذف دسترسی‌های کارگاه
+      await this.prisma.salesPersonWorkshopAccess.deleteMany({
+        where: { salesPersonId: id },
+      });
+    }
+
+    // اگر مدیر فروش است، تیم‌های تحت مدیریت را غیرفعال کن
+    if (user.role === 'SALES_MANAGER') {
+      // تیم‌های تحت مدیریت این مدیر را غیرفعال کن
+      await this.prisma.salesTeam.updateMany({
+        where: { managerId: id },
+        data: { isActive: false },
+      });
+
+      // دسترسی‌های کارگاه داده شده توسط این مدیر را غیرفعال کن
+      await this.prisma.salesPersonWorkshopAccess.updateMany({
+        where: { grantedBy: id },
+        data: { isActive: false },
+      });
+    }
   }
 
   async remove(id: string) {
@@ -765,11 +802,11 @@ export class UsersService {
     });
   }
 
-  async getSalesPersons() {
+  async getSalesPersons(includeInactive = false) {
     return this.prisma.user.findMany({
       where: {
         role: 'SALES_PERSON',
-        isActive: true,
+        ...(includeInactive ? {} : { isActive: true }),
       },
       select: {
         id: true,
@@ -787,11 +824,11 @@ export class UsersService {
     });
   }
 
-  async getSalesPersonsByManager(managerId: string) {
+  async getSalesPersonsByManager(managerId: string, includeInactive = false) {
     return this.prisma.user.findMany({
       where: {
         role: 'SALES_PERSON',
-        isActive: true,
+        ...(includeInactive ? {} : { isActive: true }),
         parentId: managerId,
       },
       select: {

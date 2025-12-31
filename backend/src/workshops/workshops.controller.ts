@@ -270,6 +270,26 @@ export class WorkshopsController {
     return this.workshopsService.getWorkshopSalesPersonAccess(id);
   }
 
+  @Get(':id/available-sales-persons')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get sales persons available for workshop access' })
+  @ApiResponse({ status: 200, description: 'Available sales persons retrieved successfully' })
+  async getAvailableSalesPersonsForWorkshop(@Param('id') workshopId: string) {
+    return this.workshopsService.getAvailableSalesPersonsForWorkshop(workshopId);
+  }
+
+  @Get(':id/all-access')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all workshop access records (active and inactive)' })
+  @ApiResponse({ status: 200, description: 'All access records retrieved successfully' })
+  async getAllWorkshopAccess(@Param('id') workshopId: string) {
+    return this.workshopsService.getAllWorkshopAccess(workshopId);
+  }
+
   @Post(':id/sales-person-access')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SALES_MANAGER')
