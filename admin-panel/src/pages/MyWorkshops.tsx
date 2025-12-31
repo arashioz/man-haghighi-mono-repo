@@ -3,6 +3,9 @@ import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import MobileLayout from '../components/MobileLayout';
+import MobileCard from '../components/MobileCard';
+import MobileModal from '../components/MobileModal';
 import { workshopsService } from '../services/api';
 import { Workshop } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
@@ -68,29 +71,111 @@ const MyWorkshops: React.FC = () => {
 
   if (loading) return <LoadingSpinner />;
 
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="کارگاه‌های من"
-        description="کارگاه‌هایی که دسترسی به آن‌ها دارید"
-      />
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
+  // Mobile Workshop Card Component
+  const MobileWorkshopCard = ({ workshop }: { workshop: Workshop }) => (
+    <MobileCard onClick={() => {
+      setSelectedWorkshop(workshop);
+      setIsModalOpen(true);
+    }}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 text-base mb-1">{workshop.title}</h3>
+          {workshop.description && (
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{workshop.description}</p>
+          )}
         </div>
-      )}
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          workshop.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {workshop.isActive ? 'فعال' : 'غیرفعال'}
+        </span>
+      </div>
 
-      {workshops.length === 0 ? (
-        <EmptyState
-          icon="Workshop"
-          title="کارگاه‌ای یافت نشد"
-          description="در حال حاضر هیچ کارگاه فعالی برای شما تعریف نشده است."
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span className="text-gray-500">تاریخ شروع:</span>
+          <p className="font-medium">{formatPersianDate(new Date(workshop.startDate))}</p>
+        </div>
+        <div>
+          <span className="text-gray-500">ظرفیت:</span>
+          <p className="font-medium">{workshop.capacity} نفر</p>
+        </div>
+        <div>
+          <span className="text-gray-500">مبلغ:</span>
+          <p className="font-medium">{workshop.price?.toLocaleString('fa-IR')} تومان</p>
+        </div>
+        <div>
+          <span className="text-gray-500">شرکت‌کنندگان:</span>
+          <p className="font-medium">{workshop.participants?.length || 0} نفر</p>
+        </div>
+      </div>
+    </MobileCard>
+  );
+
+  return (
+    <div>
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <MobileLayout
+          title="کارگاه‌های من"
+          actions={
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="p-2 bg-blue-600 text-white rounded-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </button>
+          }
+        >
+          {error && (
+            <MobileCard className="bg-red-50 border-red-200">
+              <p className="text-red-700">{error}</p>
+            </MobileCard>
+          )}
+
+          {workshops.length === 0 ? (
+            <MobileCard>
+              <EmptyState
+                icon="Workshop"
+                title="کارگاه‌ای یافت نشد"
+                description="در حال حاضر هیچ کارگاه فعالی برای شما تعریف نشده است."
+              />
+            </MobileCard>
+          ) : (
+            <div className="space-y-4">
+              {workshops.map((workshop) => (
+                <MobileWorkshopCard key={workshop.id} workshop={workshop} />
+              ))}
+            </div>
+          )}
+        </MobileLayout>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:block space-y-6">
+        <PageHeader
+          title="کارگاه‌های من"
+          description="کارگاه‌هایی که دسترسی به آن‌ها دارید"
         />
-      ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <ul className="divide-y divide-gray-200">
-            {workshops.map((workshop) => (
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
+
+        {workshops.length === 0 ? (
+          <EmptyState
+            icon="Workshop"
+            title="کارگاه‌ای یافت نشد"
+            description="در حال حاضر هیچ کارگاه فعالی برای شما تعریف نشده است."
+          />
+        ) : (
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {workshops.map((workshop) => (
               <li key={workshop.id}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
@@ -166,14 +251,95 @@ const MyWorkshops: React.FC = () => {
       )}
 
       {}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedWorkshop(null);
-        }}
-        title="اضافه کردن شرکت‌کننده"
-      >
+      {/* Mobile Modal */}
+      <div className="lg:hidden">
+        <MobileModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedWorkshop(null);
+          }}
+          title="اضافه کردن شرکت‌کننده"
+        >
+          {selectedWorkshop && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-semibold text-gray-900">{selectedWorkshop.title}</h4>
+              <p className="text-sm text-gray-600 mt-1">{selectedWorkshop.description}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleAddParticipant} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                نام مشتری
+              </label>
+              <input
+                type="text"
+                value={participantData.customerName}
+                onChange={(e) => setParticipantData({...participantData, customerName: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                شماره تماس
+              </label>
+              <input
+                type="tel"
+                value={participantData.customerPhone}
+                onChange={(e) => setParticipantData({...participantData, customerPhone: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                مبلغ پیش‌پرداخت (تومان)
+              </label>
+              <input
+                type="number"
+                value={participantData.prepaymentAmount}
+                onChange={(e) => setParticipantData({...participantData, prepaymentAmount: Number(e.target.value)})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min="0"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedWorkshop(null);
+                }}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+              >
+                انصراف
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700"
+              >
+                اضافه کردن
+              </button>
+            </div>
+          </form>
+        </MobileModal>
+      </div>
+
+      {/* Desktop Modal */}
+      <div className="hidden lg:block">
+        <Modal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedWorkshop(null);
+          }}
+          title="اضافه کردن شرکت‌کننده"
+        >
         {selectedWorkshop && (
           <div className="mb-4 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-semibold text-gray-900">{selectedWorkshop.title}</h4>

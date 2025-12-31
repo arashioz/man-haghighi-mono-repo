@@ -9,7 +9,7 @@ import { Roles } from '../auth/roles.decorator';
 @ApiTags('Settings')
 @Controller('settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
+@Roles('ADMIN', 'SALES_MANAGER', 'SALES_PERSON')
 @ApiBearerAuth()
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}

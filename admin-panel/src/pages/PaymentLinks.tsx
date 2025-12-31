@@ -3,6 +3,9 @@ import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import MobileModal from '../components/MobileModal';
+import { MobileFormField, MobileInput, MobileSelect, MobileButton } from '../components/MobileForm';
+import MobileCard from '../components/MobileCard';
 import { paymentsService, usersService, workshopsService, coursesService, settingsService, API_ORIGIN } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
@@ -253,8 +256,8 @@ const PaymentLinks: React.FC = () => {
     try {
       // Amount is always manual - workshop/course prices are just for reference
       const amount = parseFloat(newLink.amount.replace(/,/g, ''));
-      if (isNaN(amount) || amount < 1000) {
-        setError('مبلغ باید حداقل 1000 ریال باشد');
+      if (isNaN(amount) || amount < 100) {
+        setError('مبلغ باید حداقل 100 تومان باشد');
         return;
       }
 
@@ -275,7 +278,7 @@ const PaymentLinks: React.FC = () => {
       await paymentsService.createPaymentLink({
         customerName: newLink.customerName,
         customerMobile: newLink.customerMobile,
-        amount: amount,
+        amount: amount * 10, // Convert Tomans to Rials for API
         description: description || undefined,
       });
 
@@ -429,7 +432,7 @@ const PaymentLinks: React.FC = () => {
   };
 
   const getGroupedLinks = () => {
-    let filtered = paymentLinks;
+    let filtered = Array.isArray(paymentLinks) ? paymentLinks : [];
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -490,11 +493,12 @@ const PaymentLinks: React.FC = () => {
   };
 
   const getStats = () => {
-    const total = paymentLinks.length;
-    const active = paymentLinks.filter(l => l.isActive).length;
-    const paid = paymentLinks.filter(l => l.invoices?.some(inv => inv.status === 'PAID')).length;
-    const totalAmount = paymentLinks.reduce((sum, link) => sum + link.amount, 0);
-    const paidAmount = paymentLinks
+    const links = Array.isArray(paymentLinks) ? paymentLinks : [];
+    const total = links.length;
+    const active = links.filter(l => l.isActive).length;
+    const paid = links.filter(l => l.invoices?.some(inv => inv.status === 'PAID')).length;
+    const totalAmount = links.reduce((sum, link) => sum + link.amount, 0);
+    const paidAmount = links
       .filter(l => l.invoices?.some(inv => inv.status === 'PAID'))
       .reduce((sum, link) => sum + link.amount, 0);
 
@@ -592,7 +596,7 @@ const PaymentLinks: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-lg sm:text-3xl font-bold break-all">{formatAmount(stats.paidAmount)}</p>
+          <p className="text-lg sm:text-3xl font-bold break-all">{formatAmount(stats.paidAmount / 10)}</p>
         </div>
       </div>
 
@@ -690,8 +694,8 @@ const PaymentLinks: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount)} تومان</div>
-                        <div className="text-sm text-gray-500">{formatAmount(group.totalAmount * 10)} ریال</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount / 10)} تومان</div>
+                        <div className="text-sm text-gray-500">{formatAmount(group.totalAmount)} ریال</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -764,8 +768,8 @@ const PaymentLinks: React.FC = () => {
                     return (
                       <tr key={link.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount)} تومان</div>
-                          <div className="text-sm text-gray-500">{formatAmount(link.amount * 10)} ریال</div>
+                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount / 10)} تومان</div>
+                          <div className="text-sm text-gray-500">{formatAmount(link.amount)} ریال</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -797,27 +801,34 @@ const PaymentLinks: React.FC = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleToggleLink(link.id)}
-                              className={`px-3 py-1 text-xs rounded transition-colors ${
-                                link.isActive
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                              title={link.isActive ? 'غیرفعال کردن' : 'فعال کردن'}
-                            >
-                              {link.isActive ? 'غیرفعال' : 'فعال'}
-                            </button>
+                        <button
+                          onClick={() => handleToggleLink(link.id)}
+                          disabled={toggleLinkLoading === link.id}
+                          className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                            link.isActive
+                              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={link.isActive ? 'غیرفعال کردن' : 'فعال کردن'}
+                        >
+                          {toggleLinkLoading === link.id && (
+                            <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
+                          )}
+                          {link.isActive ? 'غیرفعال' : 'فعال'}
+                        </button>
                         <button
                           onClick={() => copyToClipboard(paymentUrl, link.customerName, link.amount, link.id, 'پیام کپی شد!')}
                           disabled={copyLoading === link.id}
                           className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title="کپی پیام"
                         >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                            </button>
+                          {copyLoading === link.id && (
+                            <div className="animate-spin rounded-full h-4 w-4 border border-current border-t-transparent"></div>
+                          )}
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
                             <button
                               onClick={() => sendWhatsApp(link.customerPhone, link.customerName, link.amount, paymentUrl)}
                               className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
@@ -840,7 +851,7 @@ const PaymentLinks: React.FC = () => {
       })}
 
       {/* مودال ایجاد لینک */}
-      <Modal
+      <MobileModal
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
@@ -861,42 +872,33 @@ const PaymentLinks: React.FC = () => {
       >
         <form onSubmit={handleCreateLink} className="space-y-4">
           {/* شماره موبایل - اول */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل مشتری</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={newLink.customerMobile}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^\d]/g, '');
-                  if (value.length <= 11) {
-                    handlePhoneChange(value);
-                  }
-                }}
-                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-                placeholder="09123456789"
-                pattern="09[0-9]{9}"
-              />
-              {phoneCheckLoading && (
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              {customerExists !== null && !phoneCheckLoading && (
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  {customerExists ? (
-                    <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-              )}
-            </div>
+          <MobileFormField label="شماره موبایل مشتری" required>
+            <MobileInput
+              type="text"
+              value={newLink.customerMobile}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                if (value.length <= 11) {
+                  handlePhoneChange(value);
+                }
+              }}
+              icon={phoneCheckLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+              ) : customerExists !== null ? (
+                customerExists ? (
+                  <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                )
+              ) : undefined}
+              placeholder="09123456789"
+              pattern="09[0-9]{9}"
+              required
+            />
             {customerExists === false && (
               <p className="text-sm text-orange-600 mt-1 flex items-center">
                 <svg className="h-4 w-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
@@ -942,7 +944,7 @@ const PaymentLinks: React.FC = () => {
                       {existingCustomerLinks.slice(0, 2).map((link) => (
                         <div key={link.id} className="flex items-center justify-between text-xs">
                           <span className="text-gray-600">
-                            {formatAmount(link.amount)} - {link.description || 'بدون توضیحات'}
+                            {formatAmount(link.amount / 10)} تومان - {link.description || 'بدون توضیحات'}
                           </span>
                           <span className={`px-2 py-1 rounded-full text-xs ${
                             link.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
@@ -965,7 +967,7 @@ const PaymentLinks: React.FC = () => {
                 )}
               </div>
             )}
-          </div>
+          </MobileFormField>
 
           {/* نام مشتری */}
           <div>
@@ -1054,7 +1056,7 @@ const PaymentLinks: React.FC = () => {
                   setNewLink({
                     ...newLink,
                     workshopId,
-                    amount: workshop ? Math.round(workshop.price).toString() : '',
+                    amount: workshop ? Math.round(workshop.price / 10).toString() : '', // Convert to Tomans
                   });
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -1063,14 +1065,14 @@ const PaymentLinks: React.FC = () => {
                 <option value="">انتخاب کارگاه...</option>
                 {availableWorkshops.map((workshop) => (
                   <option key={workshop.id} value={workshop.id}>
-                    {workshop.title} - {workshop.price.toLocaleString('fa-IR')} تومان
+                    {workshop.title} - {Math.round(workshop.price / 10).toLocaleString('fa-IR')} تومان
                   </option>
                 ))}
               </select>
               {newLink.workshopId && (
                 <p className="text-sm text-gray-500 mt-1">
-                  مبلغ: {formatAmount(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} تومان
-                  ({formatAmount((availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0) * 10)} ریال)
+                  مبلغ: {formatAmount((availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0) / 10)} تومان
+                  ({formatAmount(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
@@ -1088,7 +1090,7 @@ const PaymentLinks: React.FC = () => {
                   setNewLink({
                     ...newLink,
                     courseId,
-                    amount: course ? Math.round(course.price).toString() : '',
+                    amount: course ? Math.round(course.price / 10).toString() : '', // Convert to Tomans
                   });
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -1097,21 +1099,21 @@ const PaymentLinks: React.FC = () => {
                 <option value="">انتخاب دوره...</option>
                 {availableCourses.map((course) => (
                   <option key={course.id} value={course.id}>
-                    {course.title} - {course.price.toLocaleString('fa-IR')} تومان
+                    {course.title} - {Math.round(course.price / 10).toLocaleString('fa-IR')} تومان
                   </option>
                 ))}
               </select>
               {newLink.courseId && (
                 <p className="text-sm text-gray-500 mt-1">
-                  مبلغ: {formatAmount(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} تومان
-                  ({formatAmount((availableCourses.find(c => c.id === newLink.courseId)?.price || 0) * 10)} ریال)
+                  مبلغ: {formatAmount((availableCourses.find(c => c.id === newLink.courseId)?.price || 0) / 10)} تومان
+                  ({formatAmount(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان)</label>
             <input
               type="text"
               value={newLink.amount}
@@ -1176,7 +1178,7 @@ const PaymentLinks: React.FC = () => {
             </button>
           </div>
         </form>
-      </Modal>
+      </MobileModal>
 
       {/* مودال جزئیات */}
       {selectedLink && (
@@ -1199,7 +1201,7 @@ const PaymentLinks: React.FC = () => {
                 <div>
                   <p className="text-sm text-gray-600">مبلغ</p>
                   <p className="text-base font-medium text-gray-900">
-                    {formatAmount(selectedLink.amount)} تومان ({formatAmount(selectedLink.amount * 10)} ریال)
+                    {formatAmount(selectedLink.amount / 10)} تومان ({formatAmount(selectedLink.amount)} ریال)
                   </p>
                 </div>
                 <div>
@@ -1314,7 +1316,7 @@ const PaymentLinks: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-sm font-medium text-gray-900">
-                            مبلغ: {formatAmount(link.amount)} تومان ({formatAmount(link.amount * 10)} ریال)
+                            مبلغ: {formatAmount(link.amount / 10)} تومان ({formatAmount(link.amount)} ریال)
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mb-2">

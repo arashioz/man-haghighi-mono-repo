@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
+import MobileLayout from '../components/MobileLayout';
+import MobileCard from '../components/MobileCard';
 
 const MyCustomers: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -24,17 +26,33 @@ const MyCustomers: React.FC = () => {
 
   return (
     <div>
-      <PageHeader 
-        title="مشتریان من" 
-        description="لیست مشتریان شما"
-      />
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <MobileLayout title="مشتریان من">
+          <MobileCard>
+            <EmptyState
+              icon={<PeopleIcon />}
+              title="مشتری یافت نشد"
+              description="هنوز مشتریای ثبت نشده است."
+            />
+          </MobileCard>
+        </MobileLayout>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <EmptyState
-          icon={<PeopleIcon />}
-          title="مشتری یافت نشد"
-          description="هنوز مشتریای ثبت نشده است."
+      {/* Desktop Layout */}
+      <div className="hidden lg:block">
+        <PageHeader
+          title="مشتریان من"
+          description="لیست مشتریان شما"
         />
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <EmptyState
+            icon={<PeopleIcon />}
+            title="مشتری یافت نشد"
+            description="هنوز مشتریای ثبت نشده است."
+          />
+        </div>
       </div>
     </div>
   );

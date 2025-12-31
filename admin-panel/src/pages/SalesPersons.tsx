@@ -4,6 +4,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import UserDetailsModal from '../components/UserDetailsModal';
 import Modal from '../components/Modal';
+import MobileLayout from '../components/MobileLayout';
+import MobileCard from '../components/MobileCard';
+import MobileModal from '../components/MobileModal';
 import { usersService, workshopsService } from '../services/api';
 import { User, Workshop } from '../types';
 

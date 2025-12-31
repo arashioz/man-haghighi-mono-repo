@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AudioPlayButton from '../components/AudioPlayButton';
+import MobileLayout from '../components/MobileLayout';
+import MobileCard from '../components/MobileCard';
 import { useNavigate } from 'react-router-dom';
 import { coursesService, videosService, audiosService, workshopsService, authService, messagesService, paymentsService } from '../services/api';
 import { Course, Video, Audio, Workshop, UserMessage } from '../types';
