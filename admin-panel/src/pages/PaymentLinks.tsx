@@ -925,9 +925,14 @@ const PaymentLinks: React.FC = () => {
                 ) : existingCustomerLinks.length > 0 ? (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-medium text-blue-800">
-                        لینک‌های پرداخت موجود ({existingCustomerLinks.length})
-                      </p>
+                      <div>
+                        <p className="text-xs font-medium text-blue-800">
+                          لینک‌های پرداخت موجود ({existingCustomerLinks.length})
+                        </p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          مجموع: {formatAmount(existingCustomerLinks.reduce((sum, link) => sum + link.amount, 0) / 10)} تومان
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1297,6 +1302,10 @@ const PaymentLinks: React.FC = () => {
             </p>
             <p className="text-sm text-blue-800 mt-1">
               <strong>تعداد لینک‌ها:</strong> {customerLinks.length}
+            </p>
+            <p className="text-sm text-blue-800 mt-1">
+              <strong>مجموع مبلغ:</strong> {formatAmount(customerLinks.reduce((sum, link) => sum + link.amount, 0) / 10)} تومان
+              ({formatAmount(customerLinks.reduce((sum, link) => sum + link.amount, 0))} ریال)
             </p>
           </div>
 

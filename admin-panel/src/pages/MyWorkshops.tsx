@@ -10,6 +10,52 @@ import { workshopsService } from '../services/api';
 import { Workshop } from '../types';
 import { formatPersianDate } from '../utils/dateUtils';
 
+// Mobile Workshop Card Component
+const MobileWorkshopCard = ({
+  workshop,
+  onClick
+}: {
+  workshop: Workshop;
+  onClick: () => void;
+}) => {
+  return (
+    <MobileCard onClick={onClick}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 text-base mb-1">{workshop.title}</h3>
+          {workshop.description && (
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{workshop.description}</p>
+          )}
+        </div>
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+          workshop.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+        }`}>
+          {workshop.isActive ? 'فعال' : 'غیرفعال'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span className="text-gray-500">تاریخ شروع:</span>
+          <p className="font-medium">{workshop.startDate ? formatPersianDate(new Date(workshop.startDate)) : 'نامشخص'}</p>
+        </div>
+        <div>
+          <span className="text-gray-500">ظرفیت:</span>
+          <p className="font-medium">{workshop.capacity} نفر</p>
+        </div>
+        <div>
+          <span className="text-gray-500">مبلغ:</span>
+          <p className="font-medium">{workshop.price?.toLocaleString('fa-IR')} تومان</p>
+        </div>
+        <div>
+          <span className="text-gray-500">شرکت‌کنندگان:</span>
+          <p className="font-medium">{workshop.participants?.length || 0} نفر</p>
+        </div>
+      </div>
+    </MobileCard>
+  );
+};
+
 const MyWorkshops: React.FC = () => {
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,46 +117,6 @@ const MyWorkshops: React.FC = () => {
 
   if (loading) return <LoadingSpinner />;
 
-  // Mobile Workshop Card Component
-  const MobileWorkshopCard = ({ workshop }: { workshop: Workshop }) => (
-    <MobileCard onClick={() => {
-      setSelectedWorkshop(workshop);
-      setIsModalOpen(true);
-    }}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 text-base mb-1">{workshop.title}</h3>
-          {workshop.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{workshop.description}</p>
-          )}
-        </div>
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          workshop.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {workshop.isActive ? 'فعال' : 'غیرفعال'}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <span className="text-gray-500">تاریخ شروع:</span>
-          <p className="font-medium">{formatPersianDate(new Date(workshop.startDate))}</p>
-        </div>
-        <div>
-          <span className="text-gray-500">ظرفیت:</span>
-          <p className="font-medium">{workshop.capacity} نفر</p>
-        </div>
-        <div>
-          <span className="text-gray-500">مبلغ:</span>
-          <p className="font-medium">{workshop.price?.toLocaleString('fa-IR')} تومان</p>
-        </div>
-        <div>
-          <span className="text-gray-500">شرکت‌کنندگان:</span>
-          <p className="font-medium">{workshop.participants?.length || 0} نفر</p>
-        </div>
-      </div>
-    </MobileCard>
-  );
 
   return (
     <div>
@@ -146,7 +152,14 @@ const MyWorkshops: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {workshops.map((workshop) => (
-                <MobileWorkshopCard key={workshop.id} workshop={workshop} />
+                <MobileWorkshopCard
+                  key={workshop.id}
+                  workshop={workshop}
+                  onClick={() => {
+                    setSelectedWorkshop(workshop);
+                    setIsModalOpen(true);
+                  }}
+                />
               ))}
             </div>
           )}
@@ -249,8 +262,8 @@ const MyWorkshops: React.FC = () => {
           </ul>
         </div>
       )}
+      </div>
 
-      {}
       {/* Mobile Modal */}
       <div className="lg:hidden">
         <MobileModal
@@ -412,6 +425,7 @@ const MyWorkshops: React.FC = () => {
           </div>
         </form>
       </Modal>
+    </div>
     </div>
   );
 };

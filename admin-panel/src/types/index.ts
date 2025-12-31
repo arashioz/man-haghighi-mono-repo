@@ -61,7 +61,9 @@ export interface Workshop {
   title: string;
   description?: string;
   date: string;
+  startDate?: string;
   location?: string;
+  capacity?: number;
   maxParticipants?: number;
   price: number;
   thumbnail?: string;

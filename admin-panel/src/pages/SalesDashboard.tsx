@@ -57,7 +57,7 @@ const SalesDashboard: React.FC = () => {
     label: tab.label,
     icon: React.cloneElement(tab.icon as React.ReactElement, {
       className: 'w-5 h-5'
-    })
+    } as any)
   }));
 
   return (
@@ -126,11 +126,11 @@ const SalesDashboard: React.FC = () => {
         </MobileLayout>
 
         {/* Mobile Tab Navigation */}
-        <MobileTabNavigation
-          tabs={mobileTabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
+          <MobileTabNavigation
+            tabs={mobileTabs}
+            activeTab={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as TabType)}
+          />
       </div>
     </>
   );
