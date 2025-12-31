@@ -117,20 +117,22 @@ const SalesDashboard: React.FC = () => {
 
       {/* Mobile Layout */}
       <div className="lg:hidden">
-        <MobileLayout title="داشبورد فروش">
-          <div className="space-y-4">
-            {activeTab === 'payment-links' && <PaymentLinks />}
-            {activeTab === 'sales-persons' && user?.role === 'ADMIN' && <SalesPersons />}
-            {activeTab === 'reports' && <PaymentReports />}
-          </div>
-        </MobileLayout>
+        {activeTab === 'payment-links' && (
+          <PaymentLinks />
+        )}
+        {activeTab === 'sales-persons' && user?.role === 'ADMIN' && (
+          <SalesPersons />
+        )}
+        {activeTab === 'reports' && (
+          <PaymentReports />
+        )}
 
         {/* Mobile Tab Navigation */}
-          <MobileTabNavigation
-            tabs={mobileTabs}
-            activeTab={activeTab}
-            onTabChange={(tabId) => setActiveTab(tabId as TabType)}
-          />
+        <MobileTabNavigation
+          tabs={mobileTabs}
+          activeTab={activeTab}
+          onTabChange={(tabId) => setActiveTab(tabId as TabType)}
+        />
       </div>
     </>
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { paymentsService, usersService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
+import MobileLayout from '../components/MobileLayout';
 
 // تابع تبدیل تاریخ به فارسی
 const formatPersianDate = (dateString: string) => {
@@ -135,9 +136,24 @@ const PaymentReports: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      {/* Mobile Layout */}
+      <div className="lg:hidden">
+        <MobileLayout title="گزارش‌گیری">
+          <div className="p-4">
+            <div className="text-center py-8">
+              <p className="text-gray-600">این بخش در موبایل در حال توسعه است.</p>
+              <p className="text-sm text-gray-500 mt-2">لطفاً از نسخه دسکتاپ استفاده کنید.</p>
+            </div>
+          </div>
+        </MobileLayout>
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden lg:block">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">گزارش‌گیری واریزی‌ها</h2>
           <p className="text-gray-600 mt-1">گزارش کامل تراکنش‌های لینک‌های پرداخت</p>
@@ -328,6 +344,8 @@ const PaymentReports: React.FC = () => {
           </p>
         </div>
       )}
+      </div>
+    </div>
     </div>
   );
 };
