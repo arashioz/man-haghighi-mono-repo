@@ -44,6 +44,59 @@ export class PaymentsService {
     return Math.round(tomanAmount * 10);
   }
 
+  private getBankNameFromCardNumber(cardNumber?: string): string {
+    if (!cardNumber || cardNumber.length < 6) {
+      return 'بانک پارسیان'; // Default gateway
+    }
+
+    const bin = cardNumber.substring(0, 6);
+
+    // Iranian bank BIN codes
+    const bankBins: { [key: string]: string } = {
+      '603799': 'بانک ملی ایران',
+      '589210': 'بانک سپه',
+      '627648': 'بانک توسعه صادرات',
+      '627961': 'بانک صنعت و معدن',
+      '603770': 'بانک کشاورزی',
+      '628023': 'بانک مسکن',
+      '627760': 'پست بانک ایران',
+      '502908': 'بانک توسعه تعاون',
+      '627412': 'بانک اقتصاد نوین',
+      '622106': 'بانک پارسیان',
+      '502229': 'بانک پاسارگاد',
+      '627488': 'بانک کارآفرین',
+      '621986': 'بانک سامان',
+      '639346': 'بانک سینا',
+      '639607': 'بانک سرمایه',
+      '502806': 'بانک شهر',
+      '502938': 'بانک دی',
+      '603769': 'بانک صادرات ایران',
+      '610433': 'بانک ملت',
+      '627353': 'بانک تجارت',
+      '585983': 'بانک رفاه کارگران',
+      '627381': 'بانک انصار',
+      '505785': 'بانک ایران زمین',
+      '636214': 'بانک آینده',
+      '636949': 'بانک حکمت ایرانیان',
+      '585947': 'بانک خاورمیانه',
+      '505416': 'بانک گردشگری',
+      '636795': 'بانک مرکزی جمهوری اسلامی ایران',
+      '504172': 'بانک رسالت',
+      '639370': 'بانک مهر اقتصاد',
+      '639599': 'بانک قوامین',
+      '504706': 'بانک ایران ونزوئلا',
+      '502910': 'بانک ایران ونزوئلا',
+      '505801': 'موسسه اعتباری کوثر',
+      '606256': 'موسسه اعتباری ملل',
+      '606373': 'بانک قرض‌الحسنه مهر ایران',
+      '639217': 'بانک کشاورزی',
+      '505809': 'بانک توسعه تعاون',
+      '606374': 'بانک قرض‌الحسنه مهر ایران',
+    };
+
+    return bankBins[bin] || 'بانک پارسیان'; // Default to بانک پارسیان if not found
+  }
+
   async initiateCoursePayment(userId: string, courseId: string) {
     // Check if user is already enrolled
     const existingEnrollment = await this.prisma.courseEnrollment.findUnique({
@@ -384,6 +437,7 @@ export class PaymentsService {
                 paidAt: new Date(),
                 cardNumber: transaction.cardHolderPan,
                 trackingNumber: transaction.saleReferenceId,
+                gatewayName: this.getBankNameFromCardNumber(transaction.cardHolderPan),
               },
             });
 
@@ -586,19 +640,15 @@ export class PaymentsService {
       throw new BadRequestException('نام و نام خانوادگی نمی‌تواند شامل عدد باشد');
     }
 
-    // Validate mobile number (only numbers, starts with 09, 11 digits)
     const mobileRegex = /^09[0-9]{9}$/;
     if (!mobileRegex.test(dto.customerMobile)) {
       throw new BadRequestException('شماره موبایل باید با ۰۹ شروع شود و فقط شامل اعداد باشد (۱۱ رقم)');
     }
 
-    // Generate unique link code
     const linkCode = `PL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Convert toman to rial for storage (amount comes in toman from frontend)
     const amountInRial = this.tomanToRial(dto.amount);
 
-    // Create payment link with report fields
     const paymentLink = await this.prisma.paymentLink.create({
       data: {
         linkCode,
@@ -609,7 +659,7 @@ export class PaymentsService {
         description: dto.description,
         workshopTitle: dto.workshopTitle,
         isActive: true,
-        status: 'CREATED', // New status tracking
+        status: 'PENDING',
         gatewayName: 'بانک پارسیان', // Default gateway
         requestTime: new Date(), // Time when link is created
       },

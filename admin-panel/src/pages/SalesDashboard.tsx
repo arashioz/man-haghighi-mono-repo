@@ -2,16 +2,24 @@ import React, { useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import MobileLayout from '../components/MobileLayout';
 import MobileTabNavigation from '../components/MobileTabNavigation';
+import MobileSalesDashboard from '../components/MobileSalesDashboard';
 import PaymentLinks from './PaymentLinks';
 import SalesPersons from './SalesPersons';
 import PaymentReports from './PaymentReports';
 import { useAuth } from '../contexts/AuthContext';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 type TabType = 'payment-links' | 'sales-persons' | 'reports';
 
 const SalesDashboard: React.FC = () => {
   const { user } = useAuth();
+  const deviceType = useDeviceType();
   const [activeTab, setActiveTab] = useState<TabType>('payment-links');
+
+  // If mobile device, render mobile-specific dashboard
+  if (deviceType === 'mobile') {
+    return <MobileSalesDashboard />;
+  }
 
   const getTabs = () => {
     const baseTabs = [
@@ -117,15 +125,17 @@ const SalesDashboard: React.FC = () => {
 
       {/* Mobile Layout */}
       <div className="lg:hidden">
-        {activeTab === 'payment-links' && (
-          <PaymentLinks />
-        )}
-        {activeTab === 'sales-persons' && user?.role === 'ADMIN' && (
-          <SalesPersons />
-        )}
-        {activeTab === 'reports' && (
-          <PaymentReports />
-        )}
+        <MobileLayout title="داشبورد فروش">
+          {activeTab === 'payment-links' && (
+            <PaymentLinks />
+          )}
+          {activeTab === 'sales-persons' && user?.role === 'ADMIN' && (
+            <SalesPersons />
+          )}
+          {activeTab === 'reports' && (
+            <PaymentReports />
+          )}
+        </MobileLayout>
 
         {/* Mobile Tab Navigation */}
         <MobileTabNavigation

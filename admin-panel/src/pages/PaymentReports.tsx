@@ -140,11 +140,118 @@ const PaymentReports: React.FC = () => {
       {/* Mobile Layout */}
       <div className="lg:hidden">
         <MobileLayout title="گزارش‌گیری">
-          <div className="p-4">
-            <div className="text-center py-8">
-              <p className="text-gray-600">این بخش در موبایل در حال توسعه است.</p>
-              <p className="text-sm text-gray-500 mt-2">لطفاً از نسخه دسکتاپ استفاده کنید.</p>
+          <div className="space-y-4">
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={fetchReports}
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              >
+                {loading && <div className="animate-spin rounded-full h-4 w-4 border border-white border-t-transparent"></div>}
+                جستجو
+              </button>
+              <button
+                onClick={() => {
+                  setFilters({
+                    startDate: '',
+                    endDate: '',
+                    salesPersonId: '',
+                    status: '',
+                  });
+                  fetchReports();
+                }}
+                disabled={loading}
+                className="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              >
+                گزارش کلی
+              </button>
             </div>
+
+            {/* Quick Filters */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تاریخ شروع</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تاریخ پایان</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">وضعیت</label>
+              <select
+                value={filters.status}
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              >
+                <option value="">همه وضعیت‌ها</option>
+                <option value="completed">پرداخت شده</option>
+                <option value="pending">در انتظار</option>
+                <option value="failed">ناموفق</option>
+                <option value="canceled">لغو شده</option>
+              </select>
+            </div>
+
+            {/* Results */}
+            {reports.length > 0 ? (
+              <div className="space-y-3">
+                {reports.slice(0, 10).map((report, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-gray-900">{report.customerPhone}</p>
+                        <p className="text-sm text-gray-600">{formatPersianDate(report.transactionDate)}</p>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-900">{formatAmount(report.amount)}</p>
+                        {getStatusBadge(report.status)}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">درگاه: {report.gatewayName}</p>
+                  </div>
+                ))}
+                {reports.length > 10 && (
+                  <p className="text-center text-sm text-gray-600 py-2">
+                    و {reports.length - 10} مورد دیگر...
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">هیچ گزارشی یافت نشد.</p>
+              </div>
+            )}
+
+            {/* Summary */}
+            {reports.length > 0 && (
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">خلاصه گزارش</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">کل تراکنش‌ها</p>
+                    <p className="font-semibold">{reports.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">مجموع مبلغ</p>
+                    <p className="font-semibold">{formatAmount(reports.reduce((sum, report) => sum + report.amount, 0))}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </MobileLayout>
       </div>
