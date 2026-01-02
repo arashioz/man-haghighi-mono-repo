@@ -3,6 +3,8 @@ import PageHeader from '../components/PageHeader';
 import MobileLayout from '../components/MobileLayout';
 import MobileTabNavigation from '../components/MobileTabNavigation';
 import MobileSalesDashboard from '../components/MobileSalesDashboard';
+import MobileSellerDashboard from '../components/MobileSellerDashboard';
+import MobileSalesManagerDashboard from '../components/MobileSalesManagerDashboard';
 import PaymentLinks from './PaymentLinks';
 import SalesPersons from './SalesPersons';
 import PaymentReports from './PaymentReports';
@@ -16,9 +18,15 @@ const SalesDashboard: React.FC = () => {
   const deviceType = useDeviceType();
   const [activeTab, setActiveTab] = useState<TabType>('payment-links');
 
-  // If mobile device, render mobile-specific dashboard
+  // If mobile device, render mobile-specific dashboard based on user role
   if (deviceType === 'mobile') {
-    return <MobileSalesDashboard />;
+    if (user?.role === 'SALES_PERSON') {
+      return <MobileSellerDashboard />;
+    } else if (user?.role === 'SALES_MANAGER') {
+      return <MobileSalesManagerDashboard />;
+    } else {
+      return <MobileSalesDashboard />;
+    }
   }
 
   const getTabs = () => {

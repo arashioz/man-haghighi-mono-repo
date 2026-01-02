@@ -1545,5 +1545,63 @@ export class PaymentsController {
 
     return res.json(reportData);
   }
+
+  @Get('team/links')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get payment links created by team members (for sales managers)' })
+  @ApiResponse({ status: 200, description: 'Team payment links retrieved successfully' })
+  async getTeamPaymentLinks(@Req() req) {
+    // Get all sellers under this manager
+    const sellers = await this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        parentId: req.user.id,
+      },
+      select: { id: true, firstName: true, lastName: true },
+    });
+
+    const sellerIds = sellers.map(s => s.id);
+
+    if (sellerIds.length === 0) {
+      return [];
+    }
+
+    const links = await this.prisma.paymentLink.findMany({
+      where: {
+        createdById: { in: sellerIds },
+      },
+      include: {
+        creator: {
+          select: {
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+        invoices: {
+          include: {
+            transactions: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 50, // Limit for mobile performance
+    });
+
+    return links.map(link => ({
+      ...link,
+      sellerName: `${link.creator.firstName || ''} ${link.creator.lastName || ''}`.trim() || link.creator.username,
+      amount: Math.round(Number(link.amount) / 10), // Convert to toman
+    }));
+  }
 }
 

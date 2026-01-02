@@ -1295,4 +1295,233 @@ export class UsersService {
     };
     return roleLabels[role] || role;
   }
+
+  // Get seller statistics
+  async getSellerStats(sellerId: string) {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Total payment links created by seller
+    const totalLinksResult = await this.prisma.paymentLink.count({
+      where: { createdById: sellerId },
+    });
+
+    // Paid payment links
+    const paidLinksResult = await this.prisma.paymentLink.count({
+      where: {
+        createdById: sellerId,
+        status: 'PAID',
+      },
+    });
+
+    // Total revenue from paid links
+    const revenueResult = await this.prisma.paymentLink.aggregate({
+      where: {
+        createdById: sellerId,
+        status: 'PAID',
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Today's revenue
+    const todayRevenueResult = await this.prisma.paymentLink.aggregate({
+      where: {
+        createdById: sellerId,
+        status: 'PAID',
+        createdAt: {
+          gte: startOfDay,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Workshop access count
+    const workshopAccessCount = await this.prisma.salesPersonWorkshopAccess.count({
+      where: {
+        salesPersonId: sellerId,
+        isActive: true,
+      },
+    });
+
+    return {
+      totalLinks: totalLinksResult,
+      paidLinks: paidLinksResult,
+      unpaidLinks: totalLinksResult - paidLinksResult,
+      totalRevenue: revenueResult._sum.amount || 0,
+      todayRevenue: todayRevenueResult._sum.amount || 0,
+      workshopCount: workshopAccessCount,
+    };
+  }
+
+  // Get sales manager team statistics
+  async getManagerTeamStats(managerId: string) {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Get all sellers under this manager
+    const sellers = await this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        parentId: managerId,
+      },
+      select: { id: true },
+    });
+
+    const sellerIds = sellers.map(s => s.id);
+
+    if (sellerIds.length === 0) {
+      return {
+        totalSellers: 0,
+        activeSellers: 0,
+        totalRevenue: 0,
+        todayRevenue: 0,
+        totalLinks: 0,
+        paidLinks: 0,
+        conversionRate: 0,
+      };
+    }
+
+    // Total sellers count
+    const totalSellers = sellerIds.length;
+
+    // Active sellers (those with links created in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const activeSellersResult = await this.prisma.paymentLink.findMany({
+      where: {
+        createdById: { in: sellerIds },
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: { createdById: true },
+      distinct: ['createdById'],
+    });
+
+    const activeSellers = activeSellersResult.length;
+
+    // Total links created by team
+    const totalLinksResult = await this.prisma.paymentLink.count({
+      where: { createdById: { in: sellerIds } },
+    });
+
+    // Paid links
+    const paidLinksResult = await this.prisma.paymentLink.count({
+      where: {
+        createdById: { in: sellerIds },
+        status: 'PAID',
+      },
+    });
+
+    // Total revenue
+    const revenueResult = await this.prisma.paymentLink.aggregate({
+      where: {
+        createdById: { in: sellerIds },
+        status: 'PAID',
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    // Today's revenue
+    const todayRevenueResult = await this.prisma.paymentLink.aggregate({
+      where: {
+        createdById: { in: sellerIds },
+        status: 'PAID',
+        createdAt: {
+          gte: startOfDay,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+
+    const conversionRate = totalLinksResult > 0 ? Math.round((paidLinksResult / totalLinksResult) * 100) : 0;
+
+    return {
+      totalSellers,
+      activeSellers,
+      totalRevenue: revenueResult._sum.amount || 0,
+      todayRevenue: todayRevenueResult._sum.amount || 0,
+      totalLinks: totalLinksResult,
+      paidLinks: paidLinksResult,
+      conversionRate,
+    };
+  }
+
+  // Get sellers under a manager
+  async getMySellers(managerId: string) {
+    const sellers = await this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        parentId: managerId,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        phone: true,
+        email: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    // Get statistics for each seller
+    const sellersWithStats = await Promise.all(
+      sellers.map(async (seller) => {
+        const now = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        // Total links
+        const totalLinks = await this.prisma.paymentLink.count({
+          where: { createdById: seller.id },
+        });
+
+        // Paid links
+        const paidLinks = await this.prisma.paymentLink.count({
+          where: {
+            createdById: seller.id,
+            status: 'PAID',
+          },
+        });
+
+        // Total revenue
+        const revenueResult = await this.prisma.paymentLink.aggregate({
+          where: {
+            createdById: seller.id,
+            status: 'PAID',
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+
+        // Last activity (last link created)
+        const lastLink = await this.prisma.paymentLink.findFirst({
+          where: { createdById: seller.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+
+        return {
+          ...seller,
+          totalLinks,
+          paidLinks,
+          totalRevenue: revenueResult._sum.amount || 0,
+          lastActivity: lastLink?.createdAt?.toISOString() || seller.createdAt.toISOString(),
+        };
+      })
+    );
+
+    return sellersWithStats;
+  }
 }

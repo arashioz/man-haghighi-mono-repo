@@ -290,6 +290,48 @@ export const usersService = {
     const response = await api.get(`/users?role=${role}&limit=1000`);
     return response.data.data || [];
   },
+
+  getSellerStats: async (): Promise<{
+    totalLinks: number;
+    paidLinks: number;
+    unpaidLinks: number;
+    totalRevenue: number;
+    todayRevenue: number;
+    workshopCount: number;
+  }> => {
+    const response = await api.get('/users/seller/stats');
+    return response.data;
+  },
+
+  getManagerTeamStats: async (): Promise<{
+    totalSellers: number;
+    activeSellers: number;
+    totalRevenue: number;
+    todayRevenue: number;
+    totalLinks: number;
+    paidLinks: number;
+    conversionRate: number;
+  }> => {
+    const response = await api.get('/users/manager/team-stats');
+    return response.data;
+  },
+
+  getMySellers: async (): Promise<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    phone: string;
+    email?: string;
+    isActive: boolean;
+    totalLinks: number;
+    paidLinks: number;
+    totalRevenue: number;
+    lastActivity: string;
+  }>> => {
+    const response = await api.get('/users/manager/my-sellers');
+    return response.data;
+  },
 };
 
 export const messagesService = {
@@ -1636,6 +1678,21 @@ export const paymentsService = {
   getPaymentLinksReport: async (params?: string) => {
     const url = params ? `/payments/reports/payment-links?${params}` : '/payments/reports/payment-links';
     const response = await api.get(url);
+    return response.data;
+  },
+
+  getTeamPaymentLinks: async (): Promise<Array<{
+    id: string;
+    linkCode: string;
+    customerName?: string;
+    customerPhone?: string;
+    amount: number;
+    description?: string;
+    status: string;
+    sellerName: string;
+    createdAt: string;
+  }>> => {
+    const response = await api.get('/payments/team/links');
     return response.data;
   },
 };

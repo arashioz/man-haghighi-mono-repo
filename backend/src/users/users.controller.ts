@@ -325,4 +325,34 @@ export class UsersController {
     return this.usersService.create(customerData);
   }
 
+  @Get('seller/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get seller statistics (for salespersons)' })
+  @ApiResponse({ status: 200, description: 'Seller statistics retrieved successfully' })
+  async getSellerStats(@Req() req) {
+    return this.usersService.getSellerStats(req.user.id);
+  }
+
+  @Get('manager/team-stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get team statistics (for sales managers)' })
+  @ApiResponse({ status: 200, description: 'Team statistics retrieved successfully' })
+  async getManagerTeamStats(@Req() req) {
+    return this.usersService.getManagerTeamStats(req.user.id);
+  }
+
+  @Get('manager/my-sellers')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get my sellers (for sales managers)' })
+  @ApiResponse({ status: 200, description: 'Sellers retrieved successfully' })
+  async getMySellers(@Req() req) {
+    return this.usersService.getMySellers(req.user.id);
+  }
+
 }

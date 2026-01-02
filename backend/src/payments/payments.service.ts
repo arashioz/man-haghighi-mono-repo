@@ -683,12 +683,12 @@ export class PaymentsService {
       });
     }
 
-    // Create invoice for payment link
+    // Create invoice for payment link (amount in toman)
     const wallet = await this.walletService.getOrCreateWallet(customerUser.id);
     const invoice = await this.invoiceService.createInvoice({
       userId: customerUser.id,
       type: 'PAYMENT_LINK',
-      amount: dto.amount,
+      amount: dto.amount, // Keep in toman for invoice
       paymentLinkId: paymentLink.id,
       customerName: dto.customerName,
       customerPhone: dto.customerMobile,
@@ -774,7 +774,7 @@ export class PaymentsService {
       throw new NotFoundException('کاربر یافت نشد');
     }
 
-    const amount = Number(paymentLink.amount);
+    const amountInToman = Math.round(Number(paymentLink.amount) / 10); // Convert rial to toman
 
     // Find or create invoice
     let invoice = await this.prisma.invoice.findFirst({
@@ -790,7 +790,7 @@ export class PaymentsService {
       invoice = await this.invoiceService.createInvoice({
         userId: customerUser.id,
         type: 'PAYMENT_LINK',
-        amount,
+        amount: amountInToman, // Use toman amount for invoice
         paymentLinkId: paymentLink.id,
         customerName: paymentLink.customerName,
         customerPhone: paymentLink.customerPhone,
@@ -820,7 +820,7 @@ export class PaymentsService {
           invoiceId: invoice.id,
           paymentLinkId: paymentLink.id,
           type: 'PAYMENT',
-          amount: new Decimal(amount),
+          amount: new Decimal(amountInToman), // Use toman amount for transaction
           orderId,
           status: 'PENDING',
           description: paymentLink.description || 'پرداخت لینک',
@@ -828,10 +828,11 @@ export class PaymentsService {
         },
       });
 
-      // Create payment request
+      // Create payment request - gateway expects rial amount
+      const amountInRial = this.tomanToRial(amountInToman);
       const paymentRequest = await this.gatewayService.createPaymentRequest(
         orderId,
-        amount,
+        amountInRial,
         paymentLink.description || 'پرداخت لینک',
       );
 
@@ -848,7 +849,7 @@ export class PaymentsService {
 
       return {
         invoiceNumber: invoice.invoiceNumber,
-        amount: Math.round(Number(invoice.amount) / 10), // Convert rial to toman for display
+        amount: Number(invoice.amount), // Amount is already in toman
         description: invoice.description,
         customerName: invoice.customerName,
         workshopTitle: paymentLink.workshopTitle,
@@ -863,15 +864,16 @@ export class PaymentsService {
       }
 
       // Get payment URL again (it should be stored or regenerated)
+      const amountInRial = this.tomanToRial(amountInToman);
       const paymentRequest = await this.gatewayService.createPaymentRequest(
         transaction.orderId!,
-        amount,
+        amountInRial,
         paymentLink.description || 'پرداخت لینک',
       );
 
       return {
         invoiceNumber: invoice.invoiceNumber,
-        amount: Math.round(Number(invoice.amount) / 10), // Convert rial to toman for display
+        amount: Number(invoice.amount), // Amount is already in toman
         description: invoice.description,
         customerName: invoice.customerName,
         createdAt: invoice.createdAt,
