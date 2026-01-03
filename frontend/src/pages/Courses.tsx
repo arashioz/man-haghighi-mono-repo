@@ -161,8 +161,7 @@ const Courses: React.FC = () => {
     const searchLower = searchTerm.toLowerCase().trim();
     return courses.filter(course =>
       course.title.toLowerCase().includes(searchLower) ||
-      course.description?.toLowerCase().includes(searchLower) ||
-      course.instructor?.toLowerCase().includes(searchLower)
+      course.description?.toLowerCase().includes(searchLower)
     );
   }, [courses, searchTerm]);
 
