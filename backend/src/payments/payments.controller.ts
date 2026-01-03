@@ -144,6 +144,159 @@ export class PaymentsController {
     return this.invoiceService.getUserInvoices(targetUserId, limitNum);
   }
 
+  @Get('invoices/course-invoices')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'لیست فاکتورهای دوره‌ها (فقط ادمین)' })
+  @ApiResponse({ status: 200, description: 'لیست فاکتورهای دوره‌ها' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'] })
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  async getAllCourseInvoices(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED',
+    @Query('userId') userId?: string,
+  ) {
+    const params: any = { type: 'COURSE_PURCHASE' };
+    if (page) params.page = parseInt(page, 10);
+    if (limit) params.limit = parseInt(limit, 10);
+    if (status) params.status = status;
+    if (userId) params.userId = userId;
+
+    return this.invoiceService.getAllInvoices(params);
+  }
+
+  @Get('invoices/payment-links')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'لیست فاکتورهای لینک‌های پرداخت (فقط ادمین)' })
+  @ApiResponse({ status: 200, description: 'لیست فاکتورهای لینک‌های پرداخت' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'] })
+  @ApiQuery({ name: 'salesPersonId', required: false, type: String })
+  async getPaymentLinkInvoices(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED',
+    @Query('salesPersonId') salesPersonId?: string,
+  ) {
+    const params: any = { type: 'PAYMENT_LINK' };
+    if (page) params.page = parseInt(page, 10);
+    if (limit) params.limit = parseInt(limit, 10);
+    if (status) params.status = status;
+    if (salesPersonId) params.salesPersonId = salesPersonId;
+
+    return this.invoiceService.getPaymentLinkInvoices(params);
+  }
+
+  @Get('salespersons/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'آمار فروشندگان و لینک‌های پرداخت آنها (فقط ادمین)' })
+  @ApiResponse({ status: 200, description: 'آمار فروشندگان' })
+  async getSalesPersonsPaymentStats() {
+    // Get all active sales persons
+    const salesPersons = await this.prisma.user.findMany({
+      where: {
+        role: 'SALES_PERSON',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        username: true,
+        phone: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+
+    // Get statistics for each sales person
+    const salesPersonsWithStats = await Promise.all(
+      salesPersons.map(async (salesPerson) => {
+        // Count total payment links created by this sales person
+        const totalLinks = await this.prisma.paymentLink.count({
+          where: { createdById: salesPerson.id },
+        });
+
+        // Count paid payment links
+        const paidLinks = await this.prisma.paymentLink.count({
+          where: {
+            createdById: salesPerson.id,
+            status: 'PAID',
+          },
+        });
+
+        // Calculate total revenue from paid links
+        const revenueResult = await this.prisma.paymentLink.aggregate({
+          where: {
+            createdById: salesPerson.id,
+            status: 'PAID',
+          },
+          _sum: {
+            amount: true,
+          },
+        });
+
+        // Get recent activity (last link created)
+        const lastLink = await this.prisma.paymentLink.findFirst({
+          where: { createdById: salesPerson.id },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+
+        // Get today's links
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayLinks = await this.prisma.paymentLink.count({
+          where: {
+            createdById: salesPerson.id,
+            createdAt: { gte: today },
+          },
+        });
+
+        return {
+          salesPerson: {
+            ...salesPerson,
+            fullName: `${salesPerson.firstName || ''} ${salesPerson.lastName || ''}`.trim() || salesPerson.username,
+          },
+          statistics: {
+            totalLinks,
+            paidLinks,
+            unpaidLinks: totalLinks - paidLinks,
+            totalRevenue: revenueResult._sum.amount || 0, // This is in rial, will convert to toman in frontend
+            conversionRate: totalLinks > 0 ? Math.round((paidLinks / totalLinks) * 100) : 0,
+            todayLinks,
+            lastActivity: lastLink?.createdAt?.toISOString() || null,
+          },
+        };
+      })
+    );
+
+    // Sort by total revenue descending
+    salesPersonsWithStats.sort((a, b) => Number(b.statistics.totalRevenue) - Number(a.statistics.totalRevenue));
+
+    return {
+      salesPersons: salesPersonsWithStats,
+      summary: {
+        totalSalesPersons: salesPersonsWithStats.length,
+        totalLinks: salesPersonsWithStats.reduce((sum, sp) => sum + sp.statistics.totalLinks, 0),
+        totalPaidLinks: salesPersonsWithStats.reduce((sum, sp) => sum + sp.statistics.paidLinks, 0),
+        totalRevenue: salesPersonsWithStats.reduce((sum, sp) => sum + Number(sp.statistics.totalRevenue), 0),
+        averageConversionRate: salesPersonsWithStats.length > 0
+          ? Math.round(salesPersonsWithStats.reduce((sum, sp) => sum + sp.statistics.conversionRate, 0) / salesPersonsWithStats.length)
+          : 0,
+      },
+    };
+  }
+
   @Get('invoices/all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -168,7 +321,7 @@ export class PaymentsController {
     if (status) params.status = status;
     if (type) params.type = type;
     if (userId) params.userId = userId;
-    
+
     return this.invoiceService.getAllInvoices(params);
   }
 

@@ -287,5 +287,102 @@ export class InvoiceService {
       },
     };
   }
+
+  async getPaymentLinkInvoices(params?: {
+    page?: number;
+    limit?: number;
+    status?: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+    salesPersonId?: string;
+  }) {
+    const page = params?.page || 1;
+    const limit = params?.limit || 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      type: 'PAYMENT_LINK',
+    };
+
+    if (params?.status) {
+      where.status = params.status;
+    }
+
+    if (params?.salesPersonId) {
+      // Filter by sales person through paymentLink relation
+      where.paymentLink = {
+        createdById: params.salesPersonId,
+      };
+    }
+
+    const [invoices, total] = await Promise.all([
+      this.prisma.invoice.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
+          paymentLink: {
+            include: {
+              creator: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  username: true,
+                  phone: true,
+                },
+              },
+            },
+          },
+          transactions: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 1,
+            select: {
+              id: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      this.prisma.invoice.count({
+        where,
+      }),
+    ]);
+
+    const result = {
+      data: invoices.map(invoice => ({
+        ...invoice,
+        salesPerson: invoice.paymentLink?.creator ? {
+          id: invoice.paymentLink.creator.id,
+          firstName: invoice.paymentLink.creator.firstName,
+          lastName: invoice.paymentLink.creator.lastName,
+          username: invoice.paymentLink.creator.username,
+          phone: invoice.paymentLink.creator.phone,
+          fullName: `${invoice.paymentLink.creator.firstName || ''} ${invoice.paymentLink.creator.lastName || ''}`.trim() || invoice.paymentLink.creator.username,
+        } : null,
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+
+    return result;
+  }
 }
 

@@ -1665,6 +1665,21 @@ export const paymentsService = {
     return response.data;
   },
 
+  getAllCourseInvoices: async (params?: { page?: number; limit?: number; status?: string; userId?: string }) => {
+    const response = await api.get('/payments/invoices/course-invoices', { params });
+    return response.data;
+  },
+
+  getPaymentLinkInvoices: async (params?: { page?: number; limit?: number; status?: string; salesPersonId?: string }) => {
+    const response = await api.get('/payments/invoices/payment-links', { params });
+    return response.data;
+  },
+
+  getSalesPersonsPaymentStats: async () => {
+    const response = await api.get('/payments/salespersons/stats');
+    return response.data;
+  },
+
   getInvoiceById: async (invoiceId: string) => {
     const response = await api.get(`/payments/invoices/${invoiceId}`);
     return response.data;
