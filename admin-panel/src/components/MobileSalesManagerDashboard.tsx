@@ -96,7 +96,8 @@ const MobileSalesManagerDashboard: React.FC = () => {
   // Pull to refresh functionality
   const { attachToElement, isRefreshing, pullDistance, canRefresh } = usePullToRefresh({
     onRefresh: fetchDashboardData,
-    threshold: 80,
+    threshold: 120,
+    maxPullDistance: 180,
   });
 
   const handleCreateSeller = async () => {

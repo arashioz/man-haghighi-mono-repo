@@ -3,11 +3,12 @@ import { useState, useRef, useCallback } from 'react';
 interface PullToRefreshConfig {
   onRefresh: () => Promise<void> | void;
   threshold?: number;
+  maxPullDistance?: number;
   disabled?: boolean;
 }
 
 export const usePullToRefresh = (config: PullToRefreshConfig) => {
-  const { onRefresh, threshold = 80, disabled = false } = config;
+  const { onRefresh, threshold = 120, maxPullDistance = 200, disabled = false } = config;
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -30,13 +31,13 @@ export const usePullToRefresh = (config: PullToRefreshConfig) => {
     const distance = currentY - startY;
 
     // Only handle downward pull from top of scroll area
-    if (distance > 0 && (containerRef.current?.scrollTop || 0) === 0) {
+    if (distance > 0 && (containerRef.current?.scrollTop || 0) <= 5) {
       e.preventDefault();
-      const pullDistance = Math.min(distance * 0.5, threshold * 2);
+      const pullDistance = Math.min(distance * 0.6, maxPullDistance);
       setPullDistance(pullDistance);
       setCanRefresh(pullDistance >= threshold);
     }
-  }, [disabled, isRefreshing, startY, threshold]);
+  }, [disabled, isRefreshing, startY, threshold, maxPullDistance]);
 
   const handleTouchEnd = useCallback(async () => {
     if (disabled || isRefreshing) return;

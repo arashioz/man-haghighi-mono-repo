@@ -13,6 +13,7 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface PaymentLink {
   id: string;
+  linkCode: string;
   customerPhone: string;
   customerName?: string;
   amount: number;
@@ -55,6 +56,16 @@ const MobileSellerDashboard: React.FC = () => {
   const [customerName, setCustomerName] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
+  const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    password: '12345678', // Default password
+  });
+  const [customerErrors, setCustomerErrors] = useState<{[key: string]: string}>({});
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -87,8 +98,91 @@ const MobileSellerDashboard: React.FC = () => {
   // Pull to refresh functionality
   const { attachToElement, isRefreshing, pullDistance, canRefresh } = usePullToRefresh({
     onRefresh: fetchDashboardData,
-    threshold: 80,
+    threshold: 120,
+    maxPullDistance: 180,
   });
+
+  const validatePersianText = (text: string): boolean => {
+    // Allow Persian characters, spaces, and some special characters
+    const persianRegex = /^[\u0600-\u06FF\s]+$/;
+    return persianRegex.test(text) && !/[a-zA-Z0-9]/.test(text);
+  };
+
+  const handlePhoneChange = async (phone: string) => {
+    setCustomerPhone(phone);
+    setPhoneError('');
+
+    // Check phone format
+    if (phone.length === 11) {
+      if (!/^09[0-9]{9}$/.test(phone)) {
+        setPhoneError('شماره موبایل باید با ۰۹ شروع شود');
+        setCustomerName('');
+        return;
+      }
+
+      try {
+        setIsCheckingPhone(true);
+        const response = await usersService.getUserByPhone(phone);
+        setCustomerName(`${response.firstName} ${response.lastName}`.trim());
+        setPhoneError('');
+      } catch (error) {
+        // User doesn't exist, open create customer modal
+        setCustomerName('');
+        setNewCustomerData(prev => ({ ...prev, phone }));
+        setIsCreateCustomerModalOpen(true);
+      } finally {
+        setIsCheckingPhone(false);
+      }
+    } else if (phone.length > 0 && phone.length < 11) {
+      setCustomerName('');
+    }
+  };
+
+  const validateCustomerData = () => {
+    const errors: {[key: string]: string} = {};
+
+    if (!newCustomerData.firstName.trim()) {
+      errors.firstName = 'نام الزامی است';
+    } else if (!validatePersianText(newCustomerData.firstName)) {
+      errors.firstName = 'نام باید فقط شامل حروف فارسی باشد';
+    }
+
+    if (!newCustomerData.lastName.trim()) {
+      errors.lastName = 'نام خانوادگی الزامی است';
+    } else if (!validatePersianText(newCustomerData.lastName)) {
+      errors.lastName = 'نام خانوادگی باید فقط شامل حروف فارسی باشد';
+    }
+
+    setCustomerErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateCustomer = async () => {
+    if (!validateCustomerData()) return;
+
+    try {
+      await usersService.createCustomer({
+        firstName: newCustomerData.firstName,
+        lastName: newCustomerData.lastName,
+        phone: newCustomerData.phone,
+        password: newCustomerData.password,
+        confirmPassword: newCustomerData.password,
+        role: 'USER',
+      });
+
+      setCustomerName(`${newCustomerData.firstName} ${newCustomerData.lastName}`.trim());
+      setIsCreateCustomerModalOpen(false);
+      setNewCustomerData({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        password: '12345678',
+      });
+      setCustomerErrors({});
+    } catch (error) {
+      console.error('Error creating customer:', error);
+    }
+  };
 
   const handleCreatePaymentLink = async () => {
     if (!customerPhone || !amount) return;
@@ -109,6 +203,7 @@ const MobileSellerDashboard: React.FC = () => {
       setCustomerName('');
       setAmount('');
       setDescription('');
+      setPhoneError('');
 
       setIsCreateLinkModalOpen(false);
       fetchDashboardData(); // Refresh data
@@ -480,13 +575,32 @@ const MobileSellerDashboard: React.FC = () => {
         title="ایجاد لینک پرداخت جدید"
       >
         <div className="space-y-4">
-          <MobileFormField label="شماره موبایل مشتری" required>
-            <MobileInput
-              type="tel"
-              placeholder="09123456789"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-            />
+          <MobileFormField label="شماره موبایل مشتری" required error={phoneError}>
+            <div className="relative">
+              <MobileInput
+                type="tel"
+                placeholder="09123456789"
+                value={customerPhone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                className={phoneError ? 'border-red-300' : ''}
+              />
+              {isCheckingPhone && (
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                  <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              )}
+            </div>
+            {customerName && !phoneError && (
+              <div className="text-sm text-green-600 mt-1 flex items-center">
+                <svg className="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                مشتری یافت شد: {customerName}
+              </div>
+            )}
           </MobileFormField>
 
           <MobileFormField label="نام مشتری (اختیاری)">
@@ -542,8 +656,9 @@ const MobileSellerDashboard: React.FC = () => {
           isOpen={!!selectedLink}
           onClose={() => setSelectedLink(null)}
           title="جزئیات لینک پرداخت"
+          size="medium"
         >
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="text-center py-4">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 ${
                 selectedLink.isPaid
@@ -569,7 +684,7 @@ const MobileSellerDashboard: React.FC = () => {
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-600">مبلغ:</span>
-                <span className="font-medium">{(selectedLink.amount / 10).toLocaleString('fa-IR')} تومان</span>
+                <span className="font-medium">{selectedLink.amount.toLocaleString('fa-IR')} تومان</span>
               </div>
               {selectedLink.description && (
                 <div className="flex justify-between py-2 border-b border-gray-100">
@@ -592,9 +707,140 @@ const MobileSellerDashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  const linkUrl = `${window.location.origin}/pay/${selectedLink.linkCode}`;
+                  navigator.clipboard.writeText(linkUrl);
+                  // Show toast or feedback
+                }}
+                className="flex flex-col items-center justify-center p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span className="text-xs">کپی لینک</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const linkUrl = `${window.location.origin}/pay/${selectedLink.linkCode}`;
+                  const message = `لینک پرداخت شما:\n${linkUrl}\nمبلغ: ${selectedLink.amount.toLocaleString('fa-IR')} تومان`;
+                  const whatsappUrl = `https://wa.me/${selectedLink.customerPhone}?text=${encodeURIComponent(message)}`;
+                  window.open(whatsappUrl, '_blank');
+                }}
+                className="flex flex-col items-center justify-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+              >
+                <svg className="w-5 h-5 mb-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.742.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.465 3.488"/>
+                </svg>
+                <span className="text-xs">ارسال واتس‌اپ</span>
+              </button>
+            </div>
+
+            {/* Additional spacing for mobile */}
+            <div className="pb-4"></div>
           </div>
         </MobileModal>
       )}
+
+      {/* Create Customer Modal */}
+      <MobileModal
+        isOpen={isCreateCustomerModalOpen}
+        onClose={() => {
+          setIsCreateCustomerModalOpen(false);
+          setNewCustomerData({
+            firstName: '',
+            lastName: '',
+            phone: '',
+            password: '12345678',
+          });
+          setCustomerErrors({});
+          setCustomerPhone('');
+        }}
+        title="افزودن مشتری جدید"
+      >
+        <div className="space-y-4">
+          <div className="text-center py-2">
+            <p className="text-sm text-gray-600">
+              این شماره موبایل در سیستم وجود ندارد. لطفاً اطلاعات مشتری را وارد کنید.
+            </p>
+          </div>
+
+          <MobileFormField label="شماره موبایل" error={customerErrors.phone}>
+            <MobileInput
+              type="tel"
+              value={newCustomerData.phone}
+              readOnly
+              className="bg-gray-50"
+            />
+          </MobileFormField>
+
+          <MobileFormField label="نام" error={customerErrors.firstName} required>
+            <MobileInput
+              type="text"
+              placeholder="نام (فقط حروف فارسی)"
+              value={newCustomerData.firstName}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (validatePersianText(value) || value === '') {
+                  setNewCustomerData(prev => ({ ...prev, firstName: value }));
+                  if (customerErrors.firstName) {
+                    setCustomerErrors(prev => ({ ...prev, firstName: '' }));
+                  }
+                }
+              }}
+            />
+          </MobileFormField>
+
+          <MobileFormField label="نام خانوادگی" error={customerErrors.lastName} required>
+            <MobileInput
+              type="text"
+              placeholder="نام خانوادگی (فقط حروف فارسی)"
+              value={newCustomerData.lastName}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (validatePersianText(value) || value === '') {
+                  setNewCustomerData(prev => ({ ...prev, lastName: value }));
+                  if (customerErrors.lastName) {
+                    setCustomerErrors(prev => ({ ...prev, lastName: '' }));
+                  }
+                }
+              }}
+            />
+          </MobileFormField>
+
+          <div className="flex gap-3 pt-4">
+            <MobileButton
+              variant="secondary"
+              onClick={() => {
+                setIsCreateCustomerModalOpen(false);
+                setNewCustomerData({
+                  firstName: '',
+                  lastName: '',
+                  phone: '',
+                  password: '12345678',
+                });
+                setCustomerErrors({});
+                setCustomerPhone('');
+              }}
+              className="flex-1"
+            >
+              انصراف
+            </MobileButton>
+            <MobileButton
+              variant="primary"
+              onClick={handleCreateCustomer}
+              className="flex-1"
+              disabled={!newCustomerData.firstName.trim() || !newCustomerData.lastName.trim()}
+            >
+              ایجاد مشتری
+            </MobileButton>
+          </div>
+        </div>
+      </MobileModal>
     </>
   );
 };
