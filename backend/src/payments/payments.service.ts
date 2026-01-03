@@ -44,6 +44,14 @@ export class PaymentsService {
     return Math.round(tomanAmount * 10);
   }
 
+  /**
+   * Convert Rial to Toman for display and invoices
+   * 10 Rial = 1 Toman
+   */
+  private rialToToman(rialAmount: number): number {
+    return Math.round(rialAmount / 10);
+  }
+
   private getBankNameFromCardNumber(cardNumber?: string): string {
     if (!cardNumber || cardNumber.length < 6) {
       return 'بانک پارسیان'; // Default gateway
@@ -647,13 +655,12 @@ export class PaymentsService {
 
     const linkCode = `PL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    const amountInRial = this.tomanToRial(dto.amount);
-
+    // Amount is already in Rial from frontend
     const paymentLink = await this.prisma.paymentLink.create({
       data: {
         linkCode,
         createdById: userId,
-        amount: new Decimal(amountInRial),
+        amount: new Decimal(dto.amount),
         customerName: dto.customerName,
         customerPhone: dto.customerMobile,
         description: dto.description,
@@ -688,7 +695,7 @@ export class PaymentsService {
     const invoice = await this.invoiceService.createInvoice({
       userId: customerUser.id,
       type: 'PAYMENT_LINK',
-      amount: dto.amount, // Keep in toman for invoice
+      amount: this.rialToToman(dto.amount), // Convert rial back to toman for invoice
       paymentLinkId: paymentLink.id,
       customerName: dto.customerName,
       customerPhone: dto.customerMobile,

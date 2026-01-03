@@ -116,6 +116,9 @@ const Footer: React.FC = () => {
           <p className="text-xs text-white/40">
             © {new Date().getFullYear()} من حقیقی. تمامی حقوق محفوظ است.
           </p>
+          <p className="text-xs text-white/20 mt-1">
+            نسخه ۱.۸.۱
+          </p>
         </div>
       </div>
     </footer>

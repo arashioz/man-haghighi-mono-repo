@@ -608,9 +608,13 @@ const Workshops: React.FC = () => {
             <textarea
               value={newWorkshop.description}
               onChange={(e) => setNewWorkshop({...newWorkshop, description: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={3}
+              maxLength={2000}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {newWorkshop.description.length}/2000 کاراکتر
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -776,9 +780,13 @@ const Workshops: React.FC = () => {
             <textarea
               value={editingWorkshop?.description || ''}
               onChange={(e) => setEditingWorkshop(prev => prev ? {...prev, description: e.target.value} : null)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={3}
+              maxLength={2000}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {editingWorkshop?.description?.length || 0}/2000 کاراکتر
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

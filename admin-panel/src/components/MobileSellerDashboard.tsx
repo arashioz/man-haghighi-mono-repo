@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersService, paymentsService, workshopsService } from '../services/api';
-// import { usersService, paymentsService, workshopsService } from '../services/api'; // Mocked for demo
+import { usersService, paymentsService, workshopsService, settingsService } from '../services/api';
+// import { usersService, paymentsService, workshopsService, settingsService } from '../services/api'; // Mocked for demo
 import MobileLayout from './MobileLayout';
+import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
 import MobileCard from './MobileCard';
 import MobileModal from './MobileModal';
 import { MobileFormField, MobileInput, MobileButton } from './MobileForm';
 import MobileTabNavigation from './MobileTabNavigation';
 import LoadingSpinner from './LoadingSpinner';
 import EmptyState from './EmptyState';
-import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 interface PaymentLink {
   id: string;
@@ -19,6 +19,7 @@ interface PaymentLink {
   amount: number;
   description?: string;
   isPaid: boolean;
+  isActive: boolean;
   createdAt: string;
   paidAt?: string;
 }
@@ -66,6 +67,18 @@ const MobileSellerDashboard: React.FC = () => {
     password: '12345678', // Default password
   });
   const [customerErrors, setCustomerErrors] = useState<{[key: string]: string}>({});
+  const [formattedAmount, setFormattedAmount] = useState('');
+  const [toggleLinkLoading, setToggleLinkLoading] = useState<string | null>(null);
+  const [settings, setSettings] = useState<any>(null);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const settingsData = await settingsService.getSettings();
+      setSettings(settingsData);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -93,19 +106,28 @@ const MobileSellerDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchSettings();
+  }, [fetchDashboardData, fetchSettings]);
 
-  // Pull to refresh functionality
-  const { attachToElement, isRefreshing, pullDistance, canRefresh } = usePullToRefresh({
-    onRefresh: fetchDashboardData,
-    threshold: 120,
-    maxPullDistance: 180,
-  });
 
   const validatePersianText = (text: string): boolean => {
     // Allow Persian characters, spaces, and some special characters
     const persianRegex = /^[\u0600-\u06FF\s]+$/;
     return persianRegex.test(text) && !/[a-zA-Z0-9]/.test(text);
+  };
+
+  // Format amount with thousand separators
+  const formatAmountInput = (value: string) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    if (!numericValue) return '';
+    return Number(numericValue).toLocaleString('fa-IR');
+  };
+
+  // Handle amount input change
+  const handleAmountChange = (value: string) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    setAmount(numericValue);
+    setFormattedAmount(formatAmountInput(numericValue));
   };
 
   const handlePhoneChange = async (phone: string) => {
@@ -184,13 +206,33 @@ const MobileSellerDashboard: React.FC = () => {
     }
   };
 
+  const handleToggleLink = async (linkId: string) => {
+    setToggleLinkLoading(linkId);
+    try {
+      await paymentsService.togglePaymentLink(linkId);
+      await fetchDashboardData();
+    } catch (error) {
+      console.error('Error toggling link:', error);
+    } finally {
+      setToggleLinkLoading(null);
+    }
+  };
+
   const handleCreatePaymentLink = async () => {
     if (!customerPhone || !amount) return;
 
     try {
+      let amountInRial: number;
+      try {
+        amountInRial = parseTomanAmount(amount || '0');
+      } catch (error) {
+        console.error('Error parsing amount:', error);
+        return;
+      }
+
       const paymentData: any = {
         customerMobile: customerPhone,
-        amount: parseInt(amount),
+        amount: amountInRial, // Amount in Rial for API
       };
 
       if (customerName) paymentData.customerName = customerName;
@@ -202,6 +244,7 @@ const MobileSellerDashboard: React.FC = () => {
       setCustomerPhone('');
       setCustomerName('');
       setAmount('');
+      setFormattedAmount('');
       setDescription('');
       setPhoneError('');
 
@@ -282,7 +325,7 @@ const MobileSellerDashboard: React.FC = () => {
 
           <MobileCard className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{(stats.totalRevenue / 10).toLocaleString('fa-IR')}</div>
+              <div className="text-2xl font-bold text-purple-600">{formatAmountInToman(stats.totalRevenue)}</div>
               <div className="text-sm text-purple-700">مجموع درآمد</div>
             </div>
           </MobileCard>
@@ -335,7 +378,7 @@ const MobileSellerDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">{link.customerName || link.customerPhone}</div>
-                  <div className="text-sm text-gray-600">{(link.amount / 10).toLocaleString('fa-IR')} تومان</div>
+                  <div className="text-sm text-gray-600">{formatAmountInToman(link.amount)} تومان</div>
                 </div>
                 <div className={`px-2 py-1 rounded-full text-xs font-medium ${
                   link.isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -389,14 +432,14 @@ const MobileSellerDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-600">
-                <div>📱 {link.customerPhone}</div>
-                <div>💰 {(link.amount / 10).toLocaleString('fa-IR')} تومان</div>
-                {link.description && <div>📝 {link.description}</div>}
-                <div className="text-xs text-gray-500 mt-1">
-                  {new Date(link.createdAt).toLocaleDateString('fa-IR')}
+                <div className="text-sm text-gray-600">
+                  <div>📱 {link.customerPhone}</div>
+                  <div>💰 {formatAmountInToman(link.amount)} تومان</div>
+                  {link.description && <div>📝 {link.description}</div>}
+                  <div className="text-xs text-gray-500 mt-1">
+                    {new Date(link.createdAt).toLocaleDateString('fa-IR')}
+                  </div>
                 </div>
-              </div>
             </div>
           </MobileCard>
         ))
@@ -509,53 +552,7 @@ const MobileSellerDashboard: React.FC = () => {
   return (
     <>
       <MobileLayout title="داشبورد فروشنده">
-        {/* Pull to Refresh Indicator */}
-        {(pullDistance > 0 || isRefreshing) && (
-          <div
-            className="absolute top-0 left-0 right-0 z-10 bg-blue-50 border-b border-blue-200"
-            style={{
-              transform: `translateY(${Math.max(-100, pullDistance - 60)}px)`,
-              transition: isRefreshing ? 'none' : 'transform 0.2s ease-out'
-            }}
-          >
-            <div className="flex items-center justify-center py-3">
-              {isRefreshing ? (
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <svg className="animate-spin h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm text-blue-700">در حال بروزرسانی...</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <svg
-                    className={`h-4 w-4 text-blue-600 transition-transform duration-200 ${canRefresh ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                  </svg>
-                  <span className="text-sm text-blue-700">
-                    {canRefresh ? 'رها کنید برای بروزرسانی' : 'بکشید برای بروزرسانی'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div
-          className="pb-20 relative overflow-hidden"
-          ref={(el) => {
-            if (el) attachToElement(el);
-          }}
-          style={{
-            transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : 'translateY(0px)',
-            transition: isRefreshing ? 'none' : 'transform 0.2s ease-out'
-          }}
-        >
+        <div className="pb-20">
           {renderContent()}
         </div>
       </MobileLayout>
@@ -614,10 +611,10 @@ const MobileSellerDashboard: React.FC = () => {
 
           <MobileFormField label="مبلغ (تومان)" required>
             <MobileInput
-              type="number"
-              placeholder="100000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              type="text"
+              placeholder="۱۰۰,۰۰۰"
+              value={formattedAmount}
+              onChange={(e) => handleAmountChange(e.target.value)}
             />
           </MobileFormField>
 
@@ -684,7 +681,7 @@ const MobileSellerDashboard: React.FC = () => {
               </div>
               <div className="flex justify-between py-2 border-b border-gray-100">
                 <span className="text-gray-600">مبلغ:</span>
-                <span className="font-medium">{selectedLink.amount.toLocaleString('fa-IR')} تومان</span>
+                <span className="font-medium">{formatAmountInToman(selectedLink.amount)} تومان</span>
               </div>
               {selectedLink.description && (
                 <div className="flex justify-between py-2 border-b border-gray-100">
@@ -709,7 +706,7 @@ const MobileSellerDashboard: React.FC = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-200">
               <button
                 onClick={() => {
                   const linkUrl = `${window.location.origin}/pay/${selectedLink.linkCode}`;
@@ -725,10 +722,45 @@ const MobileSellerDashboard: React.FC = () => {
               </button>
 
               <button
+                onClick={() => handleToggleLink(selectedLink.id)}
+                disabled={toggleLinkLoading === selectedLink.id}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg transition-colors ${
+                  selectedLink.isActive
+                    ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                    : 'bg-green-50 text-green-700 hover:bg-green-100'
+                } disabled:opacity-50`}
+              >
+                {toggleLinkLoading === selectedLink.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border border-current border-t-transparent mb-1"></div>
+                ) : (
+                  <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {selectedLink.isActive ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728m0 0L12 12m-6.364 6.364L12 12m6.364-6.364L12 12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    )}
+                  </svg>
+                )}
+                <span className="text-xs">{selectedLink.isActive ? 'غیرفعال' : 'فعال'}</span>
+              </button>
+
+              <button
                 onClick={() => {
                   const linkUrl = `${window.location.origin}/pay/${selectedLink.linkCode}`;
-                  const message = `لینک پرداخت شما:\n${linkUrl}\nمبلغ: ${selectedLink.amount.toLocaleString('fa-IR')} تومان`;
-                  const whatsappUrl = `https://wa.me/${selectedLink.customerPhone}?text=${encodeURIComponent(message)}`;
+                  const cleanPhone = selectedLink.customerPhone.startsWith('0') ? selectedLink.customerPhone.substring(1) : selectedLink.customerPhone;
+                  const whatsappPhone = `98${cleanPhone}`;
+
+                  let message = `سلام ${selectedLink.customerName || 'مشتری عزیز'}\nمبلغ پرداختی: ${formatAmountInToman(selectedLink.amount)} تومان (${formatAmountInRial(selectedLink.amount)} ریال)\nلینک پرداخت:\n${linkUrl}`;
+
+                  // Use WhatsApp template if enabled
+                  if (settings?.messageTemplateEnabled && settings?.whatsappTemplateText) {
+                    message = settings.whatsappTemplateText
+                      .replace(/\{name\}/g, selectedLink.customerName || 'مشتری عزیز')
+                      .replace(/\{amount\}/g, formatAmountInToman(selectedLink.amount))
+                      .replace(/\{link\}/g, linkUrl);
+                  }
+
+                  const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`;
                   window.open(whatsappUrl, '_blank');
                 }}
                 className="flex flex-col items-center justify-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"

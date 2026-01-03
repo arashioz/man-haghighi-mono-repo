@@ -3,6 +3,7 @@ import { paymentsService, usersService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MobileLayout from '../components/MobileLayout';
+import { formatAmountInToman } from '../utils/currencyUtils';
 
 // تابع تبدیل تاریخ به فارسی
 const formatPersianDate = (dateString: string) => {
@@ -132,7 +133,7 @@ const PaymentReports: React.FC = () => {
   };
 
   const formatAmount = (amount: number) => {
-    return amount.toLocaleString('fa-IR') + ' تومان';
+    return formatAmountInToman(amount);
   };
 
   return (

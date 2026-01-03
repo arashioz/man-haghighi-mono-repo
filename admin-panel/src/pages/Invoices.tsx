@@ -4,6 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import MobileCard from '../components/MobileCard';
 import { paymentsService } from '../services/api';
+import { formatAmountInToman } from '../utils/currencyUtils';
 
 interface SalesPersonStats {
   salesPerson: {
@@ -208,7 +209,7 @@ const Invoices: React.FC = () => {
 
                       <div className="text-left">
                         <div className="text-lg font-bold text-gray-900">
-                          {Number(invoice.amount).toLocaleString()} تومان
+                          {formatAmountInToman(invoice.amount)} تومان
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {getTypeText(invoice.type)}
@@ -289,7 +290,7 @@ const Invoices: React.FC = () => {
 
                       <div className="text-left">
                         <div className="text-lg font-bold text-gray-900">
-                          {Number(invoice.amount).toLocaleString()} تومان
+                          {formatAmountInToman(invoice.amount)} تومان
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {getTypeText(invoice.type)}

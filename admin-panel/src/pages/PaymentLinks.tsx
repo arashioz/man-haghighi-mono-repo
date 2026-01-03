@@ -9,6 +9,7 @@ import MobileCard from '../components/MobileCard';
 import { paymentsService, usersService, workshopsService, coursesService, settingsService, API_ORIGIN } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
+import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
 import { Workshop, Course } from '../types';
 
 interface PaymentLink {
@@ -71,6 +72,9 @@ const PaymentLinks: React.FC = () => {
     workshopId: '',
     courseId: '',
   });
+
+  // Formatted amount for display
+  const [formattedAmount, setFormattedAmount] = useState('');
   const [availableWorkshops, setAvailableWorkshops] = useState<Workshop[]>([]);
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [linkType, setLinkType] = useState<'manual' | 'workshop' | 'course'>('manual');
@@ -253,15 +257,36 @@ const PaymentLinks: React.FC = () => {
     }
   };
 
+  // Format amount with thousand separators
+  const formatAmountInput = (value: string) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    if (!numericValue) return '';
+    return Number(numericValue).toLocaleString('fa-IR');
+  };
+
+  // Handle amount input change
+  const handleAmountChange = (value: string) => {
+    const numericValue = value.replace(/[^\d]/g, '');
+    setNewLink({...newLink, amount: numericValue});
+    setFormattedAmount(formatAmountInput(numericValue));
+  };
+
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setCreateLinkLoading(true);
 
     try {
-      // Amount is always manual - workshop/course prices are just for reference
-      const amount = parseFloat(newLink.amount.replace(/,/g, ''));
-      if (isNaN(amount) || amount < 100) {
+      // Parse amount as Toman and validate
+      let amountInRial: number;
+      try {
+        amountInRial = parseTomanAmount(newLink.amount);
+      } catch (error) {
+        setError('مبلغ وارد شده معتبر نیست');
+        return;
+      }
+
+      if (amountInRial < 1000) { // 100 Toman = 1000 Rial
         setError('مبلغ باید حداقل 100 تومان باشد');
         return;
       }
@@ -283,7 +308,7 @@ const PaymentLinks: React.FC = () => {
       await paymentsService.createPaymentLink({
         customerName: newLink.customerName,
         customerMobile: newLink.customerMobile,
-        amount: amount * 10, // Convert Tomans to Rials for API
+        amount: amountInRial, // Amount is already in Rial for API
         description: description || undefined,
       });
 
@@ -296,6 +321,7 @@ const PaymentLinks: React.FC = () => {
         workshopId: '',
         courseId: '',
       });
+      setFormattedAmount('');
       setLinkType('manual');
       await fetchPaymentLinks();
     } catch (err: any) {
@@ -306,20 +332,22 @@ const PaymentLinks: React.FC = () => {
   };
 
   const formatAmount = (amount: number) => {
-    return amount.toLocaleString('fa-IR');
+    return formatAmountInToman(amount);
   };
 
   const getPaymentUrl = (linkCode: string) => {
     // Use main site URL instead of admin panel URL
-    // Convert api.manehaghighi.com to manehaghighi.com
+    // Convert admin.manehaghighi.com or api.manehaghighi.com to manehaghighi.com
     let siteUrl = API_ORIGIN;
-    if (siteUrl.includes('api.manehaghighi.com')) {
+    if (siteUrl.includes('admin.manehaghighi.com')) {
+      siteUrl = siteUrl.replace('admin.manehaghighi.com', 'manehaghighi.com');
+    } else if (siteUrl.includes('api.manehaghighi.com')) {
       siteUrl = siteUrl.replace('api.manehaghighi.com', 'manehaghighi.com');
     } else if (siteUrl.includes('api.')) {
       // For other domains, remove api. subdomain
       siteUrl = siteUrl.replace(/api\./, '');
     }
-    
+
     return `${siteUrl}/api/payments/pay/${linkCode}`;
   };
 
@@ -331,7 +359,7 @@ const PaymentLinks: React.FC = () => {
     if (settings?.messageTemplateEnabled && settings?.messageTemplateText) {
       textToCopy = settings.messageTemplateText
         .replace(/\{name\}/g, customerName)
-        .replace(/\{amount\}/g, amount.toLocaleString('fa-IR'))
+        .replace(/\{amount\}/g, formatAmountInToman(amount))
         .replace(/\{link\}/g, link);
     }
 
@@ -355,13 +383,13 @@ const PaymentLinks: React.FC = () => {
     const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
     const whatsappPhone = `98${cleanPhone}`;
 
-    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmount(amount)} تومان (${formatAmount(amount * 10)} ریال)\nلینک پرداخت:\n${link}`;
+    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmountInToman(amount)} تومان (${formatAmountInRial(amount)} ریال)\nلینک پرداخت:\n${link}`;
 
     // Use WhatsApp template if enabled
     if (settings?.messageTemplateEnabled && settings?.whatsappTemplateText) {
       message = settings.whatsappTemplateText
         .replace(/\{name\}/g, name)
-        .replace(/\{amount\}/g, amount.toLocaleString('fa-IR'))
+        .replace(/\{amount\}/g, formatAmountInToman(amount))
         .replace(/\{link\}/g, link);
     }
 
@@ -639,7 +667,7 @@ const PaymentLinks: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-lg sm:text-3xl font-bold break-all">{formatAmount(stats.paidAmount / 10)}</p>
+          <p className="text-lg sm:text-3xl font-bold break-all">{formatAmountInToman(stats.paidAmount)}</p>
         </div>
       </div>
 
@@ -737,8 +765,8 @@ const PaymentLinks: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{formatAmount(group.totalAmount / 10)} تومان</div>
-                        <div className="text-sm text-gray-500">{formatAmount(group.totalAmount)} ریال</div>
+                        <div className="text-sm font-semibold text-gray-900">{formatAmountInToman(group.totalAmount)} تومان</div>
+                        <div className="text-sm text-gray-500">{formatAmountInRial(group.totalAmount)} ریال</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -811,8 +839,8 @@ const PaymentLinks: React.FC = () => {
                     return (
                       <tr key={link.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-semibold text-gray-900">{formatAmount(link.amount / 10)} تومان</div>
-                          <div className="text-sm text-gray-500">{formatAmount(link.amount)} ریال</div>
+                          <div className="text-sm font-semibold text-gray-900">{formatAmountInToman(link.amount)} تومان</div>
+                          <div className="text-sm text-gray-500">{formatAmountInRial(link.amount)} ریال</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -906,6 +934,7 @@ const PaymentLinks: React.FC = () => {
             workshopId: '',
             courseId: '',
           });
+          setFormattedAmount('');
           setLinkType('manual');
           setError('');
           setCustomerExists(null);
@@ -1053,6 +1082,7 @@ const PaymentLinks: React.FC = () => {
                 onClick={() => {
                   setLinkType('manual');
                   setNewLink({...newLink, workshopId: '', courseId: '', amount: ''});
+                  setFormattedAmount('');
                 }}
                 className={`px-4 py-2 rounded-lg border transition-colors ${
                   linkType === 'manual'
@@ -1066,8 +1096,9 @@ const PaymentLinks: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setLinkType('workshop');
-                    setNewLink({...newLink, courseId: '', amount: ''});
+                  setLinkType('workshop');
+                  setNewLink({...newLink, courseId: '', amount: ''});
+                  setFormattedAmount('');
                   }}
                   className={`px-4 py-2 rounded-lg border transition-colors ${
                     linkType === 'workshop'
@@ -1082,8 +1113,9 @@ const PaymentLinks: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setLinkType('course');
-                    setNewLink({...newLink, workshopId: '', amount: ''});
+                  setLinkType('course');
+                  setNewLink({...newLink, workshopId: '', amount: ''});
+                  setFormattedAmount('');
                   }}
                   className={`px-4 py-2 rounded-lg border transition-colors ${
                     linkType === 'course'
@@ -1106,11 +1138,13 @@ const PaymentLinks: React.FC = () => {
                 onChange={(e) => {
                   const workshopId = e.target.value;
                   const workshop = availableWorkshops.find(w => w.id === workshopId);
+                  const amountValue = workshop ? Math.round(workshop.price / 10).toString() : '';
                   setNewLink({
                     ...newLink,
                     workshopId,
-                    amount: workshop ? Math.round(workshop.price / 10).toString() : '', // Convert to Tomans
+                    amount: amountValue,
                   });
+                  setFormattedAmount(formatAmountInput(amountValue));
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
@@ -1124,8 +1158,8 @@ const PaymentLinks: React.FC = () => {
               </select>
               {newLink.workshopId && (
                 <p className="text-sm text-gray-500 mt-1">
-                  مبلغ: {formatAmount((availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0) / 10)} تومان
-                  ({formatAmount(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} ریال)
+                  مبلغ: {formatAmountInToman(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} تومان
+                  ({formatAmountInRial(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
@@ -1140,11 +1174,13 @@ const PaymentLinks: React.FC = () => {
                 onChange={(e) => {
                   const courseId = e.target.value;
                   const course = availableCourses.find(c => c.id === courseId);
+                  const amountValue = course ? Math.round(course.price / 10).toString() : '';
                   setNewLink({
                     ...newLink,
                     courseId,
-                    amount: course ? Math.round(course.price / 10).toString() : '', // Convert to Tomans
+                    amount: amountValue,
                   });
+                  setFormattedAmount(formatAmountInput(amountValue));
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
@@ -1158,8 +1194,8 @@ const PaymentLinks: React.FC = () => {
               </select>
               {newLink.courseId && (
                 <p className="text-sm text-gray-500 mt-1">
-                  مبلغ: {formatAmount((availableCourses.find(c => c.id === newLink.courseId)?.price || 0) / 10)} تومان
-                  ({formatAmount(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} ریال)
+                  مبلغ: {formatAmountInToman(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} تومان
+                  ({formatAmountInRial(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
@@ -1169,18 +1205,16 @@ const PaymentLinks: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان)</label>
             <input
               type="text"
-              value={newLink.amount}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, '');
-                setNewLink({...newLink, amount: value});
-              }}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={formattedAmount}
+              onChange={(e) => handleAmountChange(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
               required
-              placeholder="100000"
+              placeholder="۱۰۰,۰۰۰"
+              dir="ltr"
             />
             {newLink.amount && (
               <p className="text-sm text-gray-500 mt-1">
-                معادل: {formatAmount(parseFloat(newLink.amount.replace(/,/g, '')) * 10)} ریال
+                معادل: {formatAmountInRial(parseTomanAmount(newLink.amount || '0'))} ریال
               </p>
             )}
             {(linkType === 'workshop' && newLink.workshopId) || (linkType === 'course' && newLink.courseId) ? (

@@ -1220,10 +1220,10 @@ const Courses: React.FC = () => {
               onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={2}
-              maxLength={500}
+              maxLength={2000}
             />
             <p className="text-xs text-gray-500 mt-1">
-              {newCourse.description.length}/500 کاراکتر
+              {newCourse.description.length}/2000 کاراکتر
             </p>
           </div>
           <div>
@@ -1513,10 +1513,10 @@ const Courses: React.FC = () => {
               onChange={(e) => setEditingCourse(prev => prev ? {...prev, description: e.target.value} : null)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={2}
-              maxLength={500}
+              maxLength={2000}
             />
             <p className="text-xs text-gray-500 mt-1">
-              {editingCourse?.description?.length || 0}/500 کاراکتر
+              {editingCourse?.description?.length || 0}/2000 کاراکتر
             </p>
           </div>
           <div>

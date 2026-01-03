@@ -59,6 +59,7 @@ const Courses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
   
   const heroRef = React.useRef<HTMLDivElement>(null);
@@ -153,6 +154,18 @@ const Courses: React.FC = () => {
     fetchCourses();
   }, []);
 
+  // Filter courses based on search term
+  const filteredCourses = useMemo(() => {
+    if (!searchTerm.trim()) return courses;
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    return courses.filter(course =>
+      course.title.toLowerCase().includes(searchLower) ||
+      course.description?.toLowerCase().includes(searchLower) ||
+      course.instructor?.toLowerCase().includes(searchLower)
+    );
+  }, [courses, searchTerm]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
       {/* Hero Section with Blur Background */}
@@ -217,6 +230,65 @@ const Courses: React.FC = () => {
             </motion.p>
           </motion.div>
         </motion.div>
+      </section>
+
+      {/* Search Section */}
+      <section className="relative py-16 border-b border-white/10">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="text-center mb-12"
+          >
+            <h2 className="text-2xl font-bold text-white mb-4">جستجوی دوره‌ها</h2>
+            <p className="text-white/70">در میان دوره‌های آموزشی ما جستجو کنید</p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            className="relative max-w-2xl mx-auto"
+          >
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="نام دوره، توضیحات یا مدرس را جستجو کنید..."
+                className="w-full px-6 py-4 pr-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-300"
+                dir="rtl"
+              />
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                <svg
+                  className="w-5 h-5 text-white/50"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {searchTerm && (
+              <div className="mt-4 text-center">
+                <p className="text-white/70 text-sm">
+                  {filteredCourses.length} دوره یافت شد
+                  {searchTerm && ` برای "${searchTerm}"`}
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </div>
       </section>
 
       {/* Main Content */}
@@ -306,7 +378,7 @@ const Courses: React.FC = () => {
                   تلاش مجدد
                 </motion.button>
               </motion.div>
-            ) : courses.length > 0 ? (
+            ) : filteredCourses.length > 0 ? (
               <motion.div
                 variants={stagger}
                 initial="hidden"
@@ -314,7 +386,7 @@ const Courses: React.FC = () => {
                 viewport={{ once: true, amount: 0.1 }}
                 className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3"
               >
-                {courses.map((course, index) => {
+                {filteredCourses.map((course, index) => {
                   const courseImage = course.thumbnail
                     ? getImageUrlWithFallback(course.thumbnail, getRandomImage(index))
                     : getRandomImage(index);
@@ -503,10 +575,13 @@ const Courses: React.FC = () => {
                     </svg>
                   </motion.div>
                   <motion.h3 variants={fadeUp} className="text-2xl font-bold text-white mb-4">
-                    دوره‌ای برای نمایش وجود ندارد
+                    {searchTerm ? 'دوره‌ای یافت نشد' : 'دوره‌ای برای نمایش وجود ندارد'}
                   </motion.h3>
                   <motion.p variants={fadeUp} className="text-white/60 mb-8 text-lg">
-                    در حال حاضر هیچ دوره منتشر شده‌ای در دسترس نیست.
+                    {searchTerm
+                      ? `هیچ دوره‌ای با کلمه "${searchTerm}" یافت نشد.`
+                      : 'در حال حاضر هیچ دوره منتشر شده‌ای در دسترس نیست.'
+                    }
                   </motion.p>
                   <motion.button
                     variants={fadeUp}
