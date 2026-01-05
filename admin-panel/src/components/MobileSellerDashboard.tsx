@@ -67,7 +67,6 @@ const MobileSellerDashboard: React.FC = () => {
     password: '12345678', // Default password
   });
   const [customerErrors, setCustomerErrors] = useState<{[key: string]: string}>({});
-  const [formattedAmount, setFormattedAmount] = useState('');
   const [toggleLinkLoading, setToggleLinkLoading] = useState<string | null>(null);
   const [settings, setSettings] = useState<any>(null);
 
@@ -116,18 +115,16 @@ const MobileSellerDashboard: React.FC = () => {
     return persianRegex.test(text) && !/[a-zA-Z0-9]/.test(text);
   };
 
-  // Format amount with thousand separators
-  const formatAmountInput = (value: string) => {
-    const numericValue = value.replace(/[^\d]/g, '');
-    if (!numericValue) return '';
-    return Number(numericValue).toLocaleString('fa-IR');
-  };
 
   // Handle amount input change
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^\d]/g, '');
     setAmount(numericValue);
-    setFormattedAmount(formatAmountInput(numericValue));
+  };
+
+  // Format amount for display
+  const getFormattedAmount = () => {
+    return amount ? Number(amount).toLocaleString() : '';
   };
 
   const handlePhoneChange = async (phone: string) => {
@@ -244,7 +241,6 @@ const MobileSellerDashboard: React.FC = () => {
       setCustomerPhone('');
       setCustomerName('');
       setAmount('');
-      setFormattedAmount('');
       setDescription('');
       setPhoneError('');
 
@@ -612,8 +608,8 @@ const MobileSellerDashboard: React.FC = () => {
           <MobileFormField label="مبلغ (تومان)" required>
             <MobileInput
               type="text"
-              placeholder="۱۰۰,۰۰۰"
-              value={formattedAmount}
+              placeholder="۱۰۰۰۰۰"
+              value={getFormattedAmount()}
               onChange={(e) => handleAmountChange(e.target.value)}
             />
           </MobileFormField>
