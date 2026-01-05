@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { coursesService, videosService, audiosService, workshopsService, authService, messagesService, paymentsService } from '../services/api';
 import { Course, Video, Audio, Workshop, UserMessage } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { formatPersianDateWithTime } from '../utils/dateUtils';
 
 type TabId = 'courses' | 'workshops' | 'videos' | 'audios' | 'wallet' | 'messages';
 type MainTabId = 'dashboard' | 'profile';
@@ -607,7 +608,7 @@ const UserDashboard: React.FC = () => {
                           <div className="space-y-2 mb-4">
                             <div className="flex items-center text-sm text-gray-600">
                               <span className="ml-2">📅</span>
-                              <span>{workshop.date}</span>
+                              <span>{formatPersianDateWithTime(workshop.date)}</span>
                             </div>
                             <div className="flex items-center text-sm text-gray-600">
                               <span className="ml-2">📍</span>

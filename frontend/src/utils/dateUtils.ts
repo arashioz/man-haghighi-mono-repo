@@ -4,9 +4,9 @@ const KNOWN_INPUT_FORMATS = [
   'jYYYY/jMM/jDD HH:mm',
   'jYYYY/jMM/jDD - HH:mm',
   'jYYYY/jMM/jDD',
+  'YYYY-MM-DDTHH:mm:ss',
   'YYYY-MM-DDTHH:mm:ss.SSSZ',
   'YYYY-MM-DDTHH:mm:ssZ',
-  'YYYY-MM-DDTHH:mm:ss',
   'YYYY-MM-DD HH:mm:ss',
   'YYYY/MM/DD HH:mm',
   'YYYY/MM/DD',
@@ -29,6 +29,11 @@ const toMoment = (date: string | Date): Moment | null => {
     const trimmed = date.trim();
     if (!trimmed) {
       return null;
+    }
+
+    // Check if it's a local datetime string (YYYY-MM-DDTHH:mm:ss)
+    if (trimmed.includes('T') && trimmed.length === 19 && !trimmed.includes('Z') && !trimmed.includes('+')) {
+      return moment(trimmed);
     }
 
     const parsed = moment(trimmed, KNOWN_INPUT_FORMATS, true);

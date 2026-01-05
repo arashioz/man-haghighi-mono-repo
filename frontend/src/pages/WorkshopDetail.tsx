@@ -5,6 +5,7 @@ import { workshopsService } from '../services/api';
 import { Workshop } from '../types';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
 import { getImageUrlWithFallback } from '../utils/imageUtils';
+import { formatPersianDateWithTime } from '../utils/dateUtils';
 
 const WorkshopDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -59,14 +60,7 @@ const WorkshopDetail: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fa-IR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(date);
+      return formatPersianDateWithTime(dateString);
     } catch {
       return dateString;
     }

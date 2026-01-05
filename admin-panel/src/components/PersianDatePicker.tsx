@@ -55,9 +55,14 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
       return null;
     }
 
-    // If value is ISO string, parse it as UTC
-    if (value.includes('T') && value.includes('Z')) {
+    // If value is UTC ISO string, parse it as UTC
+    if (value.includes('T') && (value.includes('Z') || value.includes('+'))) {
       return moment.utc(value);
+    }
+
+    // If value is local datetime string, parse it as local
+    if (value.includes('T') && value.length === 19 && !value.includes('Z') && !value.includes('+')) {
+      return moment(value);
     }
 
     const parsed = parseValue(value);
@@ -71,9 +76,9 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
   const handleDateSelect = (date: moment.Moment) => {
     setSelectedDate(date);
 
-    // ذخیره تاریخ به صورت UTC ISO string برای جلوگیری از مشکل timezone
-    const isoString = date.toISOString();
-    onChange(isoString);
+    // ذخیره تاریخ به صورت local date string برای جلوگیری از مشکل timezone
+    const localDateString = date.format('YYYY-MM-DDTHH:mm:ss');
+    onChange(localDateString);
     setIsOpen(false);
   };
 
@@ -186,9 +191,9 @@ const PersianDatePicker: React.FC<PersianDatePickerProps> = ({
                   const baseDate = currentValueMoment || selectedDate;
                   const newDate = baseDate.clone().hours(parseInt(hours)).minutes(parseInt(minutes));
                   setSelectedDate(newDate);
-                  // ذخیره به صورت ISO string برای جلوگیری از مشکل timezone
-                  const isoString = newDate.toISOString();
-                  onChange(isoString);
+                  // ذخیره به صورت local date string برای جلوگیری از مشکل timezone
+                  const localDateString = newDate.format('YYYY-MM-DDTHH:mm:ss');
+                  onChange(localDateString);
                 }}
                 className="px-2 py-1 border border-gray-300 rounded text-sm"
               />
