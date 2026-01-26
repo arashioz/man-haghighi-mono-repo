@@ -1631,8 +1631,16 @@ export const paymentsService = {
     customerMobile: string;
     amount: number;
     description?: string;
+    workshopTitle?: string;
+    isAggregate?: boolean;
+    aggregateCount?: number;
   }) => {
     const response = await api.post('/payments/links', data);
+    return response.data;
+  },
+
+  getCustomerPaymentHistory: async (phone: string) => {
+    const response = await api.get(`/payments/customer-history/${phone}`);
     return response.data;
   },
 

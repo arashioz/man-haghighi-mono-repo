@@ -176,5 +176,41 @@ export class MessagesService {
       },
     });
   }
+
+  async sendPersonalMessage(userId: string, title: string, body: string, sendSms: boolean = false) {
+    // Create message
+    const message = await this.prisma.message.create({
+      data: {
+        title,
+        body,
+        sendSms,
+        sendInApp: true,
+        status: MessageStatus.PENDING,
+        sentById: null, // System message
+        totalRecipients: 1,
+      },
+    });
+
+    // Create user message
+    await this.prisma.userMessage.create({
+      data: {
+        userId,
+        messageId: message.id,
+      },
+    });
+
+    // Update message status
+    await this.prisma.message.update({
+      where: { id: message.id },
+      data: {
+        status: MessageStatus.SENT,
+        inAppSentCount: 1,
+      },
+    });
+
+    this.logger.log(`Personal message sent to user ${userId}: ${title}`);
+
+    return message;
+  }
 }
 

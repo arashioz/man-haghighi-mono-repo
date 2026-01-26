@@ -70,3 +70,4 @@ export const ErrorProvider: React.FC<ErrorProviderProps> = ({ children }) => {
     </ErrorContext.Provider>
   );
 };
+

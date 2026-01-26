@@ -1,4 +1,4 @@
-import { IsNumber, IsString, IsNotEmpty, IsOptional, Min, Matches } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, IsOptional, Min, Matches, IsBoolean } from 'class-validator';
 
 export class CreatePaymentLinkDto {
   @IsString()
@@ -26,4 +26,13 @@ export class CreatePaymentLinkDto {
   @IsString()
   @IsOptional()
   workshopTitle?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isAggregate?: boolean;
+
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(1)
+  @IsOptional()
+  aggregateCount?: number;
 }

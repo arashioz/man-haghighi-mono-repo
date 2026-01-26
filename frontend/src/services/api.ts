@@ -359,6 +359,24 @@ export const workshopsService = {
   }): Promise<void> => {
     await api.post(`/workshops/${workshopId}/participants`, participantData);
   },
+
+  getMyWorkshopParticipants: async (): Promise<any[]> => {
+    const response = await api.get('/workshops/my-workshops');
+    return response.data;
+  },
+
+  getParticipantPayments: async (participantId: string): Promise<any> => {
+    const response = await api.get(`/workshops/participants/${participantId}/payments`);
+    return response.data;
+  },
+
+  completeWorkshopPayment: async (participantId: string, paymentData: {
+    amount: number;
+    paymentMethod?: string;
+  }): Promise<any> => {
+    const response = await api.post(`/workshops/participants/${participantId}/complete-payment`, paymentData);
+    return response.data;
+  },
 };
 
 export const messagesService = {

@@ -135,3 +135,4 @@ SELECT enum_range(NULL::"PaymentStatus");
 3. فایل `server.env` را چک کنید (بدون رمزها)
 
 **تمام مشکلات شناخته شده برطرف شده‌اند! 🎉**
+

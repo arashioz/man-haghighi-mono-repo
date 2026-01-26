@@ -57,6 +57,9 @@ const MobileSellerDashboard: React.FC = () => {
   const [customerName, setCustomerName] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [isAggregateLink, setIsAggregateLink] = useState(false);
+  const [aggregateCount, setAggregateCount] = useState('');
+  const [customerHistory, setCustomerHistory] = useState<any>(null);
   const [phoneError, setPhoneError] = useState('');
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   const [isCreateCustomerModalOpen, setIsCreateCustomerModalOpen] = useState(false);
@@ -130,6 +133,7 @@ const MobileSellerDashboard: React.FC = () => {
   const handlePhoneChange = async (phone: string) => {
     setCustomerPhone(phone);
     setPhoneError('');
+    setCustomerHistory(null);
 
     // Check phone format
     if (phone.length === 11) {
@@ -141,11 +145,28 @@ const MobileSellerDashboard: React.FC = () => {
 
       try {
         setIsCheckingPhone(true);
-        const response = await usersService.getUserByPhone(phone);
-        setCustomerName(`${response.firstName} ${response.lastName}`.trim());
+
+        // Try to get customer info
+        try {
+          const response = await usersService.getUserByPhone(phone);
+          setCustomerName(`${response.firstName} ${response.lastName}`.trim());
+        } catch (error) {
+          // User doesn't exist, that's ok
+          setCustomerName('');
+          setNewCustomerData(prev => ({ ...prev, phone }));
+        }
+
+        // Get customer payment history
+        try {
+          const history = await paymentsService.getCustomerPaymentHistory(phone);
+          setCustomerHistory(history);
+        } catch (error) {
+          console.log('Customer has no payment history');
+        }
+
         setPhoneError('');
       } catch (error) {
-        // User doesn't exist, open create customer modal
+        setPhoneError('خطا در بررسی شماره موبایل');
         setCustomerName('');
         setNewCustomerData(prev => ({ ...prev, phone }));
         setIsCreateCustomerModalOpen(true);
@@ -230,6 +251,8 @@ const MobileSellerDashboard: React.FC = () => {
       const paymentData: any = {
         customerMobile: customerPhone,
         amount: amountInRial, // Amount in Rial for API
+        isAggregate: isAggregateLink,
+        aggregateCount: isAggregateLink ? parseInt(aggregateCount) : undefined,
       };
 
       if (customerName) paymentData.customerName = customerName;
@@ -242,6 +265,9 @@ const MobileSellerDashboard: React.FC = () => {
       setCustomerName('');
       setAmount('');
       setDescription('');
+      setIsAggregateLink(false);
+      setAggregateCount('');
+      setCustomerHistory(null);
       setPhoneError('');
 
       setIsCreateLinkModalOpen(false);
@@ -605,6 +631,42 @@ const MobileSellerDashboard: React.FC = () => {
             />
           </MobileFormField>
 
+          {/* Customer History */}
+          {customerHistory && customerHistory.exists && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-green-800">💰 سابقه مشتری</h4>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">مجموع پرداخت:</span>
+                  <span className="font-medium">{customerHistory.summary.totalPaid?.toLocaleString()} تومان</span>
+                </div>
+
+                {customerHistory.workshops.length > 0 && (
+                  <div>
+                    <p className="text-gray-600 mb-1">کارگاه‌ها:</p>
+                    {customerHistory.workshops.slice(0, 1).map((workshop: any, idx: number) => (
+                      <div key={idx} className="bg-white rounded p-2 mb-1">
+                        <p className="font-medium">{workshop.workshop.title}</p>
+                        <p className="text-gray-600">
+                          پرداخت شده: {workshop.paidAmount?.toLocaleString()} |
+                          مانده: {workshop.remainingAmount?.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex justify-between">
+                  <span className="text-gray-600">کیف پول:</span>
+                  <span className="font-medium">{(customerHistory.customer.walletBalance / 10)?.toLocaleString()} تومان</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <MobileFormField label="مبلغ (تومان)" required>
             <MobileInput
               type="text"
@@ -613,6 +675,41 @@ const MobileSellerDashboard: React.FC = () => {
               onChange={(e) => handleAmountChange(e.target.value)}
             />
           </MobileFormField>
+
+          {/* Aggregate Link Option */}
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <input
+              type="checkbox"
+              id="isAggregate"
+              checked={isAggregateLink}
+              onChange={(e) => {
+                setIsAggregateLink(e.target.checked);
+                if (!e.target.checked) {
+                  setAggregateCount('');
+                }
+              }}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="isAggregate" className="text-sm text-gray-700">
+              ساخت لینک تجمیعی
+            </label>
+          </div>
+
+          {isAggregateLink && (
+            <MobileFormField label="تعداد افراد" required>
+              <MobileInput
+                type="number"
+                placeholder="۴"
+                min="1"
+                max="50"
+                value={aggregateCount}
+                onChange={(e) => setAggregateCount(e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                تعداد افرادی که با پنل یک نفر ثبت نام می‌کنند
+              </p>
+            </MobileFormField>
+          )}
 
           <MobileFormField label="توضیحات (اختیاری)">
             <MobileInput

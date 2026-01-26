@@ -415,7 +415,8 @@ model WorkshopParticipant {
   workshopId       String
   customerPhone    String
   customerName     String
-  prepaymentAmount Decimal       @db.Decimal(10, 2)
+  totalAmount      Decimal       @db.Decimal(10, 2) // Total workshop price
+  paidAmount       Decimal       @db.Decimal(10, 2) @default(0) // Total amount paid so far
   paymentStatus    PaymentStatus @default(PENDING)
   paymentLink      String?
   invitationCard   String?
@@ -426,8 +427,29 @@ model WorkshopParticipant {
   // Relations
   workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
   creator  User     @relation(fields: [createdBy], references: [id])
+  payments WorkshopPayment[] // All payments for this participant
 
   @@map("workshop_participants")
+}
+
+model WorkshopPayment {
+  id                String          @id @default(cuid())
+  participantId     String
+  amount            Decimal         @db.Decimal(10, 2)
+  paymentMethod     String          @default("PAYMENT_LINK") // PAYMENT_LINK, WALLET, etc.
+  paymentLinkId     String? // If paid via payment link
+  transactionId     String? // Transaction ID
+  status            PaymentStatus   @default(PENDING)
+  paymentDate       DateTime?
+  notes             String?         @db.Text
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  participant WorkshopParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  paymentLink PaymentLink?        @relation(fields: [paymentLinkId], references: [id])
+
+  @@map("workshop_payments")
 }
 
 model SalesPersonWorkshopAccess {
@@ -658,6 +680,10 @@ model PaymentLink {
   isActive      Boolean   @default(true)
   expiresAt     DateTime? // تاریخ انقضا (اختیاری)
 
+  // Aggregate payment fields
+  isAggregate      Boolean @default(false) // آیا این لینک تجمیعی هست؟
+  aggregateCount   Int? // تعداد افراد در صورت لینک تجمیعی
+
   // Payment info
   status PaymentStatus @default(PENDING)
   paidAt DateTime?
@@ -675,6 +701,7 @@ model PaymentLink {
   creator      User          @relation("PaymentLinkCreator", fields: [createdById], references: [id])
   invoices     Invoice[]
   transactions Transaction[]
+  workshopPayments WorkshopPayment[]
 
   @@index([linkCode])
   @@index([createdById])

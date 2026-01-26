@@ -12,6 +12,8 @@ import { GatewayService } from './gateway.service';
 import { WalletService } from './wallet.service';
 import { InvoiceService } from './invoice.service';
 import { CoursesService } from '../courses/courses.service';
+import { MessagesService } from '../messages/messages.service';
+import { WorkshopsService } from '../workshops/workshops.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { CreatePaymentLinkDto } from './dto/create-payment-link.dto';
@@ -26,6 +28,8 @@ export class PaymentsService {
     private walletService: WalletService,
     private invoiceService: InvoiceService,
     private coursesService: CoursesService,
+    private messagesService: MessagesService,
+    private workshopsService: WorkshopsService,
     private configService: ConfigService,
   ) {}
 
@@ -591,6 +595,11 @@ export class PaymentsService {
         // Note: PAYMENT transactions with courseId are already handled above
       }
 
+      // Check if this is a workshop payment
+      if (transaction.paymentLink?.workshopTitle) {
+        await this.processWorkshopPayment(transaction);
+      }
+
       return {
         success: true,
         message: 'پرداخت با موفقیت انجام شد',
@@ -669,6 +678,8 @@ export class PaymentsService {
         status: 'PENDING',
         gatewayName: 'بانک پارسیان', // Default gateway
         requestTime: new Date(), // Time when link is created
+        isAggregate: dto.isAggregate || false,
+        aggregateCount: dto.isAggregate ? dto.aggregateCount : null,
       },
     });
 
@@ -1019,6 +1030,139 @@ export class PaymentsService {
     return transaction;
   }
 
+  async getCustomerPaymentHistory(phone: string) {
+    // Get user by phone
+    const user = await this.prisma.user.findUnique({
+      where: { phone },
+      include: {
+        purchasedCourses: {
+          include: { course: true }
+        },
+        participants: {
+          include: {
+            workshop: true,
+            creator: true
+          }
+        },
+        wallet: true
+      }
+    });
+
+    if (!user) {
+      return {
+        exists: false,
+        customer: null,
+        workshops: [],
+        paymentLinks: [],
+        totalPaid: 0,
+        totalWorkshops: 0,
+        totalCourses: 0
+      };
+    }
+
+    // Get payment links for this customer
+    const paymentLinks = await this.prisma.paymentLink.findMany({
+      where: { customerPhone: phone },
+      include: {
+        invoices: {
+          include: {
+            transactions: true
+          }
+        },
+        creator: {
+          select: {
+            firstName: true,
+            lastName: true,
+            username: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calculate totals
+    const totalPaid = paymentLinks
+      .filter(link => link.invoices?.some(inv => inv.status === 'PAID'))
+      .reduce((sum, link) => sum + Number(link.amount), 0);
+
+    const activeLinks = paymentLinks.filter(link => link.isActive).length;
+    const paidLinks = paymentLinks.filter(link =>
+      link.invoices?.some(inv => inv.status === 'PAID')
+    ).length;
+
+    // Get workshop payments summary per workshop
+    const workshopPayments = new Map();
+
+    // Process workshop participants
+    user.participants.forEach(participant => {
+      const workshopId = participant.workshopId;
+      if (!workshopPayments.has(workshopId)) {
+        workshopPayments.set(workshopId, {
+          workshop: participant.workshop,
+          participants: [],
+          totalAmount: 0,
+          paidAmount: 0,
+          remainingAmount: Number(participant.workshop.price),
+          status: 'pending'
+        });
+      }
+      workshopPayments.get(workshopId).participants.push(participant);
+    });
+
+    // Process payment links to update workshop payments
+    paymentLinks.forEach(link => {
+      // Try to find workshop in description or workshopTitle
+      const workshopTitleMatch = link.workshopTitle || link.description?.match(/کارگاه:\s*([^-\n]+)/)?.[1];
+      if (workshopTitleMatch) {
+        // Find matching workshop
+        for (const [workshopId, workshopData] of workshopPayments.entries()) {
+          if (workshopData.workshop.title.includes(workshopTitleMatch.trim()) ||
+              workshopTitleMatch.trim().includes(workshopData.workshop.title)) {
+            workshopData.totalAmount += Number(link.amount);
+            if (link.invoices?.some(inv => inv.status === 'PAID')) {
+              workshopData.paidAmount += Number(link.amount);
+              workshopData.remainingAmount = Math.max(0, Number(workshopData.workshop.price) - workshopData.paidAmount);
+              workshopData.status = workshopData.remainingAmount === 0 ? 'completed' : 'partial';
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    return {
+      exists: true,
+      customer: {
+        id: user.id,
+        phone: user.phone,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        walletBalance: user.wallet?.balance || 0
+      },
+      workshops: Array.from(workshopPayments.values()).map(data => ({
+        ...data,
+        totalAmount: data.totalAmount / 10, // Convert to toman
+        paidAmount: data.paidAmount / 10,
+        remainingAmount: data.remainingAmount / 10,
+        fullPrice: Number(data.workshop.price) / 10
+      })),
+      paymentLinks: paymentLinks.map(link => ({
+        ...link,
+        amount: Number(link.amount) / 10, // Convert to toman
+        isPaid: link.invoices?.some(inv => inv.status === 'PAID') || false
+      })),
+      summary: {
+        totalPaid: totalPaid / 10, // Convert to toman
+        totalLinks: paymentLinks.length,
+        activeLinks,
+        paidLinks,
+        unpaidLinks: paymentLinks.length - paidLinks,
+        totalWorkshops: workshopPayments.size,
+        totalCourses: user.purchasedCourses.length
+      }
+    };
+  }
+
   async getPaymentLinksReport(filters: {
     startDate?: string;
     endDate?: string;
@@ -1274,6 +1418,117 @@ export class PaymentsService {
       'CANCELLED': 'لغو شده'
     };
     return statusMap[status] || status;
+  }
+
+  private async processWorkshopPayment(transaction: any) {
+    try {
+      const paymentLink = transaction.paymentLink;
+      if (!paymentLink?.workshopTitle) return;
+
+      // Find workshop participant by phone and workshop title
+      const workshop = await this.prisma.workshop.findFirst({
+        where: {
+          title: paymentLink.workshopTitle,
+        },
+      });
+
+      if (!workshop) {
+        this.logger.warn(`Workshop not found for title: ${paymentLink.workshopTitle}`);
+        return;
+      }
+
+      // Find participant
+      let participant = await this.prisma.workshopParticipant.findFirst({
+        where: {
+          workshopId: workshop.id,
+          customerPhone: paymentLink.customerPhone,
+        },
+        include: {
+          workshop: true,
+          payments: true,
+        },
+      });
+
+      // If participant doesn't exist, create one
+      if (!participant) {
+        participant = await this.prisma.workshopParticipant.create({
+          data: {
+            workshopId: workshop.id,
+            customerName: paymentLink.customerName,
+            customerPhone: paymentLink.customerPhone,
+            totalAmount: workshop.price,
+            paidAmount: new Decimal(0),
+            createdBy: paymentLink.createdById,
+          },
+          include: {
+            workshop: true,
+            payments: true,
+          },
+        });
+      }
+
+      // Add payment record
+      const payment = await this.prisma.workshopPayment.create({
+        data: {
+          participantId: participant.id,
+          amount: transaction.amount,
+          paymentMethod: 'PAYMENT_LINK',
+          paymentLinkId: paymentLink.id,
+          transactionId: transaction.id,
+          status: 'PAID',
+          paymentDate: new Date(),
+        },
+      });
+
+      // Update participant paid amount
+      const newPaidAmount = participant.paidAmount.plus(transaction.amount);
+      const newStatus = newPaidAmount.gte(participant.totalAmount) ? 'PAID' : 'PENDING';
+
+      await this.prisma.workshopParticipant.update({
+        where: { id: participant.id },
+        data: {
+          paidAmount: newPaidAmount,
+          paymentStatus: newStatus,
+        },
+      });
+
+      // Send appropriate message
+      const remainingAmount = Number(participant.totalAmount.minus(newPaidAmount));
+      const workshopPrice = Number(participant.totalAmount);
+      const paidAmount = Number(newPaidAmount);
+
+      if (remainingAmount > 0) {
+        // Partial payment message
+        const messageTitle = 'پیش ثبت نام کارگاه';
+        const messageBody = `ممنون از پیش ثبت نام شما
+
+مبلغ کارگاه: ${Math.round(workshopPrice / 10).toLocaleString('fa-IR')} تومان
+شما پرداخت کرده‌اید: ${Math.round(paidAmount / 10).toLocaleString('fa-IR')} تومان
+برای شرکت در دوره باید پرداخت را تکمیل کنید
+
+لطفا به صفحه کیف پول بروید و پرداخت باقیمانده را انجام دهید.`;
+
+        await this.messagesService.sendPersonalMessage(transaction.userId, messageTitle, messageBody);
+      } else {
+        // Full payment message
+        const messageTitle = 'تکمیل ثبت نام کارگاه';
+        const messageBody = `با تشکر از خرید شما و شرکت در دوره
+
+🏢 کارگاه: ${participant.workshop.title}
+📅 تاریخ برگزاری: ${participant.workshop.date}
+📍 محل برگزاری: ${participant.workshop.location || 'تعیین نشده'}
+
+شماره رسید: ${transaction.orderId || payment.id}
+لطفا ساعت مقرر در مکان برگزاری حضور داشته باشید.`;
+
+        await this.messagesService.sendPersonalMessage(transaction.userId, messageTitle, messageBody);
+      }
+
+      this.logger.log(`Workshop payment processed: ${participant.customerName} - ${paidAmount}/${workshopPrice} paid`);
+    } catch (error) {
+      this.logger.error(`Error processing workshop payment: ${error.message}`);
+      // Don't fail the payment callback because of workshop processing error
+    }
   }
 }
 

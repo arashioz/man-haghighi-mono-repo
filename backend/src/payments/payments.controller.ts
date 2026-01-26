@@ -194,6 +194,17 @@ export class PaymentsController {
     return this.invoiceService.getPaymentLinkInvoices(params);
   }
 
+  @Get('customer-history/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'سابقه پرداخت و کارگاه‌های مشتری' })
+  @ApiResponse({ status: 200, description: 'سابقه مشتری' })
+  @ApiParam({ name: 'phone', description: 'شماره موبایل مشتری' })
+  async getCustomerPaymentHistory(@Param('phone') phone: string) {
+    return this.paymentsService.getCustomerPaymentHistory(phone);
+  }
+
   @Get('salespersons/stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

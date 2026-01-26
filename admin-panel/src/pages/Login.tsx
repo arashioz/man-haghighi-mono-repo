@@ -173,7 +173,7 @@ const Login: React.FC = () => {
           </form>
           
           {}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-2">
               <strong>اطلاعات آزمایشی:</strong>
             </p>
@@ -196,7 +196,7 @@ const Login: React.FC = () => {
             <p className="text-xs text-gray-500 mt-2">
               مدیران با ایمیل، بقیه با شماره تلفن وارد می‌شوند
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

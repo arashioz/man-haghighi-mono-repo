@@ -4,7 +4,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { WorkshopsService } from './workshops.service';
-import { CreateWorkshopDto, UpdateWorkshopDto } from './dto/workshop.dto';
+import { CreateWorkshopDto, UpdateWorkshopDto, CreateWorkshopParticipantDto, WorkshopPaymentDto, CompleteWorkshopPaymentDto } from './dto/workshop.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -209,8 +209,8 @@ export class WorkshopsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Add participant to workshop' })
   @ApiResponse({ status: 201, description: 'Participant added successfully' })
-  async addParticipant(@Param('id') id: string, @Body() participantData: any) {
-    return this.workshopsService.addParticipant(id, participantData);
+  async addParticipant(@Param('id') id: string, @Body() participantData: CreateWorkshopParticipantDto, @Request() req) {
+    return this.workshopsService.addParticipant(id, participantData, req.user.id);
   }
 
   @Patch(':id/participants/:participantId')
@@ -238,6 +238,43 @@ export class WorkshopsController {
     @Param('participantId') participantId: string
   ) {
     return this.workshopsService.deleteParticipant(id, participantId);
+  }
+
+  @Post(':id/participants/:participantId/payments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Add payment to workshop participant' })
+  @ApiResponse({ status: 201, description: 'Payment added successfully' })
+  async addParticipantPayment(
+    @Param('id') id: string,
+    @Param('participantId') participantId: string,
+    @Body() paymentData: WorkshopPaymentDto,
+    @Request() req
+  ) {
+    return this.workshopsService.addParticipantPayment(participantId, paymentData, req.user.id);
+  }
+
+  @Post(':id/participants/:participantId/complete-payment')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Complete workshop payment' })
+  @ApiResponse({ status: 200, description: 'Payment completed successfully' })
+  async completeWorkshopPayment(
+    @Param('id') id: string,
+    @Param('participantId') participantId: string,
+    @Body() paymentData: CompleteWorkshopPaymentDto,
+    @Request() req
+  ) {
+    return this.workshopsService.completeWorkshopPayment(participantId, paymentData, req.user.id);
+  }
+
+  @Get(':id/participants/:participantId/payments')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get participant payment history' })
+  @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
+  async getParticipantPayments(@Param('participantId') participantId: string) {
+    return this.workshopsService.getParticipantPayments(participantId);
   }
 
   @Get('sales-manager/my-workshops')

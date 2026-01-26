@@ -16,6 +16,7 @@ const UserDashboard: React.FC = () => {
   const [myVideos, setMyVideos] = useState<Video[]>([]);
   const [myAudios, setMyAudios] = useState<Audio[]>([]);
   const [myWorkshops, setMyWorkshops] = useState<Workshop[]>([]);
+  const [workshopParticipants, setWorkshopParticipants] = useState<any[]>([]);
   const [inboxMessages, setInboxMessages] = useState<UserMessage[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +65,12 @@ const UserDashboard: React.FC = () => {
   const fetchUserData = async () => {
     setMessagesLoading(true);
     try {
-      const [coursesData, videosData, audiosData, workshopsData, messagesData, invoicesData] = await Promise.all([
+      const [coursesData, videosData, audiosData, workshopsData, participantsData, messagesData, invoicesData] = await Promise.all([
         coursesService.getMyCourses(),
         videosService.getMyVideos(),
         audiosService.getMyAudios(),
-        workshopsService.getMyWorkshops(),
+        workshopsService.getActive(), // Get all workshops, not just user's
+        workshopsService.getMyWorkshopParticipants(), // Get user's workshop participation
         messagesService.getMyMessages(),
         paymentsService.getMyInvoices(10),
       ]);
@@ -76,6 +78,7 @@ const UserDashboard: React.FC = () => {
       setMyVideos(videosData);
       setMyAudios(audiosData);
       setMyWorkshops(workshopsData);
+      setWorkshopParticipants(participantsData || []);
       setInboxMessages(messagesData || []);
       setInvoices(invoicesData || []);
     } catch (err: any) {
@@ -244,6 +247,21 @@ const UserDashboard: React.FC = () => {
     } catch (err) {
       // Keep UX simple; log the error without breaking the page
       console.error('Failed to mark message as read', err);
+    }
+  };
+
+  const handleCompleteWorkshopPayment = async (participantId: string, amount: number) => {
+    try {
+      await workshopsService.completeWorkshopPayment(participantId, {
+        amount: Math.round(amount / 10), // Convert back to toman for API
+        paymentMethod: 'WALLET'
+      });
+
+      // Refresh data
+      await fetchUserData();
+      alert('پرداخت با موفقیت تکمیل شد!');
+    } catch (err: any) {
+      alert('خطا در تکمیل پرداخت: ' + (err.response?.data?.message || 'خطای نامشخص'));
     }
   };
 
@@ -793,6 +811,113 @@ const UserDashboard: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-8">
+                {/* Courses Section */}
+                <div className="bg-blue-50 rounded-2xl p-4 sm:p-6">
+                  <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
+                    <span>📚</span>
+                    دوره‌های خریداری شده
+                  </h3>
+                  {myCourses.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {myCourses.map((course) => (
+                        <div key={course.id} className="bg-white rounded-xl p-4 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            {course.thumbnail && (
+                              <img
+                                src={course.thumbnail}
+                                alt={course.title}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                            )}
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1">{course.title}</h4>
+                              <p className="text-sm text-gray-600 mb-2">
+                                {Math.round(course.price / 10).toLocaleString()} تومان
+                              </p>
+                              <button
+                                onClick={() => navigate(`/courses/${course.id}`)}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                مشاهده دوره →
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">هنوز دوره‌ای خریداری نکرده‌اید</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Workshops Section */}
+                <div className="bg-purple-50 rounded-2xl p-4 sm:p-6">
+                  <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+                    <span>🏢</span>
+                    کارگاه‌های شرکت کرده
+                  </h3>
+                  {workshopParticipants.length > 0 ? (
+                    <div className="space-y-4">
+                      {workshopParticipants.map((participant) => {
+                        const workshop = myWorkshops.find(w => w.id === participant.workshopId);
+                        if (!workshop) return null;
+
+                        const remainingAmount = participant.totalAmount - participant.paidAmount;
+                        const isCompleted = remainingAmount <= 0;
+
+                        return (
+                          <div key={participant.id} className="bg-white rounded-xl p-4 shadow-sm">
+                            <div className="flex items-start gap-3">
+                              {workshop.thumbnail && (
+                                <img
+                                  src={workshop.thumbnail}
+                                  alt={workshop.title}
+                                  className="w-16 h-16 rounded-lg object-cover"
+                                />
+                              )}
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-gray-900 mb-1">{workshop.title}</h4>
+                                <div className="text-sm text-gray-600 mb-2">
+                                  <p>مبلغ کل: {Math.round(participant.totalAmount / 10).toLocaleString()} تومان</p>
+                                  <p>پرداخت شده: {Math.round(participant.paidAmount / 10).toLocaleString()} تومان</p>
+                                  {!isCompleted && (
+                                    <p className="text-orange-600 font-medium">
+                                      مانده: {Math.round(remainingAmount / 10).toLocaleString()} تومان
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    isCompleted
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-orange-100 text-orange-800'
+                                  }`}>
+                                    {isCompleted ? '✅ تکمیل شده' : '⏳ پیش ثبت نام'}
+                                  </span>
+                                </div>
+                                {!isCompleted && (
+                                  <button
+                                    onClick={() => handleCompleteWorkshopPayment(participant.id, remainingAmount)}
+                                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                                  >
+                                    تکمیل پرداخت ({Math.round(remainingAmount / 10).toLocaleString()} تومان)
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">هنوز در کارگاهی شرکت نکرده‌اید</p>
+                    </div>
+                  )}
+                </div>
+
                 {/* Invoice List */}
                 <div className="bg-gray-50 rounded-2xl p-4 sm:p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">آخرین فاکتورها</h3>

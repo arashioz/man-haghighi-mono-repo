@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { CreateWorkshopDto, UpdateWorkshopDto } from './dto/workshop.dto';
+import { CreateWorkshopDto, UpdateWorkshopDto, CreateWorkshopParticipantDto, WorkshopPaymentDto, CompleteWorkshopPaymentDto } from './dto/workshop.dto';
 import { UrlService } from '../common/services/url.service';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class WorkshopsService {
@@ -324,13 +325,18 @@ export class WorkshopsService {
     });
   }
 
-  async addParticipant(workshopId: string, participantData: any) {
+  async addParticipant(workshopId: string, participantData: CreateWorkshopParticipantDto, userId: string) {
     const workshop = await this.findOne(workshopId);
-    
-    return this.prisma.workshopParticipant.create({
+
+    // Create participant with initial payment
+    const participant = await this.prisma.workshopParticipant.create({
       data: {
-        ...participantData,
         workshopId,
+        customerName: participantData.customerName,
+        customerPhone: participantData.customerPhone,
+        totalAmount: workshop.price, // Workshop full price
+        paidAmount: new Decimal(0), // Will be updated after payment
+        createdBy: userId,
       },
       include: {
         creator: {
@@ -341,8 +347,20 @@ export class WorkshopsService {
             username: true,
           },
         },
+        workshop: true,
       },
     });
+
+    // If there's an initial payment, create the payment record
+    if (participantData.initialPaymentAmount > 0) {
+      await this.addParticipantPayment(participant.id, {
+        amount: participantData.initialPaymentAmount,
+        paymentMethod: 'PAYMENT_LINK',
+        notes: participantData.notes || 'پرداخت اولیه کارگاه',
+      }, userId);
+    }
+
+    return participant;
   }
 
   async updateParticipant(workshopId: string, participantId: string, participantData: any) {
@@ -627,5 +645,116 @@ export class WorkshopsService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async addParticipantPayment(participantId: string, paymentData: WorkshopPaymentDto, userId: string) {
+    const participant = await this.prisma.workshopParticipant.findUnique({
+      where: { id: participantId },
+      include: { workshop: true },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('شرکت‌کننده یافت نشد');
+    }
+
+    // Check if payment exceeds remaining amount
+    const remainingAmount = participant.totalAmount.minus(participant.paidAmount);
+    if (paymentData.amount > Number(remainingAmount)) {
+      throw new BadRequestException(`مبلغ پرداخت نمی‌تواند بیشتر از ${remainingAmount} تومان باشد`);
+    }
+
+    // Create payment record
+    const payment = await this.prisma.workshopPayment.create({
+      data: {
+        participantId,
+        amount: new Decimal(paymentData.amount),
+        paymentMethod: paymentData.paymentMethod || 'PAYMENT_LINK',
+        status: 'PENDING', // Will be updated when payment is confirmed
+        notes: paymentData.notes,
+      },
+    });
+
+    return payment;
+  }
+
+  async completeWorkshopPayment(participantId: string, paymentData: CompleteWorkshopPaymentDto, userId: string) {
+    const participant = await this.prisma.workshopParticipant.findUnique({
+      where: { id: participantId },
+      include: { workshop: true, payments: true },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('شرکت‌کننده یافت نشد');
+    }
+
+    const remainingAmount = participant.totalAmount.minus(participant.paidAmount);
+    if (paymentData.amount !== Number(remainingAmount)) {
+      throw new BadRequestException(`مبلغ باید دقیقاً ${remainingAmount} تومان باشد`);
+    }
+
+    // Create final payment
+    const payment = await this.prisma.workshopPayment.create({
+      data: {
+        participantId,
+        amount: new Decimal(paymentData.amount),
+        paymentMethod: paymentData.paymentMethod || 'PAYMENT_LINK',
+        status: 'PAID',
+        paymentDate: new Date(),
+      },
+    });
+
+    // Update participant status
+    await this.prisma.workshopParticipant.update({
+      where: { id: participantId },
+      data: {
+        paidAmount: participant.totalAmount,
+        paymentStatus: 'PAID',
+      },
+    });
+
+    return {
+      participant: await this.prisma.workshopParticipant.findUnique({
+        where: { id: participantId },
+        include: { workshop: true, payments: true },
+      }),
+      finalPayment: payment,
+    };
+  }
+
+  async getParticipantPayments(participantId: string) {
+    const participant = await this.prisma.workshopParticipant.findUnique({
+      where: { id: participantId },
+      include: {
+        workshop: true,
+        payments: {
+          orderBy: { createdAt: 'desc' },
+        },
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new NotFoundException('شرکت‌کننده یافت نشد');
+    }
+
+    return {
+      participant: {
+        ...participant,
+        totalAmount: Number(participant.totalAmount),
+        paidAmount: Number(participant.paidAmount),
+        remainingAmount: Number(participant.totalAmount.minus(participant.paidAmount)),
+      },
+      payments: participant.payments.map(payment => ({
+        ...payment,
+        amount: Number(payment.amount),
+      })),
+    };
   }
 }
