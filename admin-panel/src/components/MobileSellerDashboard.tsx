@@ -121,8 +121,8 @@ const MobileSellerDashboard: React.FC = () => {
 
   // Handle amount input change
   const handleAmountChange = (value: string) => {
-    const numericValue = value.replace(/[^\d]/g, '');
-    setAmount(numericValue);
+    // const numericValue = value.replace(/[^\d]/g, '');
+    setAmount(value);
   };
 
   // Format amount for display
