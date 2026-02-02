@@ -16,7 +16,8 @@ COPY . .
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=${REACT_APP_API_URL}
 
-# Build the app
+# Ensure local node_modules binaries are on PATH and build the app
+ENV PATH=/app/node_modules/.bin:$PATH
 RUN npm run build
 
 # Production stage with nginx
