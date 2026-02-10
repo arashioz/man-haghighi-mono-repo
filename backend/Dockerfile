@@ -5,7 +5,7 @@ FROM docker.arvancloud.ir/node:18-alpine as builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm config set registry https://registry.npmmirror.com
+RUN npm config set registry https://mirror-npm.runflare.com
 RUN npm ci --legacy-peer-deps
 
 COPY . .
@@ -26,7 +26,7 @@ RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 RUN chown -R nestjs:nodejs /app
 
 COPY --chown=nestjs:nodejs package*.json ./
-RUN npm config set registry https://registry.npmmirror.com
+RUN npm config set registry https://mirror-npm.runflare.com
 
 # Install all dependencies as nestjs user to avoid permission issues
 USER nestjs
