@@ -186,6 +186,8 @@ const UploadCenter: React.FC = () => {
   };
 
   const getFileUrl = (filename: string) => {
+    // در حالت جدید، backend برای ویدیو/صوت از کلید ساده استفاده می‌کند که در استریم مصرف می‌شود
+    // اما برای پیش‌نمایش، همچنان از /uploads به‌عنوان پراکسی استفاده می‌کنیم
     return `${API_ORIGIN}/uploads/${filename}`;
   };
 

@@ -2,9 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
+import { CloudStorageService } from '../cloud-storage/cloud-storage.service';
+import * as fs from 'fs';
 
 @Injectable()
 export class UploadsService {
+  constructor(private readonly cloudStorage: CloudStorageService) {}
+
   getMulterConfig(): MulterOptions {
     return {
       storage: diskStorage({
@@ -32,15 +36,18 @@ export class UploadsService {
   }
 
   async processImage(filePath: string, options?: { width?: number; height?: number; quality?: number }) {
-    
-    
-    
-    return filePath;
+    // For now we don't do server-side image processing; just upload original file to cloud.
+    const buffer = await fs.promises.readFile(filePath);
+    const filename = filePath.split(/[/\\]/).pop()!;
+    const key = `images/${filename}`;
+    await this.cloudStorage.uploadObject(key, buffer, 'image/*');
+    return key;
   }
 
   async generateThumbnail(filePath: string) {
-    
-    
-    return filePath;
+    // Simple implementation: we currently reuse original image as thumbnail on cloud
+    const filename = filePath.split(/[/\\]/).pop()!;
+    const key = `images/${filename}`;
+    return key;
   }
 }

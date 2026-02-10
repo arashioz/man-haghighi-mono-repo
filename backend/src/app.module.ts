@@ -19,6 +19,7 @@ import { VideosModule } from './videos/videos.module';
 import { AudiosModule } from './audios/audios.module';
 import { WorkshopsModule } from './workshops/workshops.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { CloudStorageModule } from './cloud-storage/cloud-storage.module';
 import { UploadCenterModule } from './upload-center/upload-center.module';
 import { LogsModule } from './logs/logs.module';
 import { AdminModule } from './admin/admin.module';
@@ -73,6 +74,7 @@ import { validateEnv } from './config/env.validation';
     AudiosModule,
     WorkshopsModule,
     UploadsModule,
+    CloudStorageModule,
     UploadCenterModule,
     CommentsModule,
     SeoModule,

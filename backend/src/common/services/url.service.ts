@@ -41,7 +41,7 @@ export class UrlService {
       return null;
     }
     
-    // If a full URL is already stored (e.g. migrated data), return as-is
+    // If a full URL is already stored (e.g. cloud URL), return as-is
     if (filePath.startsWith('http://') || filePath.startsWith('https://')){
       return filePath;
     }
@@ -49,7 +49,8 @@ export class UrlService {
     if (filePath.startsWith('/uploads/')) {
       return `${this.baseUrl}${filePath}`;
     }
-    
+
+    // Cloud objects: برای سازگاری، اگر شبیه کلید ساده است، آن را به /uploads نگاشت می‌کنیم
     return `${this.baseUrl}/uploads/${filePath}`;
   }
 

@@ -68,13 +68,13 @@ export class UploadsController {
         throw new Error('File size exceeds 50MB limit');
       }
 
-      const processedPath = await this.uploadsService.processImage(file.path);
-      const thumbnailPath = await this.uploadsService.generateThumbnail(file.path);
+      const processedKey = await this.uploadsService.processImage(file.path);
+      const thumbnailKey = await this.uploadsService.generateThumbnail(file.path);
 
       return {
-        original: `/uploads/${file.filename}`,
-        processed: `/uploads/${processedPath.split('/').pop()}`,
-        thumbnail: `/uploads/${thumbnailPath.split('/').pop()}`,
+        original: processedKey,
+        processed: processedKey,
+        thumbnail: thumbnailKey,
         size: file.size,
         mimetype: file.mimetype,
       };
@@ -126,9 +126,10 @@ export class UploadsController {
         throw new Error('File size exceeds 2GB limit');
       }
 
+      // For videos we keep only the filename; UploadCenter + streaming use it as key under videos/
       return {
         filename: file.filename,
-        path: `/uploads/${file.filename}`,
+        path: file.filename,
         size: file.size,
         mimetype: file.mimetype,
       };
@@ -180,9 +181,10 @@ export class UploadsController {
         throw new Error('File size exceeds 200MB limit');
       }
 
+      // For audios we keep only the filename; UploadCenter + streaming use it as key under audios/
       return {
         filename: file.filename,
-        path: `/uploads/${file.filename}`,
+        path: file.filename,
         size: file.size,
         mimetype: file.mimetype,
       };

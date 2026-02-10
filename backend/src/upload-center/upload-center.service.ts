@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { CloudStorageService } from '../cloud-storage/cloud-storage.service';
 import { UploadedFileInfo, FileType, AssignFileToCourseDto } from './dto/upload-center.dto';
 import { join } from 'path';
 import * as fs from 'fs';
@@ -7,11 +8,10 @@ import * as path from 'path';
 
 @Injectable()
 export class UploadCenterService {
-  constructor(private prisma: PrismaService) {}
-
-  private getUploadsDirectory(): string {
-    return process.env.UPLOAD_PATH || join(process.cwd(), 'uploads');
-  }
+  constructor(
+    private prisma: PrismaService,
+    private cloudStorage: CloudStorageService,
+  ) {}
 
   private getFileType(mimetype: string, filename: string): FileType {
     if (mimetype.startsWith('video/')) {
@@ -39,78 +39,80 @@ export class UploadCenterService {
   }
 
   async getAllFiles(): Promise<UploadedFileInfo[]> {
-    const uploadsDir = this.getUploadsDirectory();
-    
-    if (!fs.existsSync(uploadsDir)) {
-      return [];
-    }
-
-    const files = fs.readdirSync(uploadsDir);
     const fileInfos: UploadedFileInfo[] = [];
 
-    for (const filename of files) {
-      const filePath = join(uploadsDir, filename);
-      const stats = fs.statSync(filePath);
+    // در نسخه کلاد: منبع اصلی اطلاعات فایل‌ها دیتابیس است (video / audio / course / podcast / ...)
+    const [videos, audios] = await Promise.all([
+      this.prisma.video.findMany({
+        where: { videoFile: { not: null } },
+        select: { id: true, title: true, description: true, videoFile: true, createdAt: true, courseId: true, course: { select: { id: true, title: true } } },
+      }),
+      this.prisma.audio.findMany({
+        where: { audioFile: { not: null } },
+        select: { id: true, title: true, description: true, audioFile: true, createdAt: true, courseId: true, course: { select: { id: true, title: true } } },
+      }),
+    ]);
 
-      if (stats.isFile()) {
-        // Get mimetype from file extension
-        const ext = path.extname(filename).toLowerCase();
-        let mimetype = 'application/octet-stream';
-        
-        if (ext === '.mp4' || ext === '.webm' || ext === '.mov' || ext === '.avi' || ext === '.mkv') {
-          mimetype = 'video/' + ext.substring(1);
-        } else if (ext === '.mp3' || ext === '.wav' || ext === '.ogg' || ext === '.m4a' || ext === '.aac') {
-          mimetype = 'audio/' + ext.substring(1);
-        } else if (ext === '.jpg' || ext === '.jpeg' || ext === '.png' || ext === '.gif' || ext === '.webp') {
-          mimetype = 'image/' + ext.substring(1);
-        } else if (ext === '.pdf') {
-          mimetype = 'application/pdf';
-        } else if (ext === '.doc' || ext === '.docx') {
-          mimetype = 'application/msword';
-        } else if (ext === '.txt') {
-          mimetype = 'text/plain';
-        }
-
-        const fileType = this.getFileType(mimetype, filename);
-        const fileInfo: UploadedFileInfo = {
-          filename,
-          path: `/uploads/${filename}`,
-          size: stats.size,
-          sizeFormatted: this.formatFileSize(stats.size),
-          mimetype,
-          type: fileType,
-          createdAt: stats.birthtime,
-        };
-
-        // Check if file is assigned to a course
-        const video = await this.prisma.video.findFirst({
-          where: { videoFile: filename },
-          include: { course: { select: { id: true, title: true } } },
-        });
-
-        if (video) {
-          fileInfo.assignedToCourse = {
-            courseId: video.courseId,
-            courseTitle: video.course.title,
-            videoId: video.id,
-          };
-        } else {
-          const audio = await this.prisma.audio.findFirst({
-            where: { audioFile: filename },
-            include: { course: { select: { id: true, title: true } } },
-          });
-
-          if (audio) {
-            fileInfo.assignedToCourse = {
-              courseId: audio.courseId,
-              courseTitle: audio.course.title,
-              audioId: audio.id,
-            };
-          }
-        }
-
-        fileInfos.push(fileInfo);
+    // Videos
+    for (const video of videos) {
+      const filename = video.videoFile as string;
+      const ext = path.extname(filename).toLowerCase();
+      let mimetype = 'video/mp4';
+      if (ext) {
+        mimetype = `video/${ext.substring(1)}`;
       }
+      const fileType = this.getFileType(mimetype, filename);
+      const size = 0; // Unknown without HEAD to cloud; نمایش فقط منطقی
+
+      const fileInfo: UploadedFileInfo = {
+        filename,
+        path: filename,
+        size,
+        sizeFormatted: this.formatFileSize(size),
+        mimetype,
+        type: fileType,
+        createdAt: video.createdAt,
+        assignedToCourse: video.courseId
+          ? {
+              courseId: video.courseId,
+              courseTitle: video.course?.title || '',
+              videoId: video.id,
+            }
+          : undefined,
+      };
+
+      fileInfos.push(fileInfo);
+    }
+
+    // Audios
+    for (const audio of audios) {
+      const filename = audio.audioFile as string;
+      const ext = path.extname(filename).toLowerCase();
+      let mimetype = 'audio/mpeg';
+      if (ext) {
+        mimetype = `audio/${ext.substring(1)}`;
+      }
+      const fileType = this.getFileType(mimetype, filename);
+      const size = 0;
+
+      const fileInfo: UploadedFileInfo = {
+        filename,
+        path: filename,
+        size,
+        sizeFormatted: this.formatFileSize(size),
+        mimetype,
+        type: fileType,
+        createdAt: audio.createdAt,
+        assignedToCourse: audio.courseId
+          ? {
+              courseId: audio.courseId,
+              courseTitle: audio.course?.title || '',
+              audioId: audio.id,
+            }
+          : undefined,
+      };
+
+      fileInfos.push(fileInfo);
     }
 
     // Sort by creation date (newest first)
@@ -128,13 +130,7 @@ export class UploadCenterService {
   }
 
   async deleteFile(filename: string, force: boolean = false): Promise<void> {
-    const uploadsDir = this.getUploadsDirectory();
-    const filePath = join(uploadsDir, filename);
-
-    if (!fs.existsSync(filePath)) {
-      throw new NotFoundException('File not found');
-    }
-
+    // در حالت کلاد، فایل فیزیکی روی دیسک نداریم؛ فقط رکوردها و آبجکت روی کلاد را مدیریت می‌کنیم
     // If force delete, remove from database first
     if (force) {
       // Delete video if exists
@@ -214,8 +210,11 @@ export class UploadCenterService {
       }
     }
 
-    // Delete file from disk
-    fs.unlinkSync(filePath);
+    // Delete file from cloud (videos/ یا audios/)
+    const videoKey = `videos/${filename}`;
+    const audioKey = `audios/${filename}`;
+    await this.cloudStorage.deleteObject(videoKey);
+    await this.cloudStorage.deleteObject(audioKey);
   }
 
   async assignFileToCourse(
@@ -223,13 +222,6 @@ export class UploadCenterService {
     assignDto: AssignFileToCourseDto,
     forceReassign: boolean = false,
   ): Promise<{ video?: any; audio?: any }> {
-    const uploadsDir = this.getUploadsDirectory();
-    const filePath = join(uploadsDir, filename);
-
-    if (!fs.existsSync(filePath)) {
-      throw new NotFoundException('File not found');
-    }
-
     // Check if course exists
     const course = await this.prisma.course.findUnique({
       where: { id: assignDto.courseId },

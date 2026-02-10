@@ -63,6 +63,31 @@ class EnvironmentVariables {
   @IsOptional()
   UPLOAD_PATH?: string;
 
+  // Cloud storage (Parspack MinIO)
+  @IsString()
+  @IsOptional()
+  CLOUD_ENDPOINT?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUD_ACCESS_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUD_SECRET_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUD_BUCKET?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUD_USE_SSL?: string;
+
+  @IsNumber()
+  @IsOptional()
+  CLOUD_PORT?: number;
+
   // API Base URL
   @IsString()
   @IsOptional()
