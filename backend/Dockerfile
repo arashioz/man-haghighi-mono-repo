@@ -30,6 +30,7 @@ RUN npm config set registry https://mirror-npm.runflare.com
 
 # Install all dependencies as nestjs user to avoid permission issues
 USER nestjs
+RUN npm config set registry https://mirror-npm.runflare.com
 RUN npm install --legacy-peer-deps && npm cache clean --force
 USER root
 
