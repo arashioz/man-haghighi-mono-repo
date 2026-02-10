@@ -100,7 +100,8 @@ export class VideosController {
   async streamVideoTest(
     @Param('id') id: string,
     @Res() res: Response,
-    @Headers('range') range?: string
+    @Headers('range') range?: string,
+    @Query('quality') quality?: string,
   ) {
     try {
       console.log(`[TEST] Streaming video ID: ${id} (NO AUTH)`);
@@ -182,6 +183,22 @@ export class VideosController {
             videoFile: video.videoFile,
             attemptedPaths: [videoPath, ...altPaths]
           });
+        }
+      }
+
+      // If a specific quality is requested (e.g. 720p, 480p), try to use a variant file
+      if (quality) {
+        const dotIndex = videoPath.lastIndexOf('.');
+        const qualityPath =
+          dotIndex !== -1
+            ? `${videoPath.slice(0, dotIndex)}-${quality}${videoPath.slice(dotIndex)}`
+            : `${videoPath}-${quality}`;
+
+        if (existsSync(qualityPath)) {
+          console.log(`[TEST] Using quality variant "${quality}" at path: ${qualityPath}`);
+          videoPath = qualityPath;
+        } else {
+          console.log(`[TEST] Quality variant "${quality}" not found, falling back to original file`);
         }
       }
       
@@ -277,7 +294,8 @@ export class VideosController {
     @Param('id') id: string,
     @Request() req,
     @Res() res: Response,
-    @Headers('range') range?: string
+    @Headers('range') range?: string,
+    @Query('quality') quality?: string,
   ) {
     try {
       const hasAccess = await this.videosService.checkVideoAccess(req.user.id, id);
@@ -373,6 +391,22 @@ export class VideosController {
             videoFile: video.videoFile,
             attemptedPaths: [videoPath, ...altPaths]
           });
+        }
+      }
+
+      // If a specific quality is requested (e.g. 720p, 480p), try to use a variant file
+      if (quality) {
+        const dotIndex = videoPath.lastIndexOf('.');
+        const qualityPath =
+          dotIndex !== -1
+            ? `${videoPath.slice(0, dotIndex)}-${quality}${videoPath.slice(dotIndex)}`
+            : `${videoPath}-${quality}`;
+
+        if (existsSync(qualityPath)) {
+          console.log(`Using quality variant "${quality}" at path: ${qualityPath}`);
+          videoPath = qualityPath;
+        } else {
+          console.log(`Quality variant "${quality}" not found, falling back to original file`);
         }
       }
       

@@ -6,6 +6,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Use Iran-friendly npm mirror to avoid network timeouts
+RUN npm config set registry https://mirror-npm.runflare.com
+
 # Clean npm cache and install dependencies with legacy peer deps to handle React 19 compatibility
 RUN npm cache clean --force && rm -f package-lock.json yarn.lock && npm install --legacy-peer-deps --force
 

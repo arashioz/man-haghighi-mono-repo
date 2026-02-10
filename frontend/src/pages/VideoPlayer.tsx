@@ -6,6 +6,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/imageUtils';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+const USE_TEST_ENDPOINT = true; // استفاده از endpoint تست برای جلوگیری از مشکلات توکن در حال حاضر
+
+const QUALITY_OPTIONS = [
+  { value: 'auto', label: 'خودکار' },
+  { value: '1080p', label: '۱۰۸۰p' },
+  { value: '720p', label: '۷۲۰p' },
+  { value: '480p', label: '۴۸۰p' },
+];
+
 const VideoPlayer: React.FC = () => {
   const { videoId } = useParams<{ videoId: string }>();
   const { courseId } = useParams<{ courseId: string }>();
@@ -19,6 +28,8 @@ const VideoPlayer: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [videoUrl, setVideoUrl] = useState<string>('');
+  const [selectedQuality, setSelectedQuality] = useState<string>('auto');
+  const [resumeTime, setResumeTime] = useState<number | null>(null);
 
   useEffect(() => {
     // Wait for auth to finish loading before checking user
@@ -32,6 +43,7 @@ const VideoPlayer: React.FC = () => {
     }
 
     if (videoId) {
+      setSelectedQuality('auto');
       fetchVideoData();
     }
   }, [videoId, user, authLoading, navigate]);
@@ -43,42 +55,10 @@ const VideoPlayer: React.FC = () => {
       const streamData = await videosService.getVideoStreamUrl(videoId!);
       setVideoInfo(streamData);
       
-      const token = localStorage.getItem('token');
-
-      const baseUrl = API_ORIGIN;
-      
-      const USE_TEST_ENDPOINT = true; 
-      const streamUrl = USE_TEST_ENDPOINT
-        ? `${baseUrl}/api/videos/${videoId}/stream-test`
-        : (token 
-          ? `${baseUrl}/api/videos/${videoId}/stream?token=${encodeURIComponent(token)}`
-          : streamData.streamUrl);
-      
-      console.log('Video stream URL:', streamUrl);
+      const initialUrl = buildStreamUrl('auto', videoId!, streamData);
+      console.log('Video stream URL:', initialUrl);
       console.log('Video info:', streamData);
-      
-      // Test if URL is accessible
-      try {
-        const testResponse = await fetch(streamUrl, {
-          method: 'HEAD',
-          headers: {
-            'Range': 'bytes=0-1'
-          }
-        });
-        console.log('Video URL test response:', {
-          status: testResponse.status,
-          statusText: testResponse.statusText,
-          headers: Object.fromEntries(testResponse.headers.entries())
-        });
-        
-        if (!testResponse.ok) {
-          console.error('Video URL not accessible:', testResponse.status, testResponse.statusText);
-        }
-      } catch (fetchError) {
-        console.error('Error testing video URL:', fetchError);
-      }
-      
-      setVideoUrl(streamUrl);
+      setVideoUrl(initialUrl);
       
       if (streamData.courseId) {
         const [courseData, videosData] = await Promise.all([
@@ -98,6 +78,52 @@ const VideoPlayer: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildStreamUrl = (quality: string, currentVideoId: string, info: VideoStreamInfo | null) => {
+    const baseUrl = API_ORIGIN;
+
+    if (USE_TEST_ENDPOINT) {
+      if (quality === 'auto') {
+        return `${baseUrl}/api/videos/${currentVideoId}/stream-test`;
+      }
+      return `${baseUrl}/api/videos/${currentVideoId}/stream-test?quality=${encodeURIComponent(
+        quality,
+      )}`;
+    }
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    if (token) {
+      const base = `${baseUrl}/api/videos/${currentVideoId}/stream?token=${encodeURIComponent(
+        token,
+      )}`;
+      if (quality === 'auto') {
+        return base;
+      }
+      return `${base}&quality=${encodeURIComponent(quality)}`;
+    }
+
+    if (info?.streamUrl) {
+      if (quality === 'auto') {
+        return info.streamUrl;
+      }
+      const separator = info.streamUrl.includes('?') ? '&' : '?';
+      return `${info.streamUrl}${separator}quality=${encodeURIComponent(quality)}`;
+    }
+
+    return '';
+  };
+
+  const handleQualityChange = (quality: string) => {
+    if (!videoId) return;
+
+    const currentTime = videoRef.current?.currentTime ?? 0;
+    setResumeTime(currentTime);
+    setSelectedQuality(quality);
+
+    const newUrl = buildStreamUrl(quality, videoId, videoInfo);
+    setVideoUrl(newUrl);
   };
 
   const handleVideoSelect = (selectedVideoId: string) => {
@@ -194,7 +220,7 @@ const VideoPlayer: React.FC = () => {
                 {videoUrl && (
                   <video
                     ref={videoRef}
-                    key={videoId} // Force re-render when video changes
+                    key={`${videoId}-${selectedQuality}`} // Force re-render when video or quality changes
                     controls
                     controlsList="nodownload"
                     className="w-full h-full object-contain"
@@ -246,6 +272,16 @@ const VideoPlayer: React.FC = () => {
                     }}
                     onLoadedData={() => {
                       console.log('Video loaded successfully');
+                      if (resumeTime !== null && videoRef.current) {
+                        try {
+                          videoRef.current.currentTime = resumeTime;
+                          videoRef.current.play().catch(() => undefined);
+                        } catch (e) {
+                          console.warn('Failed to resume video at previous time', e);
+                        } finally {
+                          setResumeTime(null);
+                        }
+                      }
                     }}
                     onCanPlay={() => {
                       console.log('Video can play');
@@ -256,6 +292,26 @@ const VideoPlayer: React.FC = () => {
                     <source src={videoUrl || videoInfo.streamUrl} type="video/ogg" />
                     مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
                   </video>
+                )}
+
+                {/* Quality selector */}
+                {videoUrl && (
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <label className="bg-black/70 border border-white/10 text-xs text-white/80 px-2 py-1 rounded flex items-center space-x-2 space-x-reverse">
+                      <span className="ml-2">کیفیت:</span>
+                      <select
+                        value={selectedQuality}
+                        onChange={(e) => handleQualityChange(e.target.value)}
+                        className="bg-transparent border border-white/20 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-yellow-400"
+                      >
+                        {QUALITY_OPTIONS.map((q) => (
+                          <option key={q.value} value={q.value} className="bg-[#0a0a0a] text-white">
+                            {q.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                 )}
               </div>
               
