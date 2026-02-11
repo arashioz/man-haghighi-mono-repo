@@ -32,7 +32,7 @@ RUN npm config set registry https://mirror-npm.runflare.com
 
 # نصب deps به عنوان nestjs
 USER nestjs
-RUN npm install --legacy-peer-deps && npm cache clean --force
+RUN npm install --legacy-peer-deps 
 
 # بازگشت به root برای ساخت پوشه‌ها
 USER root
