@@ -2,6 +2,8 @@
 # Stage 1: builder
 # ===============================
 FROM docker.arvancloud.ir/node:18-alpine as builder
+RUN npm config set registry https://mirror-npm.runflare.com
+
 WORKDIR /app
 
 COPY package*.json ./
