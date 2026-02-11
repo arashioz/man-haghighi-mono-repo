@@ -33,6 +33,11 @@ USER nestjs
 RUN npm config set registry https://mirror-npm.runflare.com
 RUN npm install --legacy-peer-deps && npm cache clean --force
 USER root
+RUN chown -R node:node /app/moc-old-data
+RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
+RUN chown -R nestjs:nodejs /app/moc-old-data
+RUN mkdir -p /app/moc-old-data && chown -R nestjs:nodejs /app/moc-old-data
+RUN mkdir -p /app/moc-old-data && chown -R nestjs:nodejs /app/moc-old-data
 
 # Copy artifacts from builder with correct ownership
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
