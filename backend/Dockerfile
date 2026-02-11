@@ -20,35 +20,39 @@ RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 FROM docker.arvancloud.ir/node:18-alpine
 WORKDIR /app
 
+# اضافه کردن گروه و کاربر
 RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
 
-# Set ownership of /app before npm install to avoid chown issues
+# مطمئن شدن مالکیت /app برای root
 RUN chown -R nestjs:nodejs /app
 
+# کپی package و نصب deps
 COPY --chown=nestjs:nodejs package*.json ./
 RUN npm config set registry https://mirror-npm.runflare.com
 
-# Install all dependencies as nestjs user to avoid permission issues
+# نصب deps به عنوان nestjs
 USER nestjs
-RUN npm config set registry https://mirror-npm.runflare.com
 RUN npm install --legacy-peer-deps && npm cache clean --force
-USER root
-RUN mkdir -p /app/moc-old-data && \
-    chown -R nestjs:nodejs /app/moc-old-data
 
-# Copy artifacts from builder with correct ownership
+# بازگشت به root برای ساخت پوشه‌ها
+USER root
+
+# ساخت مسیرهای مورد نیاز و مالکیت مناسب
+RUN mkdir -p /app/moc-old-data /app/uploads
+RUN chown -R nestjs:nodejs /app/moc-old-data /app/uploads
+
+# کپی build از stage اول با مالکیت درست
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.seed.json ./tsconfig.seed.json
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
-# Removed redundant chown
-USER node
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
+
+# دادن دسترسی اجرایی به اسکریپت‌ها
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
-RUN mkdir -p /app/uploads && chown -R nestjs:nodejs /app/uploads
-
+# اجرای برنامه با کاربر nestjs
 USER nestjs
 
 EXPOSE 3000
