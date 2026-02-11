@@ -33,11 +33,8 @@ USER nestjs
 RUN npm config set registry https://mirror-npm.runflare.com
 RUN npm install --legacy-peer-deps && npm cache clean --force
 USER root
-RUN chown -R node:node /app/moc-old-data
-RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
-RUN chown -R nestjs:nodejs /app/moc-old-data
-RUN mkdir -p /app/moc-old-data && chown -R nestjs:nodejs /app/moc-old-data
-RUN mkdir -p /app/moc-old-data && chown -R nestjs:nodejs /app/moc-old-data
+RUN mkdir -p /app/moc-old-data && \
+    chown -R nestjs:nodejs /app/moc-old-data
 
 # Copy artifacts from builder with correct ownership
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
@@ -45,7 +42,7 @@ COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.seed.json ./tsconfig.seed.json
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
-RUN chown -R node:node /app/moc-old-data
+# Removed redundant chown
 USER node
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
