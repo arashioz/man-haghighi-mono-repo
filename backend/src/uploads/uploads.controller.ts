@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, UseInterceptors, UploadedFile, UseGuards, Res, Param, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { UploadsService } from './uploads.service';
@@ -8,14 +8,108 @@ import { Roles } from '../auth/roles.decorator';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
+import { Response } from 'express';
+enum FileType {
+  VIDEO = 'video',
+  AUDIO = 'audio',
+  IMAGE = 'image',
+  OTHER = 'other'
+}
 
-@ApiTags('Uploads')
+@ApiTags('Upload Center')
 @Controller('uploads')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')
 @ApiBearerAuth()
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all uploaded files' })
+  @ApiResponse({ status: 200, description: 'Files retrieved successfully' })
+  async getAllFiles() {
+    const uploadPath = join(process.cwd(), 'uploads');
+    if (!fs.existsSync(uploadPath)) {
+      return [];
+    }
+    
+    const files = fs.readdirSync(uploadPath);
+    return files.map(file => {
+      const stats = fs.statSync(join(uploadPath, file));
+      return {
+        filename: file,
+        path: `/uploads/${file}`,
+        size: stats.size,
+        createdAt: stats.birthtime,
+        type: this.getFileType(file)
+      };
+    });
+  }
+
+  @Get(':filename')
+  @ApiOperation({ summary: 'Download a file' })
+  @ApiResponse({ status: 200, description: 'File downloaded successfully' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  async downloadFile(@Param('filename') filename: string, @Res() res: Response) {
+    const filePath = join(process.cwd(), 'uploads', filename);
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File not found');
+    }
+    return res.download(filePath);
+  }
+
+  @Get('stream/:filename')
+  @ApiOperation({ summary: 'Stream a media file' })
+  @ApiResponse({ status: 200, description: 'File stream started' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  async streamFile(@Req() req: Request, @Param('filename') filename: string, @Res() res: Response) {
+    const filePath = join(process.cwd(), 'uploads', filename);
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File not found');
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    //@ts-ignore
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
+    }
+  }
+
+  private getFileType(filename: string): FileType {
+    const ext = extname(filename).toLowerCase();
+    if (['.mp4', '.webm', '.mov', '.avi'].includes(ext)) {
+      return FileType.VIDEO;
+    }
+    if (['.mp3', '.wav', '.ogg'].includes(ext)) {
+      return FileType.AUDIO;
+    }
+    if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+      return FileType.IMAGE;
+    }
+    return FileType.OTHER;
+  }
 
   private ensureUploadsDirectory(): string {
     const uploadPath = join(process.cwd(), 'uploads');

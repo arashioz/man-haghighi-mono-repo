@@ -34,3 +34,4 @@ const MobileCard: React.FC<MobileCardProps> = ({
 export default MobileCard;
 
 
+

@@ -1734,33 +1734,41 @@ export const settingsService = {
 
 export const uploadCenterService = {
   getAllFiles: async () => {
-    const response = await api.get('/upload-center');
+    const response = await api.get('/uploads');
     return response.data;
   },
 
   getVideos: async () => {
-    const response = await api.get('/upload-center/videos');
-    return response.data;
+    const files = await api.get('/uploads');
+    return files.data.filter((f: any) => f.type === 'video');
   },
 
   getAudios: async () => {
-    const response = await api.get('/upload-center/audios');
-    return response.data;
+    const files = await api.get('/uploads');
+    return files.data.filter((f: any) => f.type === 'audio');
   },
 
   deleteFile: async (filename: string, force: boolean = false) => {
-    const url = `/upload-center/${encodeURIComponent(filename)}${force ? '?force=true' : ''}`;
+    const url = `/uploads/${encodeURIComponent(filename)}${force ? '?force=true' : ''}`;
     await api.delete(url);
   },
 
   assignFileToCourse: async (filename: string, courseId: string, title?: string, description?: string, forceReassign: boolean = false) => {
-    const url = `/upload-center/${encodeURIComponent(filename)}/assign${forceReassign ? '?forceReassign=true' : ''}`;
-    const response = await api.post(url, {
+    const response = await api.post(`/uploads/${encodeURIComponent(filename)}/assign`, {
       courseId,
       title,
       description,
+      forceReassign
     });
     return response.data;
   },
+
+  downloadFile: async (filename: string) => {
+    return `${API_ORIGIN}/uploads/${encodeURIComponent(filename)}`;
+  },
+
+  streamFile: async (filename: string) => {
+    return `${API_ORIGIN}/uploads/stream/${encodeURIComponent(filename)}`;
+  }
 };
 

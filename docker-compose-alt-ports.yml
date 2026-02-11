@@ -11,7 +11,7 @@ services:
     ports:
       - "5432:5432" # برای dev/debug، در production بهتر نباشد
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./pgdata:/var/lib/postgresql/data
     networks:
       - backend_network
     healthcheck:
@@ -129,9 +129,6 @@ services:
 # -------------------------------
 # Volumes & Networks
 # -------------------------------
-volumes:
-  postgres_data:
-    driver: local
 
 networks:
   backend_network:

@@ -18,6 +18,7 @@ RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 # Stage 2: Production
 # ===============================
 FROM docker.arvancloud.ir/node:18-alpine
+RUN npm config set registry https://mirror-npm.runflare.com
 WORKDIR /app
 
 # اضافه کردن گروه و کاربر
@@ -28,7 +29,6 @@ RUN chown -R nestjs:nodejs /app
 
 # کپی package و نصب deps
 COPY --chown=nestjs:nodejs package*.json ./
-RUN npm config set registry https://mirror-npm.runflare.com
 
 # نصب deps به عنوان nestjs
 USER nestjs
