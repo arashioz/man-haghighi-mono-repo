@@ -29,7 +29,7 @@ model User {
   isOld                  Boolean   @default(false) // Flag for old imported users
   mustChangePassword     Boolean   @default(false) // Force user to change password on next login
   parentId               String?
-  isBlocked              Boolean   @default(false) // Rate limit blocking
+  is cked              Boolean   @default(false) // Rate limit blocking
   blockedUntil           DateTime? // When the block expires
   rateLimitViolations    Int       @default(0) // Count of rate limit violations
   lastRateLimitViolation DateTime? // Last violation time
@@ -763,6 +763,7 @@ model Transaction {
   invoice     Invoice?     @relation(fields: [invoiceId], references: [id])
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentLink PaymentLink? @relation(fields: [paymentLinkId], references: [id])
+  posts       Post[]       @relation("UserPosts")
 
   @@index([walletId])
   @@index([invoiceId])
@@ -772,4 +773,25 @@ model Transaction {
   @@index([status])
   @@index([createdAt])
   @@map("transactions")
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  excerpt     String?
+  slug        String   @unique
+  status      String   @default("draft") // draft, published, archived
+  featuredImage String?
+  authorId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author User?
+
+  @@index([slug])
+  @@index([status])
+  @@index([createdAt])
+  @@map("posts")
 }
