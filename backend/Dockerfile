@@ -40,7 +40,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.seed.json ./tsconfig.seed.json
 COPY --from=builder --chown=nestjs:nodejs /app/tsconfig.json ./tsconfig.json
-
+RUN chown -R node:node /app/moc-old-data
+USER node
 COPY --from=builder --chown=nestjs:nodejs /app/scripts ./scripts
 RUN chmod +x ./scripts/*.sh 2>/dev/null || true
 
