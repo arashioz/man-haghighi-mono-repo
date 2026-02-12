@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { PrismaClient } from '@prisma/client';
 
 interface WordPressPost {
   ID: string;
@@ -10,17 +9,11 @@ interface WordPressPost {
   post_name: string;
   post_status: string;
   post_date: string;
-  // Other WordPress fields we might need
 }
 
 interface ProcessedArticle {
   title: string;
-  slug: string;
   content: string;
-  excerpt?: string;
-  featuredImage?: string;
-  metaTitle?: string;
-  metaDescription?: string;
 }
 
 function processPost(post: WordPressPost): ProcessedArticle | null {
@@ -28,17 +21,17 @@ function processPost(post: WordPressPost): ProcessedArticle | null {
     return null;
   }
 
+  // Remove HTML tags from content
+  const cleanContent = post.post_content.replace(/<[^>]*>/g, '');
+
   return {
     title: post.post_title,
-    slug: post.post_name || post.post_title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
-    content: post.post_content,
-    excerpt: post.post_excerpt,
-    // Add other field mappings as needed
+    content: cleanContent
   };
 }
 
 async function main() {
-  const inputPath = path.join(__dirname, '../../5pOOisH_posts.json');
+  const inputPath = path.join(__dirname, '../../moc-old-data/5pOOisH_posts.json');
   const outputPath = path.join(__dirname, 'processed-articles.json');
 
   console.log(`Processing WordPress export file: ${inputPath}`);
@@ -46,7 +39,6 @@ async function main() {
   const fileContent = fs.readFileSync(inputPath, 'utf8');
   const data = JSON.parse(fileContent);
   
-  // Find the table data containing posts
   const postsTable = data.find((item: any) => 
     item.type === 'table' && item.name === '5pOOisH_posts'
   );

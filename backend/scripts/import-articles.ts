@@ -5,6 +5,13 @@ import path from 'path';
 const prisma = new PrismaClient();
 const BATCH_SIZE = 100; // Process articles in batches
 
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '');
+}
+
 async function importArticles() {
   const filePath = path.join(__dirname, 'processed-articles.json');
   
@@ -17,10 +24,7 @@ async function importArticles() {
   const articlesData = fs.readFileSync(filePath, 'utf8');
   const articles: Array<{
     title: string;
-    slug: string;
     content: string;
-    excerpt?: string;
-    featuredImage?: string;
   }> = JSON.parse(articlesData);
 
   console.log(`Found ${articles.length} articles to import`);
@@ -35,20 +39,28 @@ async function importArticles() {
 
     try {
       await prisma.$transaction(
-        batch.map(article => 
-          prisma.article.upsert({
-            where: { slug: article.slug },
-            create: article,
-            update: article
-          })
-        )
+        batch.map(article => {
+          const slug = generateSlug(article.title);
+          return prisma.article.upsert({
+            where: { slug },
+            create: {
+              title: article.title,
+              content: article.content,
+              slug
+            },
+            update: {
+              title: article.title,
+              content: article.content,
+              slug
+            }
+          });
+        })
       );
 
       importedCount += batch.length;
       console.log(`Imported batch ${i + 1}/${batches} (${importedCount}/${articles.length})`);
     } catch (error) {
       console.error(`Error importing batch ${i + 1}:`, error);
-      // Continue with next batch
     }
   }
 
