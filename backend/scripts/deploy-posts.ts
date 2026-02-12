@@ -8,7 +8,6 @@ interface PostData {
   content?: string;
   createdAt?: string;
   updatedAt?: string;
-  // Add other fields as needed
 }
 
 const prisma = new PrismaClient();
@@ -16,14 +15,12 @@ const postsFile = path.join(__dirname, '../post-content/all_posts.json');
 
 async function deployPosts() {
   try {
-    // Read the combined posts file
     const fileContent = fs.readFileSync(postsFile, 'utf8');
     const allPosts: PostData[] = JSON.parse(fileContent);
     
     let successCount = 0;
     let errorCount = 0;
 
-    // Process each post
     for (const postData of allPosts) {
       try {
         //@ts-ignore
@@ -31,6 +28,9 @@ async function deployPosts() {
           data: {
             title: postData.title || '',
             content: postData.content || '',
+            slug: postData.title ? 
+              postData.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '') : 
+              `post-${Date.now()}`,
             createdAt: new Date(postData.createdAt || Date.now()),
             updatedAt: new Date(postData.updatedAt || Date.now())
           }
