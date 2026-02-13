@@ -31,7 +31,7 @@ function processPost(post: WordPressPost): ProcessedArticle | null {
 }
 
 async function main() {
-  const inputPath = path.join(__dirname, '../../moc-old-data/5pOOisH_posts.json');
+  const inputPath = path.join(__dirname, './moc-old-data/5pOOisH_posts.json');
   const outputPath = path.join(__dirname, 'processed-articles.json');
 
   console.log(`Processing WordPress export file: ${inputPath}`);
