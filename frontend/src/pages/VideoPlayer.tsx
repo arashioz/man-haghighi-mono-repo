@@ -231,6 +231,9 @@ const VideoPlayer: React.FC = () => {
                       touchAction: 'manipulation'
                     }}
                     poster={videoInfo.thumbnail ? getImageUrl(videoInfo.thumbnail)! : undefined}
+                    playsInline
+                    muted
+                    preload="auto"
                     onEnded={hasNext ? goToNextVideo : undefined}
                     onClick={(e) => {
                       // Allow click events to propagate to video controls

@@ -1302,15 +1302,28 @@ const PaymentLinks: React.FC = () => {
             <input
               type="text"
               value={formattedAmount}
-              onChange={(e) => handleAmountChange(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                setNewLink({...newLink, amount: value});
+                setFormattedAmount(value ? Number(value).toLocaleString('fa-IR') : '');
+              }}
+              onFocus={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                e.target.value = value;
+                setFormattedAmount(value);
+              }}
+              onBlur={(e) => {
+                const value = e.target.value.replace(/[^\d]/g, '');
+                setFormattedAmount(value ? Number(value).toLocaleString('fa-IR') : '');
+              }}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
               required
-              placeholder="۱۰۰,۰۰۰"
+              placeholder="مثال: ۱۰۰,۰۰۰"
               dir="ltr"
             />
             {newLink.amount && (
               <p className="text-sm text-gray-500 mt-1">
-                معادل: {formatAmountInRial(parseTomanAmount(newLink.amount || '0'))} ریال
+                معادل: {formatAmountInRial(parseInt(newLink.amount) * 10)} ریال
               </p>
             )}
             {(linkType === 'workshop' && newLink.workshopId) || (linkType === 'course' && newLink.courseId) ? (

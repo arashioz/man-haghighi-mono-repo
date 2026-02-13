@@ -79,6 +79,9 @@ const VideoPodcastModal: React.FC<VideoPodcastModalProps> = ({
             className="w-full h-full"
             poster={thumbnailUrl || undefined}
             src={videoUrl}
+            playsInline
+            muted
+            preload="auto"
             onError={(e) => {
               const videoElement = e.target as HTMLVideoElement;
               console.error('Video error:', videoElement.error);

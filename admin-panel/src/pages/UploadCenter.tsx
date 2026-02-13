@@ -185,9 +185,12 @@ const UploadCenter: React.FC = () => {
     }).format(date);
   };
 
-  const getFileUrl = (filename: string) => {
-    // در حالت جدید، backend برای ویدیو/صوت از کلید ساده استفاده می‌کند که در استریم مصرف می‌شود
-    // اما برای پیش‌نمایش، همچنان از /uploads به‌عنوان پراکسی استفاده می‌کنیم
+  const getFileUrl = (filename: string, type?: string) => {
+    // برای ویدیوها از endpoint استریم استفاده می‌کنیم
+    if (type === 'video') {
+      return `${API_ORIGIN}/uploads/stream/${filename}`;
+    }
+    // برای سایر فایل‌ها از مسیر معمولی
     return `${API_ORIGIN}/uploads/${filename}`;
   };
 
@@ -495,11 +498,16 @@ const UploadCenter: React.FC = () => {
             <div className="aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center">
               {previewFile.type === 'video' && (
                 <video
-                  src={getFileUrl(previewFile.filename)}
+                  src={getFileUrl(previewFile.filename, 'video')}
                   controls
                   className="w-full h-full"
                   autoPlay
-                />
+                  playsInline
+                  muted
+                  preload="auto"
+                >
+                  مرورگر شما از پخش ویدیو پشتیبانی نمی‌کند.
+                </video>
               )}
               {previewFile.type === 'audio' && (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 gap-6 p-12">
