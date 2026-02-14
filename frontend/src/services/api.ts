@@ -178,9 +178,9 @@ export const slidersService = {
 };
 
 export const articlesService = {
-  getPublished: async (): Promise<Article[]> => {
-    const response = await api.get('/articles/published');
-    return response.data;
+  getPublished: async (params?: { limit?: number }): Promise<Article[]> => {
+    const response = await api.get('/articles/published', { params });
+    return response.data?.data || response.data || [];
   },
 
   getBySlug: async (slug: string): Promise<Article> => {

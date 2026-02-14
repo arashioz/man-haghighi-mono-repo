@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { slidersService, coursesService, articlesService, podcastsService, videoPodcastsService, workshopsService } from '../services/api';
 import { Slider, Course, Article, Podcast, VideoPodcast, Workshop } from '../types';
 import HomeV2 from '../components/home/HomeV2';
@@ -20,21 +20,21 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [slidersData, coursesData, articlesData, podcastsData, videoPodcastsData, workshopsData] = await Promise.all([
-          slidersService.getActive(),
-          coursesService.getForHomepage(),
-          articlesService.getPublished(),
-          podcastsService.getPublished(),
-          videoPodcastsService.getPublished(),
-          workshopsService.getActive(),
-        ]);
+      const [slidersData, coursesData, articlesData, podcastsData, videoPodcastsData, workshopsData] = await Promise.all([
+        slidersService.getActive(),
+        coursesService.getForHomepage(),
+        articlesService.getPublished({ limit: 3 }), // Get only 3 latest articles
+        podcastsService.getPublished(),
+        videoPodcastsService.getPublished(),
+        workshopsService.getActive(),
+      ]);
 
-        setSliders(Array.isArray(slidersData) ? slidersData : []);
-        setCourses(Array.isArray(coursesData) ? coursesData.slice(0, 6) : []);
-        setArticles(Array.isArray(articlesData) ? articlesData.slice(0, 3) : []);
-        setPodcasts(Array.isArray(podcastsData) ? podcastsData.slice(0, 6) : []);
-        setVideoPodcasts(Array.isArray(videoPodcastsData) ? videoPodcastsData.slice(0, 6) : []);
-        setWorkshops(Array.isArray(workshopsData) ? workshopsData.slice(0, 3) : []);
+      setSliders(Array.isArray(slidersData) ? slidersData : []);
+      setCourses(Array.isArray(coursesData) ? coursesData : []);
+      setArticles(Array.isArray(articlesData) ? articlesData : []);
+      setPodcasts(Array.isArray(podcastsData) ? podcastsData : []);
+      setVideoPodcasts(Array.isArray(videoPodcastsData) ? videoPodcastsData : []);
+      setWorkshops(Array.isArray(workshopsData) ? workshopsData : []);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Failed to fetch data');
       } finally {
@@ -92,7 +92,7 @@ const Home: React.FC = () => {
       <HomeV2
         sliders={sliders}
         courses={courses}
-        articles={articles}
+        articles={articles || []}  // Ensure articles is always an array
         podcasts={podcasts}
         videoPodcasts={videoPodcasts}
         workshops={workshops}

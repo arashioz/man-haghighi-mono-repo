@@ -49,20 +49,15 @@ const Articles: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await articlesService.getAll();
-      // Handle different response structures: array, { data: array }, or { data: { data: array } }
-      let articlesArray: Article[] = [];
-      if (Array.isArray(response)) {
-        articlesArray = response;
-      } else if (response && typeof response === 'object') {
-        if (Array.isArray(response.data)) {
-          articlesArray = response.data;
-        } else if (response.data && Array.isArray(response.data.data)) {
-          articlesArray = response.data.data;
-        }
-      }
-      // Ensure articlesArray is always an array
-      setArticles(Array.isArray(articlesArray) ? articlesArray : []);
+      const response = await articlesService.getAll({
+        page: 1,
+        limit: 10,
+        sort: 'createdAt',
+        order: 'desc'
+      });
+      // Handle response with pagination
+      const articlesArray = response?.data || [];
+      setArticles(articlesArray);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
       setArticles([]); // Ensure articles is always an array
