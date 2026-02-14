@@ -1,6 +1,7 @@
 {
   "name": "haghighi-backend",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "NestJS Backend for Haghighi Platform",
   "author": "Arash Haghighi",
   "private": true,

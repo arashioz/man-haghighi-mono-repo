@@ -186,11 +186,10 @@ const UploadCenter: React.FC = () => {
   };
 
   const getFileUrl = (filename: string, type?: string) => {
-    // برای ویدیوها از endpoint استریم استفاده می‌کنیم
     if (type === 'video') {
+      console.log("irad" , filename)
       return `${API_ORIGIN}/uploads/stream/${filename}`;
     }
-    // برای سایر فایل‌ها از مسیر معمولی
     return `${API_ORIGIN}/uploads/${filename}`;
   };
 

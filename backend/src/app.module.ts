@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { CorsModule } from '@nestjs/platform-express';
 import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 
@@ -38,16 +39,15 @@ import { validateEnv } from './config/env.validation';
 @Module({
   controllers: [AppController, HealthController],
   imports: [
+    CorsModule.forRoot({
+      origin: true,
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+      credentials: true,
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
-      envFilePath: ['.env.production', '.env'],
-    }),
-    ThrottlerModule.forRootAsync({
-      useFactory: (configService) => ({
-        throttlers: [{
-          ttl: configService.get('RATE_LIMIT_TTL', 60000),
-          limit: configService.get('RATE_LIMIT_MAX', 100),
+      env
         }],
       }),
       inject: [ConfigService],

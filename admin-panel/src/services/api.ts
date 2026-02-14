@@ -1768,6 +1768,7 @@ export const uploadCenterService = {
   },
 
   streamFile: async (filename: string) => {
+    console.log(filename)
     return `${API_ORIGIN}/uploads/stream/${encodeURIComponent(filename)}`;
   }
 };

@@ -14,9 +14,21 @@ const prisma = new PrismaClient();
 async function importUsers() {
   try {
     // Read the JSON file
-    const filePath = path.join(__dirname, 'final_merged_data_cleaned.json');
+    const filePath = path.join(__dirname, '../../moc-old-data/final_merged_data_cleaned.json');
+    
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Data file not found at path: ${filePath}`);
+    }
+
     const rawData = fs.readFileSync(filePath, 'utf-8');
-    const usersData: UserData[] = JSON.parse(rawData);
+    const parsedData = JSON.parse(rawData);
+    
+    if (!parsedData.users || typeof parsedData.users !== 'object') {
+      throw new Error('Invalid data format - missing users object');
+    }
+
+    // Convert users object to array
+    const usersData = Object.values(parsedData.users).map((user: any) => user.user_info);
 
     let importedCount = 0;
     let skippedCount = 0;
@@ -41,7 +53,8 @@ async function importUsers() {
       // Create new user with only valid fields
       const userData: any = {
         phone: user.user_login,
-        password: user.user_pass
+        password: user.user_pass,
+        username: user.user_login // Use user_login as username
       };
 
       // Only add email if it exists
