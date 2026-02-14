@@ -45,19 +45,25 @@ const Articles: React.FC = () => {
     fetchArticles();
   }, []);
 
-  const fetchArticles = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const fetchArticles = async (page = 1) => {
     try {
       setLoading(true);
       setError('');
       const response = await articlesService.getAll({
-        page: 1,
+        page,
         limit: 10,
         sort: 'createdAt',
         order: 'desc'
       });
-      // Handle response with pagination
-      const articlesArray = response?.data || [];
-      setArticles(articlesArray);
+      
+      setArticles(response?.data || []);
+      setTotalPages(response?.totalPages || 1);
+      setTotalItems(response?.totalItems || 0);
+      setCurrentPage(page);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
       setArticles([]); // Ensure articles is always an array
@@ -305,8 +311,9 @@ const Articles: React.FC = () => {
       )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        {Array.isArray(articles) && articles.length > 0 ? (
-          <div className="overflow-x-auto">
+          {Array.isArray(articles) && articles.length > 0 ? (
+            <div>
+              <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -408,7 +415,37 @@ const Articles: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                <div className="text-sm text-gray-700">
+                  نمایش {articles.length} از {totalItems} مقاله
+                </div>
+                <div className="flex space-x-2 space-x-reverse">
+                  <button
+                    onClick={() => fetchArticles(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 border rounded-md ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    قبلی
+                  </button>
+                  {Array.from({length: totalPages}, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => fetchArticles(page)}
+                      className={`px-3 py-1 border rounded-md ${currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => fetchArticles(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 border rounded-md ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    بعدی
+                  </button>
+                </div>
+              </div>
+            </div>
         ) : (
           <div className="p-6">
             <EmptyState

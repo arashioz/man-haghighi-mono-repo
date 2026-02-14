@@ -194,7 +194,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
   const primaryWorkshop = workshops[0] ?? null;
 
   const featuredArticles = useMemo(() => {
-    return articles.slice(0, 3);
+    // Filter out articles without images if needed
+    return articles
+      .filter(article => article.featuredImage || article.content?.includes('<img'))
+      .slice(0, 3);
   }, [articles]);
 
   const featuredPodcasts = useMemo(() => {
