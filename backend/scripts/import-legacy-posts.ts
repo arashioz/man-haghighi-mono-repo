@@ -33,8 +33,8 @@ interface NewArticle {
 }
 
 // تنظیمات اولیه
-const INPUT_FILE = path.join(__dirname, './moc-old-data/5pOOisH_posts.json');
-const OUTPUT_FILE = path.join(__dirname, './moc-old-data/processed-articles.json');
+const INPUT_FILE = path.join( './moc-old-data/5pOOisH_posts.json');
+const OUTPUT_FILE = path.join( './moc-old-data/processed-articles.json');
 const BATCH_SIZE = 100; // تعداد رکوردها در هر بسته
 
 const prisma = new PrismaClient();
