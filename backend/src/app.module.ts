@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ServeStaticModule } from '@nestjs/serve-static';
-import { CorsModule } from '@nestjs/platform-express';
-import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -35,19 +33,21 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ProgressiveThrottlerGuard } from './common/guards/progressive-throttler.guard';
 import { validateEnv } from './config/env.validation';
+import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 
 @Module({
   controllers: [AppController, HealthController],
   imports: [
-    CorsModule.forRoot({
-      origin: true,
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-      credentials: true,
-    }),
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
-      env
+      envFilePath: ['.env.production', '.env'],
+    }),
+    ThrottlerModule.forRootAsync({
+      useFactory: (configService) => ({
+        throttlers: [{
+          ttl: configService.get('RATE_LIMIT_TTL', 60000),
+          limit: configService.get('RATE_LIMIT_MAX', 100),
         }],
       }),
       inject: [ConfigService],
