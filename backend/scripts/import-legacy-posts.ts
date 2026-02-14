@@ -33,8 +33,8 @@ interface NewArticle {
 }
 
 // تنظیمات اولیه
-const INPUT_FILE = path.join( '../moc-old-data/5pOOisH_posts.json');
-const OUTPUT_FILE = path.join( '../moc-old-data/processed-articles.json');
+const INPUT_FILE = path.join(__dirname, '../moc-old-data/5pOOisH_posts.json');
+const OUTPUT_FILE = path.join(__dirname, '../moc-old-data/processed-articles.json');
 const BATCH_SIZE = 100; // تعداد رکوردها در هر بسته
 
 const prisma = new PrismaClient();
@@ -61,7 +61,11 @@ async function processLegacyPosts() {
         if (!line.trim()) return;
         
         try {
-          const legacyPost: LegacyPost = JSON.parse(line);
+          // حذف کاراکترهای غیرمجاز از ابتدا و انتهای خط
+          const cleanLine = line.trim().replace(/^[,\s]+/, '').replace(/[,\s]+$/, '');
+          if (!cleanLine) return;
+          
+          const legacyPost: LegacyPost = JSON.parse(cleanLine);
           const newArticle = transformPost(legacyPost);
           processedArticles.push(newArticle);
           recordsProcessed++;
@@ -72,7 +76,7 @@ async function processLegacyPosts() {
             processedArticles.length = 0; // پاک کردن آرایه
           }
         } catch (err) {
-          console.error('Error parsing JSON line:', err);
+          console.error('Error parsing JSON line:', line, err);
         }
       });
     });
