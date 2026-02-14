@@ -1,10 +1,11 @@
-import { Controller, Post, Get, UseInterceptors, UploadedFile, UseGuards, Res, Param, Req } from '@nestjs/common';
+import { Controller, Post, Get, UseInterceptors, UploadedFile, UseGuards, Res, Param, Req, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { UploadsService } from './uploads.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { PrismaService } from '../common/prisma/prisma.service';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
@@ -22,7 +23,10 @@ enum FileType {
 @Roles('ADMIN')
 @ApiBearerAuth()
 export class UploadsController {
-  constructor(private readonly uploadsService: UploadsService) {}
+  constructor(
+    private readonly uploadsService: UploadsService,
+    private readonly prisma: PrismaService
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all uploaded files' })
@@ -285,5 +289,56 @@ export class UploadsController {
     } catch (error) {
       throw new Error(`Audio upload failed: ${error.message}`);
     }
+  }
+
+  @Post(':filename/assign')
+  @ApiOperation({ summary: 'Assign an audio file to a course' })
+  @ApiResponse({ status: 201, description: 'Audio assigned to course successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 404, description: 'File or course not found' })
+  async assignAudioToCourse(
+    @Param('filename') filename: string,
+    @Body() body: { courseId: string }
+  ) {
+    // Check if file exists
+    const filePath = join(process.cwd(), 'uploads', filename);
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File not found');
+    }
+
+    // Check if course exists
+    const course = await this.prisma.course.findUnique({
+      where: { id: body.courseId }
+    });
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    // Check audio count limit (max 50 per course)
+    const existingAudioCount = await this.prisma.audio.count({
+      where: { courseId: body.courseId }
+    });
+    if (existingAudioCount >= 50) {
+      throw new Error('Maximum 50 audio files per course');
+    }
+
+    // Create audio record
+    const audio = await this.prisma.audio.create({
+      data: {
+        title: filename,
+        description: `Audio file for course ${course.title}`,
+        audioFile: filename,
+        order: existingAudioCount + 1,
+        courseId: body.courseId,
+        published: course.published
+      }
+    });
+
+    return {
+      success: true,
+      audioId: audio.id,
+      filename,
+      courseId: body.courseId
+    };
   }
 }
