@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 async function importUsers() {
   try {
     // Read the JSON file
-    const filePath = path.join(__dirname, '../../moc-old-data/final_merged_data_cleaned.json');
+    const filePath = path.join(__dirname, './final_merged_data_cleaned.json');
     
     if (!fs.existsSync(filePath)) {
       throw new Error(`Data file not found at path: ${filePath}`);
