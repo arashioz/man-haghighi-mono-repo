@@ -111,13 +111,23 @@ const UploadCenter: React.FC = () => {
     try {
       setAssigning(true);
       setError('');
-      await uploadCenterService.assignFileToCourse(
-        selectedFile.filename,
-        assignForm.courseId,
-        assignForm.title,
-        assignForm.description,
-        isReassign
-      );
+      
+      // Use different API endpoints based on file type
+      if (selectedFile.type === 'video') {
+        await uploadCenterService.assignVideoToCourse(
+          selectedFile.filename,
+          assignForm.courseId
+        );
+      } else {
+        await uploadCenterService.assignFileToCourse(
+          selectedFile.filename,
+          assignForm.courseId,
+          assignForm.title,
+          assignForm.description,
+          isReassign
+        );
+      }
+      
       setIsAssignModalOpen(false);
       setSelectedFile(null);
       await fetchFiles();
@@ -125,13 +135,20 @@ const UploadCenter: React.FC = () => {
       const errorMessage = err.response?.data?.message || 'خطا در اختصاص فایل به دوره';
       if (errorMessage.includes('already assigned')) {
         if (window.confirm('این فایل قبلاً اختصاص داده شده است. آیا می‌خواهید اختصاص آن را تغییر دهید؟')) {
-          await uploadCenterService.assignFileToCourse(
-            selectedFile.filename,
-            assignForm.courseId,
-            assignForm.title,
-            assignForm.description,
-            true
-          );
+          if (selectedFile.type === 'video') {
+            await uploadCenterService.assignVideoToCourse(
+              selectedFile.filename,
+              assignForm.courseId
+            );
+          } else {
+            await uploadCenterService.assignFileToCourse(
+              selectedFile.filename,
+              assignForm.courseId,
+              assignForm.title,
+              assignForm.description,
+              true
+            );
+          }
           setIsAssignModalOpen(false);
           setSelectedFile(null);
           await fetchFiles();

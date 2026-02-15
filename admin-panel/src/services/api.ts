@@ -1763,6 +1763,13 @@ export const uploadCenterService = {
     return response.data;
   },
 
+  assignVideoToCourse: async (filename: string, courseId: string) => {
+    const response = await api.post(`/uploads/${encodeURIComponent(filename)}/assign-video`, {
+      courseId
+    });
+    return response.data;
+  },
+
   downloadFile: async (filename: string) => {
     return `${API_ORIGIN}/uploads/${encodeURIComponent(filename)}`;
   },
