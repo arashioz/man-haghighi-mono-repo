@@ -12,6 +12,7 @@ export class CreateUserDto {
   @ApiProperty({ example: '09123456789' })
   @IsOptional()
   @IsString()
+  @IsNotEmpty({ message: 'Phone number is required' })
   phone?: string;
 
   @ApiProperty({ example: 'password123', description: 'Password for regular users. Required for USER role.' })

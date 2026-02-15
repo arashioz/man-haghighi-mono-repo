@@ -1524,4 +1524,56 @@ export class UsersService {
 
     return sellersWithStats;
   }
+
+  async importUsers(usersData: any[]) {
+    let importedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const userData of usersData) {
+      try {
+        // Validate required fields
+        if (!userData.phone) {
+          errors.push(`User with ID ${userData.id || 'unknown'}: Phone number is required`);
+          skippedCount++;
+          continue;
+        }
+
+        // Check if user already exists
+        const existingUser = await this.findByPhone(userData.phone);
+        
+        if (existingUser) {
+          // Update existing user
+          await this.update(existingUser.id, {
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role || 'USER',
+            isOld: true,
+          });
+          skippedCount++;
+        } else {
+          // Create new user
+          await this.create({
+            phone: userData.phone,
+            email: userData.email,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            role: userData.role || 'USER',
+            isOld: true,
+          });
+          importedCount++;
+        }
+      } catch (error) {
+        errors.push(`Error importing user: ${error.message}`);
+        skippedCount++;
+      }
+    }
+
+    return {
+      importedCount,
+      skippedCount,
+      errors
+    };
+  }
 }

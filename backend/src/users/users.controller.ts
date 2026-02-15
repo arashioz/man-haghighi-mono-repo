@@ -31,35 +31,63 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Import users with courses from JSON file (Admin only)' })
   @ApiResponse({ status: 201, description: 'Users imported successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file format or content' })
+  @ApiResponse({ status: 500, description: 'Import failed' })
   async importUsers(@UploadedFile() file: Express.Multer.File) {
-    const { spawn } = require('child_process');
-    const path = require('path');
-    
-    return new Promise((resolve, reject) => {
-      const importScript = spawn('npx', [
-        'ts-node',
-        path.join(process.cwd(), 'backend/scripts/import-users-with-courses.ts'),
-        file.path
-      ]);
+    try {
+      if (!file) {
+        throw new Error('No file uploaded');
+      }
 
-      let output = '';
+      // Validate file type
+      if (!file.mimetype.includes('json')) {
+        throw new Error('Only JSON files are allowed');
+      }
+
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size exceeds 10MB limit');
+      }
+
+      // Read and parse JSON file
+      const fs = require('fs');
+      const path = require('path');
       
-      importScript.stdout.on('data', (data) => {
-        output += data.toString();
-      });
+      let usersData;
+      try {
+        const fileContent = fs.readFileSync(file.path, 'utf8');
+        usersData = JSON.parse(fileContent);
+      } catch (parseError) {
+        throw new Error(`Invalid JSON format: ${parseError.message}`);
+      }
 
-      importScript.stderr.on('data', (data) => {
-        output += data.toString();
-      });
+      // Validate data structure
+      if (!Array.isArray(usersData)) {
+        throw new Error('JSON file must contain an array of users');
+      }
 
-      importScript.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true, output });
-        } else {
-          reject({ success: false, output });
-        }
-      });
-    });
+      if (usersData.length === 0) {
+        throw new Error('JSON file is empty');
+      }
+
+      // Import users directly using the service
+      const result = await this.usersService.importUsers(usersData);
+      
+      return {
+        success: true,
+        message: 'Users imported successfully',
+        importedCount: result.importedCount,
+        skippedCount: result.skippedCount,
+        errors: result.errors
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Import failed'
+      };
+    }
   }
 
   // Rest of the existing controller methods...

@@ -324,113 +324,54 @@ export class VideosController {
 
       console.log(`Streaming video ID: ${id}, videoFile: ${video.videoFile}`);
 
-      // Handle different video file formats
-      let videoPath: string;
-      let isExternalUrl = false;
-
-      if (video.videoFile.startsWith('http://') || video.videoFile.startsWith('https://')) {
-        // Check if it's an internal URL (same domain)
-        const baseUrl = this.urlService.getBaseUrl();
-        if (video.videoFile.startsWith(baseUrl)) {
-          // Convert internal URL to local file path
-          const urlPath = new URL(video.videoFile).pathname;
-          // In Docker, files are typically in /app/uploads/
-          videoPath = join('/app', urlPath);
-          console.log(`Converted internal URL to local path: ${videoPath}`);
-
-          // If local file doesn't exist, redirect to the URL
-          if (!existsSync(videoPath)) {
-            console.log(`Local file not found, redirecting to: ${video.videoFile}`);
-            return res.redirect(video.videoFile);
-          }
-        } else {
-          // External URL - reject
-          console.error(`External URLs are not supported. Video ID: ${id}, videoFile: ${video.videoFile}`);
-          res.setHeader('Content-Type', 'application/json');
-          return res.status(400).json({ error: 'External URLs are not supported. Only internal uploads are allowed.' });
-        }
-      } else if (video.videoFile.startsWith('/')) {
-        // Absolute path
-        videoPath = video.videoFile;
-      } else if (video.videoFile.startsWith('uploads/') || video.videoFile.startsWith('./uploads/')) {
-        // Path already includes uploads directory
-        videoPath = join(process.cwd(), video.videoFile.replace(/^\.\//, ''));
-      } else {
-        // Relative path - assume it's in uploads directory
-        videoPath = join(process.cwd(), 'uploads', video.videoFile);
-      }
-
-      console.log(`Attempting to stream from path: ${videoPath}`);
+      // Standardize video file path resolution
+      const videoPath = this.resolveVideoFilePath(video.videoFile);
+      
+      console.log(`Attempting to stream from standardized path: ${videoPath}`);
       
       // Check if file exists
       if (!existsSync(videoPath)) {
         console.error(`Video file does not exist at path: ${videoPath}`);
-        // Try alternative paths
-        const urlObj = new URL(video.videoFile);
-        const urlPath = urlObj.pathname;
-        const altPaths = [
-          join('/app', urlPath), // Docker path
-          join(process.cwd(), urlPath.replace(/^\//, '')), // Relative to cwd
-          join(process.cwd(), 'uploads', urlPath.replace(/^\/uploads\//, '')), // In uploads folder
-          join('/app/uploads', urlPath.replace(/^\/uploads\//, '')), // Docker uploads
-        ];
-        
-        for (const altPath of altPaths) {
-          if (existsSync(altPath)) {
-            console.log(`Found video at alternative path: ${altPath}`);
-            videoPath = altPath;
-            break;
-          }
-        }
-        
-        if (!existsSync(videoPath)) {
-          console.error(`Video file not found at any path. Tried: ${videoPath}, ${altPaths.join(', ')}`);
-          res.setHeader('Content-Type', 'application/json');
-          return res.status(404).json({
-            error: 'Video file not found',
-            videoFile: video.videoFile,
-            attemptedPaths: [videoPath, ...altPaths]
-          });
-        }
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(404).json({
+          error: 'Video file not found',
+          videoFile: video.videoFile,
+          path: videoPath,
+          attemptedPaths: [videoPath]
+        });
       }
 
       // If a specific quality is requested (e.g. 720p, 480p), try to use a variant file
+      let finalVideoPath = videoPath;
       if (quality) {
-        const dotIndex = videoPath.lastIndexOf('.');
-        const qualityPath =
-          dotIndex !== -1
-            ? `${videoPath.slice(0, dotIndex)}-${quality}${videoPath.slice(dotIndex)}`
-            : `${videoPath}-${quality}`;
-
+        const qualityPath = this.getQualityVariantPath(videoPath, quality);
         if (existsSync(qualityPath)) {
           console.log(`Using quality variant "${quality}" at path: ${qualityPath}`);
-          videoPath = qualityPath;
+          finalVideoPath = qualityPath;
         } else {
           console.log(`Quality variant "${quality}" not found, falling back to original file`);
         }
       }
       
-      const stat = statSync(videoPath);
+      const stat = statSync(finalVideoPath);
       const fileSize = stat.size;
       console.log(`Video file size: ${fileSize} bytes`);
       
       // Check if file is empty
       if (fileSize === 0) {
-        console.error(`Video file is empty (0 bytes) at path: ${videoPath}`);
+        console.error(`Video file is empty (0 bytes) at path: ${finalVideoPath}`);
         res.setHeader('Content-Type', 'application/json');
         return res.status(404).json({
           error: 'Video file is empty or corrupted',
           videoFile: video.videoFile,
-          path: videoPath,
+          path: finalVideoPath,
           size: fileSize
         });
       }
       
       // Determine content type based on file extension
-      const ext = videoPath.split('.').pop()?.toLowerCase();
-      const contentType = ext === 'webm' ? 'video/webm' : 
-                         ext === 'mov' ? 'video/quicktime' : 
-                         ext === 'avi' ? 'video/x-msvideo' : 'video/mp4';
+      const ext = finalVideoPath.split('.').pop()?.toLowerCase();
+      const contentType = this.getVideoContentType(ext);
       
       // CORS headers are handled globally in main.ts
       // Only expose headers for video streaming
@@ -452,7 +393,7 @@ export class VideosController {
         
         const chunksize = (end - start) + 1;
         
-        const file = createReadStream(videoPath, { start, end });
+        const file = createReadStream(finalVideoPath, { start, end });
         const head = {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
@@ -476,7 +417,7 @@ export class VideosController {
         };
         
         res.writeHead(200, head);
-        createReadStream(videoPath).pipe(res);
+        createReadStream(finalVideoPath).pipe(res);
       }
     } catch (error: any) {
       console.error('Video stream error:', error.message);
@@ -488,6 +429,50 @@ export class VideosController {
           message: error.message
         });
       }
+    }
+  }
+
+  // Helper method to standardize video file path resolution
+  private resolveVideoFilePath(videoFile: string): string {
+    // Reject external URLs - only internal uploads allowed
+    if (videoFile.startsWith('http://') || videoFile.startsWith('https://')) {
+      throw new Error('External URLs are not supported. Only internal uploads are allowed.');
+    }
+
+    // Handle different path formats
+    if (videoFile.startsWith('/')) {
+      // Absolute path
+      return videoFile;
+    } else if (videoFile.startsWith('uploads/') || videoFile.startsWith('./uploads/')) {
+      // Path already includes uploads directory
+      return join(process.cwd(), videoFile.replace(/^\.\//, ''));
+    } else {
+      // Relative path - assume it's in uploads directory
+      return join(process.cwd(), 'uploads', videoFile);
+    }
+  }
+
+  // Helper method to get quality variant path
+  private getQualityVariantPath(originalPath: string, quality: string): string {
+    const dotIndex = originalPath.lastIndexOf('.');
+    return dotIndex !== -1
+      ? `${originalPath.slice(0, dotIndex)}-${quality}${originalPath.slice(dotIndex)}`
+      : `${originalPath}-${quality}`;
+  }
+
+  // Helper method to get video content type
+  private getVideoContentType(ext: string | undefined): string {
+    switch (ext) {
+      case 'webm':
+        return 'video/webm';
+      case 'mov':
+        return 'video/quicktime';
+      case 'avi':
+        return 'video/x-msvideo';
+      case 'mkv':
+        return 'video/x-matroska';
+      default:
+        return 'video/mp4';
     }
   }
 
