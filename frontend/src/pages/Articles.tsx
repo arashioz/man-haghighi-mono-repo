@@ -30,39 +30,40 @@ const curatedAssets = {
   ],
 };
 
+const ITEMS_PER_PAGE = 12;
+
 const Articles: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const response: any = await articlesService.getPublished();
-        let articlesArray: Article[] = [];
-        if (Array.isArray(response)) {
-          articlesArray = response;
-        } else if (response && typeof response === 'object') {
-          if (Array.isArray(response.data)) {
-            articlesArray = response.data;
-          } else if (response.data && Array.isArray(response.data.data)) {
-            articlesArray = response.data.data;
-          }
-        }
-        setArticles(Array.isArray(articlesArray) ? articlesArray : []);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'خطا در دریافت مقالات');
-        setArticles([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchArticles = async (pageNum = 1) => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await articlesService.getPublished({
+        page: pageNum,
+        limit: ITEMS_PER_PAGE,
+      });
+      setArticles(response.data || []);
+      setTotalPages(response.meta?.totalPages ?? 1);
+      setTotalItems(response.meta?.total ?? 0);
+      setPage(pageNum);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دریافت مقالات');
+      setArticles([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchArticles();
-  }, []);
+  useEffect(() => {
+    fetchArticles(page);
+  }, [page]);
 
   if (loading) {
     return (
@@ -189,6 +190,31 @@ const Articles: React.FC = () => {
           ) : (
             <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
               <p className="text-white/60 mb-4">مقالاتی برای نمایش وجود ندارد</p>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1 || loading}
+                className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-white/10"
+              >
+                قبلی
+              </button>
+              <span className="px-4 py-2 text-sm text-white/80">
+                صفحه {page} از {totalPages} ({totalItems} مقاله)
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages || loading}
+                className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-white/10"
+              >
+                بعدی
+              </button>
             </div>
           )}
         </section>

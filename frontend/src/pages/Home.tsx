@@ -20,10 +20,10 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-      const [slidersData, coursesData, articlesData, podcastsData, videoPodcastsData, workshopsData] = await Promise.all([
+      const [slidersData, coursesData, articlesResponse, podcastsData, videoPodcastsData, workshopsData] = await Promise.all([
         slidersService.getActive(),
         coursesService.getForHomepage(),
-        articlesService.getPublished({ limit: 3 }), // Get only 3 latest articles
+        articlesService.getPublished({ limit: 3, page: 1 }),
         podcastsService.getPublished(),
         videoPodcastsService.getPublished(),
         workshopsService.getActive(),
@@ -31,7 +31,7 @@ const Home: React.FC = () => {
 
       setSliders(Array.isArray(slidersData) ? slidersData : []);
       setCourses(Array.isArray(coursesData) ? coursesData : []);
-      setArticles(Array.isArray(articlesData) ? articlesData : []);
+      setArticles(Array.isArray(articlesResponse?.data) ? articlesResponse.data : []);
       setPodcasts(Array.isArray(podcastsData) ? podcastsData : []);
       setVideoPodcasts(Array.isArray(videoPodcastsData) ? videoPodcastsData : []);
       setWorkshops(Array.isArray(workshopsData) ? workshopsData : []);

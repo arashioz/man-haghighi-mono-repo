@@ -51,21 +51,20 @@ const Articles: React.FC = () => {
     fetchArticles();
   }, []);
 
-  const fetchArticles = async (page = 1) => {
+  const fetchArticles = async (pageNum = 1) => {
     try {
       setLoading(true);
       setError('');
       const response = await articlesService.getAll({
-        page,
+        page: pageNum,
         limit: 10,
-        sort: 'createdAt',
-        order: 'desc'
       });
-      
-      setArticles(response?.data || []);
-      setTotalPages(response?.totalPages || 1);
-      setTotalItems(response?.totalItems || 0);
-      setCurrentPage(page);
+      const data = response?.data ?? [];
+      const meta = response?.meta ?? {};
+      setArticles(Array.isArray(data) ? data : []);
+      setTotalPages(meta.totalPages ?? 1);
+      setTotalItems(meta.total ?? 0);
+      setCurrentPage(pageNum);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
       setArticles([]);

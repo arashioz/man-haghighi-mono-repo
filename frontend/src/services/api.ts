@@ -178,9 +178,13 @@ export const slidersService = {
 };
 
 export const articlesService = {
-  getPublished: async (params?: { limit?: number }): Promise<Article[]> => {
+  getPublished: async (params?: { limit?: number; page?: number }): Promise<{ data: Article[]; meta: { total: number; page: number; limit: number; totalPages: number } }> => {
     const response = await api.get('/articles/published', { params });
-    return response.data?.data || response.data || [];
+    const body = response.data || {};
+    return {
+      data: Array.isArray(body.data) ? body.data : [],
+      meta: body.meta || { total: 0, page: 1, limit: 10, totalPages: 0 },
+    };
   },
 
   getBySlug: async (slug: string): Promise<Article> => {

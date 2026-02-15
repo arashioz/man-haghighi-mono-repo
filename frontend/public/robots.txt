@@ -1,21 +1,16 @@
 # robots.txt for manehaghighi.com
-# https://www.robotstxt.org/robotstxt.html
+# Sitemap is served at /sitemap.xml (proxied from API in production)
 
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: https://manehaghighi.com/api/seo/sitemap.xml
+Sitemap: https://manehaghighi.com/sitemap.xml
 
-# Disallow admin and API endpoints
 Disallow: /api/
-Disallow: /admin/
-Disallow: /dashboard/
+Disallow: /dashboard
 Disallow: /login
 Disallow: /register
+Disallow: /payment/
 
-# Allow static assets
 Allow: /assets/
 Allow: /uploads/
-Allow: /fonts/
-Allow: /images/

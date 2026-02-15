@@ -4,6 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
 
+const getErrorMessage = (err: any): string => {
+  const msg = err?.response?.data?.message;
+  if (typeof msg === 'string') return msg;
+  if (Array.isArray(msg)) return msg[0] || 'خطایی رخ داد.';
+  return err?.message || 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
+};
+
 const Login: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -11,6 +18,7 @@ const Login: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const navigate = useNavigate();
@@ -18,6 +26,7 @@ const Login: React.FC = () => {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
@@ -35,7 +44,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      // Error will be handled globally
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -43,6 +52,7 @@ const Login: React.FC = () => {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
@@ -51,7 +61,7 @@ const Login: React.FC = () => {
       setSession(response);
       navigate('/dashboard');
     } catch (err: any) {
-      // Error will be handled globally
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -59,6 +69,7 @@ const Login: React.FC = () => {
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
@@ -73,7 +84,7 @@ const Login: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
-      // Error will be handled globally
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -81,6 +92,7 @@ const Login: React.FC = () => {
 
   const handleResendOtp = async () => {
     if (countdown > 0) return;
+    setError(null);
     setLoading(true);
 
     try {
@@ -97,7 +109,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      // Error will be handled globally
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -124,6 +136,7 @@ const Login: React.FC = () => {
               type="button"
               onClick={() => {
                 setMode('otp');
+                setError(null);
               }}
               className={`px-3 py-1 text-sm rounded-md border ${mode === 'otp' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
             >
@@ -133,6 +146,7 @@ const Login: React.FC = () => {
               type="button"
               onClick={() => {
                 setMode('password');
+                setError(null);
               }}
               className={`px-3 py-1 text-sm rounded-md border ${mode === 'password' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
             >
@@ -140,6 +154,12 @@ const Login: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 p-4 text-right" role="alert">
+            <p className="text-sm font-medium text-red-800">{error}</p>
+          </div>
+        )}
 
         {mode === 'password' ? (
           // Password Login Form
@@ -183,8 +203,14 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 {loading ? 'در حال ورود...' : 'ورود'}
               </button>
             </div>
@@ -226,8 +252,14 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
               </button>
             </div>
@@ -261,8 +293,14 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading || otp.length !== 6}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
               >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
                 {loading ? 'در حال تایید...' : 'تایید و ورود'}
               </button>
             </div>

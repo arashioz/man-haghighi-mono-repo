@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
 import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
 import { Workshop, Course } from '../types';
+import { getImageUrl } from '../../../frontend/src/utils/imageUtils';
 
 interface PaymentLink {
   id: string;
@@ -286,12 +287,7 @@ const PaymentLinks: React.FC = () => {
     return Number(numericValue).toLocaleString('fa-IR');
   };
 
-  // Handle amount input change
-  const handleAmountChange = (value: string) => {
-    const numericValue = value.replace(/[^\d]/g, '');
-    setNewLink({...newLink, amount: numericValue});
-    setFormattedAmount(formatAmountInput(numericValue));
-  };
+  
 
   const handleCreateLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -347,7 +343,6 @@ const PaymentLinks: React.FC = () => {
         workshopId: '',
         courseId: '',
       });
-      setFormattedAmount('');
       setLinkType('manual');
       await fetchPaymentLinks();
     } catch (err: any) {
@@ -1017,7 +1012,7 @@ const PaymentLinks: React.FC = () => {
                   مشتری موجود در سیستم {newLink.customerName ? `(${newLink.customerName})` : ''}
               </p>
 
-                {/* Customer History */}
+getImageUrl                {/* Customer History */}
                 {loadingCustomerHistory ? (
                   <div className="text-xs text-gray-500 flex items-center">
                     <div className="animate-spin rounded-full h-3 w-3 border border-gray-300 border-t-gray-500 ml-2"></div>
@@ -1197,7 +1192,7 @@ const PaymentLinks: React.FC = () => {
                     workshopId,
                     amount: amountValue,
                   });
-                  setFormattedAmount(formatAmountInput(amountValue));
+                  setFormattedAmount((amountValue));
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
@@ -1233,7 +1228,7 @@ const PaymentLinks: React.FC = () => {
                     courseId,
                     amount: amountValue,
                   });
-                  setFormattedAmount(formatAmountInput(amountValue));
+                  setFormattedAmount((amountValue));
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 required
@@ -1305,7 +1300,7 @@ const PaymentLinks: React.FC = () => {
               onChange={(e) => {
                 const value = e.target.value.replace(/[^\d]/g, '');
                 setNewLink({...newLink, amount: value});
-                setFormattedAmount(value ? Number(value).toLocaleString('fa-IR') : '');
+                setFormattedAmount(value);
               }}
               onFocus={(e) => {
                 const value = e.target.value.replace(/[^\d]/g, '');
@@ -1314,7 +1309,7 @@ const PaymentLinks: React.FC = () => {
               }}
               onBlur={(e) => {
                 const value = e.target.value.replace(/[^\d]/g, '');
-                setFormattedAmount(value ? Number(value).toLocaleString('fa-IR') : '');
+                setFormattedAmount(value);
               }}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
               required
