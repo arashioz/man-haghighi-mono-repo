@@ -11,7 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
 import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
 import { Workshop, Course } from '../types';
-import { getImageUrl } from '../../../frontend/src/utils/imageUtils';
+import { getImageUrl } from '../utils/imageUtils';
 
 interface PaymentLink {
   id: string;

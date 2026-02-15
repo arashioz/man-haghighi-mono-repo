@@ -1764,7 +1764,7 @@ export const uploadCenterService = {
   },
 
   assignVideoToCourse: async (filename: string, courseId: string) => {
-    const response = await api.post(`/uploads/${encodeURIComponent(filename)}/assign`, {
+    const response = await api.post(`/uploads/${encodeURIComponent(filename)}/assign-video`, {
       courseId
     });
     return response.data;
