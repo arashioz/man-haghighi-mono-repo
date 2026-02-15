@@ -83,6 +83,11 @@ async function bootstrap() {
         'https://manehaghighi.com',
         'https://www.manehaghighi.com',
         'https://api.manehaghighi.com',
+        'http://admin.manehaghighi.com',
+        'http://sales.manehaghighi.com',
+        'http://manehaghighi.com',
+        'http://www.manehaghighi.com',
+        'http://api.manehaghighi.com',
         // Local development origins
         'http://localhost:3000',
         'http://localhost:3001',

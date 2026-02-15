@@ -7,6 +7,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { NotFoundException } from '@nestjs/common';
 
 @ApiTags('Users')
 @Controller('users')
@@ -22,6 +23,68 @@ export class UsersController {
   @ApiResponse({ status: 409, description: 'User already exists' })
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Post('check-phone/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_PERSON', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Check if phone number exists (Admin, Sales Person, Sales Manager only)' })
+  @ApiResponse({ status: 200, description: 'Phone check result' })
+  @ApiResponse({ status: 404, description: 'Phone not found' })
+  async checkPhoneExists(@Param('phone') phone: string) {
+    const user = await this.usersService.findByPhone(phone);
+    return {
+      exists: !!user,
+      user: user ? {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+      } : null
+    };
+  }
+
+  @Post('by-phone/:phone')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_PERSON', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user by phone number (Admin, Sales Person, Sales Manager only)' })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserByPhone(@Param('phone') phone: string) {
+    const user = await this.usersService.findByPhone(phone);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  @Post('customer')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SALES_PERSON', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new customer (Admin, Sales Person, Sales Manager only)' })
+  @ApiResponse({ status: 201, description: 'Customer created successfully' })
+  @ApiResponse({ status: 409, description: 'Customer already exists' })
+  async createCustomer(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.create({
+      ...createUserDto,
+      role: 'USER',
+      isActive: true,
+      isOld: false,
+    });
+  }
+
+  @Post(':id/courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Assign courses to user (Admin only)' })
+  @ApiResponse({ status: 201, description: 'Courses assigned successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async assignCourses(@Param('id') userId: string, @Body() body: { courseIds: string[] }) {
+    return this.usersService.assignCourses(userId, body.courseIds);
   }
 
   @Post('import')
