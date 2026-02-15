@@ -36,9 +36,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      message = typeof exceptionResponse === 'string' 
-        ? exceptionResponse 
+      message = typeof exceptionResponse === 'string'
+        ? exceptionResponse
         : (exceptionResponse as any)?.message || exception.message;
+      // Clear user-facing message for rate limit (429)
+      if (status === HttpStatus.TOO_MANY_REQUESTS) {
+        message = 'IP شما بلاک شده است. لطفاً چند دقیقه دیگر تلاش کنید.';
+      }
     } else if (exception instanceof Error) {
       if (exception.message.includes('File too large')) {
         status = HttpStatus.PAYLOAD_TOO_LARGE;

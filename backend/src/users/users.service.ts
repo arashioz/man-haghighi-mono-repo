@@ -170,12 +170,25 @@ export class UsersService {
       userData.password = hashedPassword;
     }
 
-    const user = await this.prisma.user.create({
-      data: userData,
-      select: baseUserSelect,
-    });
-
-    return user;
+    try {
+      const user = await this.prisma.user.create({
+        data: userData,
+        select: baseUserSelect,
+      });
+      return user;
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        const target = Array.isArray(error?.meta?.target) ? error.meta.target : [];
+        if (target.includes('user_phone') || target.includes('phone')) {
+          throw new ConflictException('User with this phone number already exists');
+        }
+        if (target.includes('email')) {
+          throw new ConflictException('User with this email already exists');
+        }
+        throw new ConflictException('User with this unique field already exists');
+      }
+      throw error;
+    }
   }
 
   async findAll(paginationQuery: PaginationQueryDto) {

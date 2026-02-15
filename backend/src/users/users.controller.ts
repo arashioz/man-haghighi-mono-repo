@@ -153,6 +153,36 @@ export class UsersController {
     }
   }
 
+  @Get('sales-persons')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all sales persons (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Sales persons retrieved successfully' })
+  async getSalesPersons() {
+    return this.usersService.getSalesPersons();
+  }
+
+  @Get('sales-managers')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all sales managers (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Sales managers retrieved successfully' })
+  async getSalesManagers() {
+    return this.usersService.getSalesManagers();
+  }
+
+  @Get('seller/stats')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SALES_PERSON', 'SALES_MANAGER')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get seller statistics (Sales Person, Sales Manager only)' })
+  @ApiResponse({ status: 200, description: 'Seller statistics retrieved successfully' })
+  async getSellerStats(@Req() req: any) {
+    return this.usersService.getSellerStats(req.user.id);
+  }
+
   // Rest of the existing controller methods...
   // [All other existing methods should be kept exactly as they were]
   @Get()

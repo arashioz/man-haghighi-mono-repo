@@ -24,8 +24,12 @@ export class ArticlesController {
     return this.articlesService.create(createArticleDto);
   }
 
+  /** List all articles with pagination (Admin) - GET /articles */
   @Get()
-  @ApiOperation({ summary: 'Get all articles with pagination and filters' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all articles with pagination (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
@@ -51,8 +55,9 @@ export class ArticlesController {
     });
   }
 
+  /** Published articles with pagination (public) - GET /articles/published */
   @Get('published')
-  @ApiOperation({ summary: 'Get published articles' })
+  @ApiOperation({ summary: 'Get published articles with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'categoryId', required: false, type: String })
@@ -78,6 +83,20 @@ export class ArticlesController {
   @ApiResponse({ status: 404, description: 'Article not found' })
   async findBySlug(@Param('slug') slug: string) {
     return this.articlesService.findBySlug(slug);
+  }
+
+  @Get('categories/all')
+  @ApiOperation({ summary: 'Get all article categories' })
+  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
+  async findAllCategories() {
+    return this.articlesService.findAllCategories();
+  }
+
+  @Get('categories/:id')
+  @ApiOperation({ summary: 'Get category by ID' })
+  @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
+  async findCategory(@Param('id') id: string) {
+    return this.articlesService.findCategory(id);
   }
 
   @Get(':id')
@@ -183,20 +202,6 @@ export class ArticlesController {
   @ApiResponse({ status: 201, description: 'Category created successfully' })
   async createCategory(@Body() createCategoryDto: CreateCategoryDto) {
     return this.articlesService.createCategory(createCategoryDto);
-  }
-
-  @Get('categories/all')
-  @ApiOperation({ summary: 'Get all article categories' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
-  async findAllCategories() {
-    return this.articlesService.findAllCategories();
-  }
-
-  @Get('categories/:id')
-  @ApiOperation({ summary: 'Get category by ID' })
-  @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
-  async findCategory(@Param('id') id: string) {
-    return this.articlesService.findCategory(id);
   }
 
   @Patch('categories/:id')

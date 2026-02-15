@@ -18,61 +18,54 @@ export class SeoService {
   }
 
   /**
-   * Generate sitemap.xml with all public pages
+   * Generate sitemap.xml with all public pages (Google-compliant)
+   * https://www.sitemaps.org/protocol.html
    */
   async generateSitemap(): Promise<string> {
-    const baseUrl = this.baseUrl;
+    const baseUrl = this.baseUrl.replace(/\/$/, '');
 
     // Get all published content
-    const [articles, courses, podcasts, videoPodcasts] = await Promise.all([
+    const [articles, courses, podcasts, videoPodcasts, workshops] = await Promise.all([
       this.prisma.article.findMany({
         where: { published: true },
-        select: {
-          slug: true,
-          updatedAt: true,
-          publishedAt: true,
-        },
+        select: { slug: true, updatedAt: true, publishedAt: true },
         orderBy: { publishedAt: 'desc' },
       }),
       this.prisma.course.findMany({
         where: { published: true },
-        select: {
-          id: true,
-          updatedAt: true,
-        },
+        select: { id: true, updatedAt: true },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.podcast.findMany({
         where: { published: true },
-        select: {
-          id: true,
-          updatedAt: true,
-          publishedAt: true,
-        },
+        select: { id: true, updatedAt: true, publishedAt: true },
         orderBy: { publishedAt: 'desc' },
       }),
       this.prisma.videoPodcast.findMany({
         where: { published: true },
-        select: {
-          id: true,
-          updatedAt: true,
-          publishedAt: true,
-        },
+        select: { id: true, updatedAt: true, publishedAt: true },
         orderBy: { publishedAt: 'desc' },
+      }),
+      this.prisma.workshop.findMany({
+        where: { isActive: true },
+        select: { id: true, updatedAt: true, createdAt: true },
+        orderBy: { updatedAt: 'desc' },
       }),
     ]);
 
-    // Build sitemap entries
     const urls: string[] = [];
 
-    // Homepage
+    // Homepage — highest priority
     urls.push(this.buildSitemapUrl(`${baseUrl}/`, new Date(), 'daily', '1.0'));
 
-    // Static pages
+    // Static / important pages
+    urls.push(this.buildSitemapUrl(`${baseUrl}/about`, new Date(), 'monthly', '0.9'));
+    urls.push(this.buildSitemapUrl(`${baseUrl}/contact`, new Date(), 'monthly', '0.8'));
     urls.push(this.buildSitemapUrl(`${baseUrl}/articles`, new Date(), 'daily', '0.9'));
     urls.push(this.buildSitemapUrl(`${baseUrl}/courses`, new Date(), 'daily', '0.9'));
     urls.push(this.buildSitemapUrl(`${baseUrl}/podcasts`, new Date(), 'daily', '0.9'));
     urls.push(this.buildSitemapUrl(`${baseUrl}/video-podcasts`, new Date(), 'daily', '0.9'));
+    urls.push(this.buildSitemapUrl(`${baseUrl}/workshops`, new Date(), 'weekly', '0.85'));
 
     // Articles
     articles.forEach((article) => {
@@ -93,12 +86,17 @@ export class SeoService {
     });
 
     // Video Podcasts
-    videoPodcasts.forEach((videoPodcast) => {
-      const lastmod = videoPodcast.updatedAt || videoPodcast.publishedAt || new Date();
-      urls.push(this.buildSitemapUrl(`${baseUrl}/video-podcasts/${videoPodcast.id}`, lastmod, 'weekly', '0.7'));
+    videoPodcasts.forEach((vp) => {
+      const lastmod = vp.updatedAt || vp.publishedAt || new Date();
+      urls.push(this.buildSitemapUrl(`${baseUrl}/video-podcasts/${vp.id}`, lastmod, 'weekly', '0.7'));
     });
 
-    // Build XML
+    // Workshops
+    workshops.forEach((w) => {
+      const lastmod = w.updatedAt || w.createdAt || new Date();
+      urls.push(this.buildSitemapUrl(`${baseUrl}/workshops/${w.id}`, lastmod, 'weekly', '0.75'));
+    });
+
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -109,7 +107,7 @@ ${urls.join('\n')}
   }
 
   /**
-   * Build a single URL entry for sitemap
+   * Build a single URL entry for sitemap (W3C / Google compliant)
    */
   private buildSitemapUrl(
     loc: string,
@@ -117,7 +115,7 @@ ${urls.join('\n')}
     changefreq: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never',
     priority: string,
   ): string {
-    const lastmodISO = lastmod.toISOString().split('T')[0];
+    const lastmodISO = lastmod.toISOString().split('T')[0]; // YYYY-MM-DD
     return `  <url>
     <loc>${this.escapeXml(loc)}</loc>
     <lastmod>${lastmodISO}</lastmod>
@@ -139,35 +137,33 @@ ${urls.join('\n')}
   }
 
   /**
-   * Generate robots.txt
+   * Generate robots.txt (main site URL; sitemap is served at /sitemap.xml via nginx)
    */
   async generateRobotsTxt(): Promise<string> {
-    const baseUrl = this.baseUrl;
-    
+    const baseUrl = this.baseUrl.replace(/\/$/, '');
+    const sitemapUrl = `${baseUrl}/sitemap.xml`;
+
     return `# robots.txt for ${baseUrl}
 # https://www.robotstxt.org/robotstxt.html
 
 User-agent: *
 Allow: /
 
-# Sitemap
-Sitemap: ${baseUrl}/api/seo/sitemap.xml
+# Sitemap (canonical URL on main site)
+Sitemap: ${sitemapUrl}
 
-# Disallow admin and API endpoints
+# Do not crawl auth and private areas
 Disallow: /api/
 Disallow: /admin/
-Disallow: /dashboard/
+Disallow: /dashboard
 Disallow: /login
 Disallow: /register
+Disallow: /payment/
 
-# Allow static assets
+# Allow public assets
 Allow: /assets/
 Allow: /uploads/
-Allow: /fonts/
-Allow: /images/
-
-# Crawl-delay (optional, adjust as needed)
-# Crawl-delay: 1`;
+`;
   }
 }
 

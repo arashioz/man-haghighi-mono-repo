@@ -10,6 +10,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
+import { log } from 'console';
 enum FileType {
   VIDEO = 'video',
   AUDIO = 'audio',
@@ -67,15 +68,37 @@ export class UploadsController {
   @ApiResponse({ status: 200, description: 'File stream started' })
   @ApiResponse({ status: 404, description: 'File not found' })
   async streamFile(@Req() req: Request, @Param('filename') filename: string, @Res() res: Response) {
+    // Check if file exists in uploads directory
     const filePath = join(process.cwd(), 'uploads', filename);
     if (!fs.existsSync(filePath)) {
-      throw new Error('File not found');
+      // If not found in uploads, check if it's a course video in courseVideos subdirectory
+      const courseVideoPath = join(process.cwd(), 'uploads', 'courseVideos', filename);
+      log("/uploads/" , courseVideoPath)
+      if (!fs.existsSync(courseVideoPath)) {
+        throw new Error('File not found'  );
+      }
+      // Use course video path instead
+      this.streamFileFromPath(req, res, courseVideoPath, filename);
+      return;
     }
 
+    this.streamFileFromPath(req, res, filePath, filename);
+  }
+
+  private streamFileFromPath(req: Request, res: Response, filePath: string, filename: string) {
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     //@ts-ignore
     const range = req.headers.range;
+
+    // Determine content type based on file extension
+    const ext = extname(filename).toLowerCase();
+    let contentType = 'video/mp4';
+    if (['.mp3', '.wav', '.ogg'].includes(ext)) {
+      contentType = 'audio/mpeg';
+    } else if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+      contentType = 'image/' + ext.substring(1);
+    }
 
     if (range) {
       const parts = range.replace(/bytes=/, "").split("-");
@@ -87,14 +110,14 @@ export class UploadsController {
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
       };
       res.writeHead(206, head);
       file.pipe(res);
     } else {
       const head = {
         'Content-Length': fileSize,
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
       };
       res.writeHead(200, head);
       fs.createReadStream(filePath).pipe(res);

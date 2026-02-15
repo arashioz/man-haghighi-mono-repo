@@ -97,11 +97,56 @@ export class SalesService {
       where: { createdBy: userId }
     });
 
+    // Get payment links created by this sales person
+    const paymentLinks = await this.prisma.paymentLink.findMany({
+      where: { createdById: userId },
+      include: {
+        invoices: {
+          include: {
+            transactions: true
+          }
+        }
+      }
+    });
+
+    // Calculate stats
+    const totalLinks = paymentLinks.length;
+    const paidLinks = paymentLinks.filter(link => 
+      link.invoices?.some(inv => inv.status === 'PAID')
+    ).length;
+    const unpaidLinks = totalLinks - paidLinks;
+    const totalRevenue = paymentLinks
+      .filter(link => link.invoices?.some(inv => inv.status === 'PAID'))
+      .reduce((sum, link) => sum + Number(link.amount), 0);
+
+    // Calculate today's revenue
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayRevenue = paymentLinks
+      .filter(link => 
+        link.invoices?.some(inv => 
+          inv.status === 'PAID' && 
+          new Date(inv.paidAt!) >= today && 
+          new Date(inv.paidAt!) < tomorrow
+        )
+      )
+      .reduce((sum, link) => sum + Number(link.amount), 0);
+
     return {
       enrollments: enrollments.length,
       workshops: workshops.length,
       enrollmentsList: enrollments,
       workshopsList: workshops,
+      paymentLinks: {
+        totalLinks,
+        paidLinks,
+        unpaidLinks,
+        totalRevenue,
+        todayRevenue
+      },
       period: period || 'all',
       role: 'SALES_PERSON'
     };
