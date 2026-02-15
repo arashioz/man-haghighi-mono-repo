@@ -341,4 +341,55 @@ export class UploadsController {
       courseId: body.courseId
     };
   }
+
+  @Post(':filename/assign-video')
+  @ApiOperation({ summary: 'Assign a video file to a course' })
+  @ApiResponse({ status: 201, description: 'Video assigned to course successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 404, description: 'File or course not found' })
+  async assignVideoToCourse(
+    @Param('filename') filename: string,
+    @Body() body: { courseId: string }
+  ) {
+    // Check if file exists
+    const filePath = join(process.cwd(), 'uploads', filename);
+    if (!fs.existsSync(filePath)) {
+      throw new Error('File not found');
+    }
+
+    // Check if course exists
+    const course = await this.prisma.course.findUnique({
+      where: { id: body.courseId }
+    });
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    // Check video count limit (max 20 per course)
+    const existingVideoCount = await this.prisma.video.count({
+      where: { courseId: body.courseId }
+    });
+    if (existingVideoCount >= 20) {
+      throw new Error('Maximum 20 video files per course');
+    }
+
+    // Create video record
+    const video = await this.prisma.video.create({
+      data: {
+        title: filename,
+        description: `Video file for course ${course.title}`,
+        videoFile: filename,
+        order: existingVideoCount + 1,
+        courseId: body.courseId,
+        published: course.published
+      }
+    });
+
+    return {
+      success: true,
+      videoId: video.id,
+      filename,
+      courseId: body.courseId
+    };
+  }
 }
