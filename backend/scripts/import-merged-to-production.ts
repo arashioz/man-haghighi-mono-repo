@@ -97,7 +97,7 @@ async function main() {
   for (const [legacyId, { user_info: ui, products = [] }] of entries) {
     const email = normalize(ui.user_email);
     const login = normalize(ui.user_login);
-    const phone = normalize(ui.phone) || normalize(ui.user_phone);
+    const phone = normalize(ui.phone as string) || normalize(ui.user_phone as string);
 
     const username = login || (email ? email.split('@')[0] : null) || `user_${legacyId}`;
     if (!username) {
