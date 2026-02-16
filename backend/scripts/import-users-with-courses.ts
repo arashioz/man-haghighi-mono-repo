@@ -21,7 +21,7 @@ interface UserCourseData {
 
 interface ImportUser {
   id: string;
-  phone: string;
+  phone?: string;
   email?: string;
   firstName?: string;
   lastName?: string;
@@ -30,40 +30,51 @@ interface ImportUser {
   audioAccessIds: string[];
 }
 
+function normalizePhone(phone: string | null | undefined): string {
+  if (!phone) return '';
+  return phone.replace(/\s/g, '').trim();
+}
+
+function normalizeEmail(email: string | null | undefined): string {
+  if (!email) return '';
+  return email.trim().toLowerCase();
+}
+
 /**
- * برای همهٔ کاربرانی که شماره همراه دارند، username (user_login) را برابر با شماره همراه قرار می‌دهد.
- * تمام رکوردهای دیتابیس اپدیت می‌شوند.
+ * برای همهٔ کاربران: شناسه ورود (username) را از شماره همراه یا در نبود آن از ایمیل تنظیم می‌کند.
+ * اولویت: شماره همراه؛ اگر نبود ایمیل. تمام رکوردهای دیتابیس اپدیت می‌شوند.
  */
-async function setPhoneAsUsernameForAllUsers() {
-  console.log('\n--- به‌روزرسانی username برابر با شماره همراه برای تمام کاربران ---');
-  const usersWithPhone = await prisma.user.findMany({
-    where: { phone: { not: null } },
-    select: { id: true, phone: true, username: true },
+async function setLoginUsernameForAllUsers() {
+  console.log('\n--- به‌روزرسانی username (شناسه ورود) برای تمام کاربران ---');
+  const users = await prisma.user.findMany({
+    where: {
+      OR: [{ phone: { not: null } }, { email: { not: null } }],
+    },
+    select: { id: true, phone: true, email: true, username: true },
   });
   let updated = 0;
   let skipped = 0;
-  for (let i = 0; i < usersWithPhone.length; i += UPDATE_BATCH_SIZE) {
-    const batch = usersWithPhone.slice(i, i + UPDATE_BATCH_SIZE);
+  for (let i = 0; i < users.length; i += UPDATE_BATCH_SIZE) {
+    const batch = users.slice(i, i + UPDATE_BATCH_SIZE);
     await prisma.$transaction(async (tx) => {
       for (const u of batch) {
-        const phone = u.phone!;
-        const normalized = phone.replace(/\s/g, '').trim();
-        if (!normalized) {
+        const loginId = normalizePhone(u.phone) || normalizeEmail(u.email);
+        if (!loginId) {
           skipped++;
           continue;
         }
-        if (u.username === normalized) {
+        if (u.username === loginId) {
           skipped++;
           continue;
         }
         try {
           await tx.user.update({
             where: { id: u.id },
-            data: { username: normalized },
+            data: { username: loginId },
           });
           updated++;
           if (updated <= 5 || updated % 500 === 0) {
-            console.log(`  username به شماره همراه تنظیم شد: ${u.id} -> ${normalized}`);
+            console.log(`  username تنظیم شد: ${u.id} -> ${loginId}`);
           }
         } catch (e) {
           console.error(`  خطا در اپدیت user ${u.id}:`, e);
@@ -93,38 +104,38 @@ async function importUsers(filePath: string) {
     try {
       await prisma.$transaction(async (tx) => {
         for (const userData of currentBatch) {
-          // Skip if no phone number
-          if (!userData.phone) {
-            console.log(`Skipping user with no phone number (ID: ${userData.id})`);
+          const normalizedPhone = normalizePhone(userData.phone);
+          const normalizedEmail = normalizeEmail(userData.email);
+          const loginId = normalizedPhone || normalizedEmail;
+
+          if (!loginId) {
+            console.log(`Skipping user with no phone and no email (ID: ${userData.id})`);
             invalidUsers++;
             continue;
           }
 
-          const normalizedPhone = userData.phone.replace(/\s/g, '').trim();
-          if (!normalizedPhone) {
-            invalidUsers++;
-            continue;
-          }
-
-          // Check if user exists by phone
-          const existingUser = await tx.user.findUnique({
-            where: { phone: normalizedPhone },
-          });
+          const existingByPhone = normalizedPhone
+            ? await tx.user.findUnique({ where: { phone: normalizedPhone } })
+            : null;
+          const existingByEmail = normalizedEmail
+            ? await tx.user.findUnique({ where: { email: normalizedEmail } })
+            : null;
+          const existingUser = existingByPhone || existingByEmail;
 
           if (existingUser) {
-            console.log(`User ${normalizedPhone} already exists, skipping`);
+            console.log(`User ${loginId} already exists, skipping`);
             skippedUsers++;
             continue;
           }
 
-          // Create new user — شماره همراه به‌عنوان user_login (username) قرار می‌گیرد
+          // شناسه ورود: اول شماره همراه، در نبود آن ایمیل
           const user = await tx.user.create({
             data: {
-              phone: normalizedPhone,
-              email: userData.email,
+              phone: normalizedPhone || null,
+              email: normalizedEmail || userData.email?.trim() || null,
               firstName: userData.firstName,
               lastName: userData.lastName,
-              username: normalizedPhone,
+              username: loginId,
               role: 'USER',
               isOld: true,
             },
@@ -182,13 +193,13 @@ async function importUsers(filePath: string) {
   console.log(`- Users imported: ${importedUsers}`);
   console.log(`- Course enrollments: ${importedEnrollments}`);
   console.log(`- Users skipped (already existed): ${skippedUsers}`);
-  console.log(`- Users skipped (no phone number): ${invalidUsers}`);
+  console.log(`- Users skipped (no phone and no email): ${invalidUsers}`);
 
-  await setPhoneAsUsernameForAllUsers();
+  await setLoginUsernameForAllUsers();
 }
 
 // آرگومان‌ها: [--update-only] یا [مسیر فایل JSON]
-// --update-only: فقط تمام کاربران دارای شماره را اپدیت کن (username = phone)، بدون import از فایل
+// --update-only: فقط username تمام کاربران را اپدیت کن (شماره یا ایمیل)، بدون import از فایل
 const args = process.argv.slice(2);
 const updateOnly = args.includes('--update-only');
 const filePathArg = args.find((a) => !a.startsWith('--'));
@@ -197,7 +208,7 @@ const filePath = filePathArg || defaultPath;
 
 async function main() {
   if (updateOnly) {
-    await setPhoneAsUsernameForAllUsers();
+    await setLoginUsernameForAllUsers();
     return;
   }
   if (!fs.existsSync(filePath)) {
