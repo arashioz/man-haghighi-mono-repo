@@ -43,6 +43,7 @@ const UsersManagement: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,11 +96,22 @@ const UsersManagement: React.FC = () => {
     { id: 'site-managers' as TabType, label: 'مدیرهای سایت', role: 'ADMIN' },
   ];
 
+  // جستجو با تأخیر (debounce) تا با هر حرف یا پاک‌کردن یا عوض کردن زبان کیبورد لود نشود
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   useEffect(() => {
     const fetchData = async () => {
-      if (searchTerm) {
+      const isSearching = !!debouncedSearchTerm.trim();
+      const hasExistingData = users.length > 0;
+      // وقتی جستجو خالی است و لیست از قبل داریم، فقط در پس‌زمینه رفرش می‌کنیم تا لودینگ نزنه
+      if (isSearching) {
         setSearchLoading(true);
-      } else {
+      } else if (!hasExistingData) {
         setLoading(true);
       }
       try {
@@ -108,7 +120,7 @@ const UsersManagement: React.FC = () => {
           usersService.getAll({
             page: currentPage,
             limit,
-            search: searchTerm || undefined,
+            search: debouncedSearchTerm.trim() || undefined,
             role: roleFilter,
           }),
           coursesService.getAll(),
@@ -119,7 +131,6 @@ const UsersManagement: React.FC = () => {
         setTotalPages(usersResponse.meta.totalPages);
         setCourses(coursesResponse);
         
-        // Use the counts provided by the backend to avoid extra API calls
         const coursesCountData: {[userId: string]: number} = {};
         const productsCountData: {[userId: string]: number} = {};
         
@@ -139,12 +150,12 @@ const UsersManagement: React.FC = () => {
     };
 
     fetchData();
-  }, [activeTab, currentPage, limit, searchTerm]);
+  }, [activeTab, currentPage, limit, debouncedSearchTerm]);
   
-  // Reset to page 1 when search or tab changes
+  // صفحه را فقط وقتی مقدار واقعی جستجو (بعد از debounce) عوض شد به ۱ برگردان
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeTab]);
+  }, [debouncedSearchTerm, activeTab]);
 
   // Update export filters role when tab changes
   useEffect(() => {

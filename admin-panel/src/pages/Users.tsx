@@ -108,7 +108,12 @@ const Users: React.FC = () => {
   // Fetch users when pagination/filter changes
   useEffect(() => {
     const fetchUsers = async () => {
-      setLoading(true);
+      // وقتی جستجو خالی است و لیست از قبل داریم، فقط در پس‌زمینه رفرش می‌کنیم تا لودینگ نزنه
+      const isSearching = !!debouncedSearchTerm.trim();
+      const hasExistingData = users.length > 0;
+      if (isSearching || !hasExistingData) {
+        setLoading(true);
+      }
       try {
         const usersResponse = await usersService.getAll({ 
           page: currentPage, 

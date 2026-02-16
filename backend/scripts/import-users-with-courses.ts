@@ -42,7 +42,7 @@ function normalizeEmail(email: string | null | undefined): string {
 
 /**
  * برای همهٔ کاربران: شناسه ورود (username) را از شماره همراه یا در نبود آن از ایمیل تنظیم می‌کند.
- * اولویت: شماره همراه؛ اگر نبود ایمیل. تمام رکوردهای دیتابیس اپدیت می‌شوند.
+ * اولویت: شماره همراه؛ اگر نبود ایمیل. اگر username موردنظر قبلاً در دیتابیس استفاده شده، یک نام یکتا ساخته می‌شود.
  */
 async function setLoginUsernameForAllUsers() {
   console.log('\n--- به‌روزرسانی username (شناسه ورود) برای تمام کاربران ---');
@@ -54,9 +54,9 @@ async function setLoginUsernameForAllUsers() {
   });
   let updated = 0;
   let skipped = 0;
+  const assignedInThisRun = new Set<string>();
   for (let i = 0; i < users.length; i += UPDATE_BATCH_SIZE) {
     const batch = users.slice(i, i + UPDATE_BATCH_SIZE);
-    // هر کاربر را جداگانه اپدیت می‌کنیم تا خطا در یکی تراکنش بقیه را abort نکند (25P02)
     for (const u of batch) {
       const loginId = normalizePhone(u.phone) || normalizeEmail(u.email);
       if (!loginId) {
@@ -65,19 +65,41 @@ async function setLoginUsernameForAllUsers() {
       }
       if (u.username === loginId) {
         skipped++;
+        assignedInThisRun.add(loginId);
         continue;
       }
+      let targetUsername = loginId;
+      if (assignedInThisRun.has(loginId)) {
+        targetUsername = `${loginId}_${u.id.slice(-8)}`;
+      }
+      assignedInThisRun.add(targetUsername);
       try {
         await prisma.user.update({
           where: { id: u.id },
-          data: { username: loginId },
+          data: { username: targetUsername },
         });
         updated++;
         if (updated <= 5 || updated % 500 === 0) {
-          console.log(`  username تنظیم شد: ${u.id} -> ${loginId}`);
+          console.log(`  username تنظیم شد: ${u.id} -> ${targetUsername}`);
         }
       } catch (e) {
-        console.error(`  خطا در اپدیت user ${u.id}:`, e);
+        const err = e as { code?: string; meta?: { target?: string[] } };
+        if (err.code === 'P2002' && err.meta?.target?.includes('username')) {
+          targetUsername = `${loginId}_${u.id.slice(-8)}`;
+          assignedInThisRun.add(targetUsername);
+          try {
+            await prisma.user.update({
+              where: { id: u.id },
+              data: { username: targetUsername },
+            });
+            updated++;
+            console.log(`  username یکتا شد: ${u.id} -> ${targetUsername}`);
+          } catch (e2) {
+            console.error(`  خطا در اپدیت user ${u.id}:`, e2);
+          }
+        } else {
+          console.error(`  خطا در اپدیت user ${u.id}:`, e);
+        }
       }
     }
   }
