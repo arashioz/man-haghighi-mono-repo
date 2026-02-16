@@ -15,6 +15,7 @@ export async function login(loginId: string, password: string): Promise<AuthResp
 }
 
 export async function forceLogoutAll(payload: {
+  forceLogoutToken?: string;
   login?: string;
   password?: string;
   phone?: string;

@@ -27,7 +27,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
-  const [loggedElsewhereModal, setLoggedElsewhereModal] = useState<{ deviceType: string } | null>(null);
+  const [loggedElsewhereModal, setLoggedElsewhereModal] = useState<{ deviceType: string; forceLogoutToken: string } | null>(null);
   const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   const navigate = useNavigate();
   const { login: authLogin, setSession } = useAuth();
@@ -71,7 +71,10 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
-        setLoggedElsewhereModal({ deviceType: err.response.data.deviceType || 'DESKTOP' });
+        setLoggedElsewhereModal({
+          deviceType: err.response.data.deviceType || 'DESKTOP',
+          forceLogoutToken: err.response.data.forceLogoutToken || '',
+        });
         setError(null);
       } else {
         setError(getErrorMessage(err));
@@ -99,7 +102,10 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
-        setLoggedElsewhereModal({ deviceType: err.response.data.deviceType || 'DESKTOP' });
+        setLoggedElsewhereModal({
+          deviceType: err.response.data.deviceType || 'DESKTOP',
+          forceLogoutToken: err.response.data.forceLogoutToken || '',
+        });
         setError(null);
       } else {
         setError(getErrorMessage(err));
@@ -110,18 +116,15 @@ const Login: React.FC = () => {
   };
 
   const handleForceLogoutAll = async () => {
+    const token = loggedElsewhereModal?.forceLogoutToken;
+    if (!token) {
+      setError('لطفاً دوباره وارد شوید.');
+      return;
+    }
     setForceLogoutLoading(true);
     setError(null);
     try {
-      if (mode === 'password') {
-        const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
-          ? normalizePhoneNumber(loginInput)
-          : loginInput;
-        await authService.forceLogoutAll({ login: normalizedLogin, password: loginPassword });
-      } else {
-        const normalizedPhone = normalizePhoneNumber(phone);
-        await authService.forceLogoutAll({ phone: normalizedPhone, otp });
-      }
+      await authService.forceLogoutAll({ forceLogoutToken: token });
       setLoggedElsewhereModal(null);
       if (mode === 'password') {
         const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
@@ -174,7 +177,7 @@ const Login: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
             <p className="text-gray-800 mb-4">
-              شما با دستگاه دیگری ({deviceTypeLabel[loggedElsewhereModal.deviceType] || loggedElsewhereModal.deviceType}) وارد شده‌اید.
+              شما با دستگاه دیگری ({deviceTypeLabel[loggedElsewhereModal?.deviceType] || loggedElsewhereModal?.deviceType}) وارد شده‌اید.
             </p>
             <p className="text-sm text-gray-600 mb-6">
               برای ورود از این دستگاه، ابتدا از همه دستگاه‌ها خارج شوید.

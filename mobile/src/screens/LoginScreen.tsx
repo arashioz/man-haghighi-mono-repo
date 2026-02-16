@@ -26,7 +26,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [loggedElsewhereModal, setLoggedElsewhereModal] = useState<{ deviceType: string } | null>(null);
+  const [loggedElsewhereModal, setLoggedElsewhereModal] = useState<{ deviceType: string; forceLogoutToken: string } | null>(null);
   const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   const { login } = useAuth();
 
@@ -43,7 +43,10 @@ export default function LoginScreen() {
       await login(id, password);
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
-        setLoggedElsewhereModal({ deviceType: err.response.data.deviceType || 'DESKTOP' });
+        setLoggedElsewhereModal({
+          deviceType: err.response.data.deviceType || 'DESKTOP',
+          forceLogoutToken: err.response.data.forceLogoutToken || '',
+        });
         setError('');
       } else {
         const msg =
@@ -59,13 +62,17 @@ export default function LoginScreen() {
   };
 
   const handleForceLogoutAll = async () => {
-    const id = loginId.trim();
+    const token = loggedElsewhereModal?.forceLogoutToken;
+    if (!token) {
+      setError('لطفاً دوباره وارد شوید.');
+      return;
+    }
     setForceLogoutLoading(true);
     setError('');
     try {
-      await AuthApi.forceLogoutAll({ login: id, password });
+      await AuthApi.forceLogoutAll({ forceLogoutToken: token });
       setLoggedElsewhereModal(null);
-      await login(id, password);
+      await login(loginId.trim(), password);
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||

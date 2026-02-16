@@ -152,7 +152,7 @@ export const authService = {
     return response.data;
   },
 
-  forceLogoutAll: async (payload: { login?: string; password?: string; phone?: string; otp?: string }): Promise<{ success: boolean; message: string }> => {
+  forceLogoutAll: async (payload: { forceLogoutToken?: string; login?: string; password?: string; phone?: string; otp?: string }): Promise<{ success: boolean; message: string }> => {
     const response = await api.post('/auth/force-logout-all', payload);
     return response.data;
   },
