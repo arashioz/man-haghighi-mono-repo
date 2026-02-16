@@ -11,6 +11,12 @@ const getErrorMessage = (err: any): string => {
   return err?.message || 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
 };
 
+const deviceTypeLabel: Record<string, string> = {
+  ANDROID: 'اندروید',
+  IOS: 'آی‌او‌اس',
+  DESKTOP: 'دسکتاپ',
+};
+
 const Login: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -21,6 +27,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
+  const [loggedElsewhereModal, setLoggedElsewhereModal] = useState<{ deviceType: string } | null>(null);
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   const navigate = useNavigate();
   const { login: authLogin, setSession } = useAuth();
 
@@ -53,6 +61,7 @@ const Login: React.FC = () => {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoggedElsewhereModal(null);
     setLoading(true);
 
     try {
@@ -61,7 +70,12 @@ const Login: React.FC = () => {
       setSession(response);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getErrorMessage(err));
+      if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
+        setLoggedElsewhereModal({ deviceType: err.response.data.deviceType || 'DESKTOP' });
+        setError(null);
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -70,10 +84,10 @@ const Login: React.FC = () => {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoggedElsewhereModal(null);
     setLoading(true);
 
     try {
-      // Normalize phone number if login input is a phone number
       const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
         ? normalizePhoneNumber(loginInput)
         : loginInput;
@@ -84,9 +98,47 @@ const Login: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getErrorMessage(err));
+      if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
+        setLoggedElsewhereModal({ deviceType: err.response.data.deviceType || 'DESKTOP' });
+        setError(null);
+      } else {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForceLogoutAll = async () => {
+    setForceLogoutLoading(true);
+    setError(null);
+    try {
+      if (mode === 'password') {
+        const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
+          ? normalizePhoneNumber(loginInput)
+          : loginInput;
+        await authService.forceLogoutAll({ login: normalizedLogin, password: loginPassword });
+      } else {
+        const normalizedPhone = normalizePhoneNumber(phone);
+        await authService.forceLogoutAll({ phone: normalizedPhone, otp });
+      }
+      setLoggedElsewhereModal(null);
+      if (mode === 'password') {
+        const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
+          ? normalizePhoneNumber(loginInput)
+          : loginInput;
+        await authLogin({ login: normalizedLogin, password: loginPassword });
+        navigate('/dashboard');
+      } else {
+        const normalizedPhone = normalizePhoneNumber(phone);
+        const response = await authService.verifyOtp(normalizedPhone, otp);
+        setSession(response);
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setError(getErrorMessage(err));
+    } finally {
+      setForceLogoutLoading(false);
     }
   };
 
@@ -117,6 +169,36 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* مودال ورود از دستگاه دیگر */}
+      {loggedElsewhereModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
+            <p className="text-gray-800 mb-4">
+              شما با دستگاه دیگری ({deviceTypeLabel[loggedElsewhereModal.deviceType] || loggedElsewhereModal.deviceType}) وارد شده‌اید.
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              برای ورود از این دستگاه، ابتدا از همه دستگاه‌ها خارج شوید.
+            </p>
+            <button
+              type="button"
+              onClick={handleForceLogoutAll}
+              disabled={forceLogoutLoading}
+              className="w-full py-2.5 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {forceLogoutLoading ? 'در حال انجام...' : 'خروج از همه دستگاه‌ها'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoggedElsewhereModal(null)}
+              disabled={forceLogoutLoading}
+              className="mt-3 w-full py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+            >
+              انصراف
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">

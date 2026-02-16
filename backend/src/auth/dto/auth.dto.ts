@@ -1,6 +1,9 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, Matches, ValidateIf } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, Matches, ValidateIf, IsIn } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Match } from '../../common/decorators/match.decorator';
+
+export const DEVICE_TYPES = ['ANDROID', 'IOS', 'DESKTOP'] as const;
+export type DeviceType = (typeof DEVICE_TYPES)[number];
 
 export class RegisterDto {
   @ApiProperty({ example: 'john@example.com', required: false })
@@ -82,6 +85,12 @@ export class LoginDto {
   @IsOptional()
   @IsString()
   password?: string;
+
+  @ApiProperty({ example: 'DESKTOP', enum: ['ANDROID', 'IOS', 'DESKTOP'], required: false })
+  @IsOptional()
+  @IsString()
+  @IsIn(DEVICE_TYPES, { message: 'deviceType must be ANDROID, IOS or DESKTOP' })
+  deviceType?: DeviceType;
 }
 
 export class SendOtpDto {
@@ -104,6 +113,41 @@ export class VerifyOtpDto {
   @IsNotEmpty()
   @Matches(/^\d{6}$/, { message: 'OTP must be 6 digits' })
   otp: string;
+
+  @ApiProperty({ example: 'DESKTOP', enum: ['ANDROID', 'IOS', 'DESKTOP'], required: false })
+  @IsOptional()
+  @IsString()
+  @IsIn(DEVICE_TYPES, { message: 'deviceType must be ANDROID, IOS or DESKTOP' })
+  deviceType?: DeviceType;
+}
+
+export class ForceLogoutAllDto {
+  @ApiProperty({ description: 'توکن یک‌بارمصرف برگشتی همراه خطای 409 (فقط دکمه بزن، بدون OTP/رمز)' })
+  @IsOptional()
+  @IsString()
+  forceLogoutToken?: string;
+
+  @ApiProperty({ example: 'john@example.com or 09123456789', description: 'When not using forceLogoutToken' })
+  @IsOptional()
+  @IsString()
+  login?: string;
+
+  @ApiProperty({ example: 'password123' })
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @ApiProperty({ example: '09123456789' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^09\d{9}$/, { message: 'Phone must be 09xxxxxxxxx' })
+  phone?: string;
+
+  @ApiProperty({ example: '123456' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'OTP must be 6 digits' })
+  otp?: string;
 }
 
 export class UpdateProfileDto {

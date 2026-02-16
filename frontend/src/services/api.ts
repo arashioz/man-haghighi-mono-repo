@@ -131,8 +131,9 @@ api.interceptors.response.use(
 );
 
 export const authService = {
-  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/auth/login', credentials);
+  login: async (credentials: LoginCredentials & { deviceType?: string }): Promise<AuthResponse> => {
+    const payload = { ...credentials, deviceType: credentials.deviceType ?? 'DESKTOP' };
+    const response = await api.post('/auth/login', payload);
     return response.data;
   },
 
@@ -146,8 +147,13 @@ export const authService = {
     return response.data;
   },
 
-  verifyOtp: async (phone: string, otp: string): Promise<AuthResponse> => {
-    const response = await api.post('/auth/verify-otp', { phone, otp });
+  verifyOtp: async (phone: string, otp: string, deviceType: string = 'DESKTOP'): Promise<AuthResponse> => {
+    const response = await api.post('/auth/verify-otp', { phone, otp, deviceType });
+    return response.data;
+  },
+
+  forceLogoutAll: async (payload: { login?: string; password?: string; phone?: string; otp?: string }): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/auth/force-logout-all', payload);
     return response.data;
   },
 

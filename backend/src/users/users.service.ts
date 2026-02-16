@@ -793,17 +793,25 @@ export class UsersService {
     });
   }
 
-  async assignCourses(userId: string, courseIds: string[]) {
-    // Remove duplicates from courseIds array
-    const uniqueCourseIds = [...new Set(courseIds)];
+  async assignCourses(userId: string, courseIds: string[] | undefined | null) {
+    // Ensure user exists
+    await this.findOne(userId);
+
+    // Normalize: ensure array of strings, filter empty
+    const safeIds = Array.isArray(courseIds) ? courseIds : [];
+    const uniqueCourseIds = [...new Set(safeIds.map((id) => String(id).trim()).filter(Boolean))];
 
     // Delete existing enrollments for this user
     await this.prisma.courseEnrollment.deleteMany({
       where: { userId },
     });
 
+    if (uniqueCourseIds.length === 0) {
+      return { count: 0 };
+    }
+
     // Create enrollments with skipDuplicates to handle any race conditions
-    const enrollments = uniqueCourseIds.map(courseId => ({
+    const enrollments = uniqueCourseIds.map((courseId) => ({
       userId,
       courseId,
       enrolledAt: new Date(),

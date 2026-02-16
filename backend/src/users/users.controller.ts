@@ -83,8 +83,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Assign courses to user (Admin only)' })
   @ApiResponse({ status: 201, description: 'Courses assigned successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async assignCourses(@Param('id') userId: string, @Body() body: { courseIds: string[] }) {
-    return this.usersService.assignCourses(userId, body.courseIds);
+  async assignCourses(@Param('id') userId: string, @Body() body: { courseIds?: string[] }) {
+    return this.usersService.assignCourses(userId, body?.courseIds ?? []);
   }
 
   @Post('import')
@@ -183,8 +183,102 @@ export class UsersController {
     return this.usersService.getSellerStats(req.user.id);
   }
 
-  // Rest of the existing controller methods...
-  // [All other existing methods should be kept exactly as they were]
+  @Get('export/json')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export users with courses as JSON (Admin only)' })
+  @ApiQuery({ name: 'userType', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'role', required: false })
+  @ApiResponse({ status: 200, description: 'JSON export' })
+  async exportUsersJson(@Query() query: ExportUsersQueryDto) {
+    return this.usersService.exportUsersWithCourses(query);
+  }
+
+  @Get('export/excel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export users as Excel (Admin only)' })
+  @ApiQuery({ name: 'userType', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'role', required: false })
+  @ApiResponse({ status: 200, description: 'Excel file' })
+  async exportUsersExcel(@Query() query: ExportUsersQueryDto, @Res() res: Response) {
+    const buffer = await this.usersService.exportUsers(query);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=users_export_${Date.now()}.xlsx`);
+    res.send(buffer);
+  }
+
+  @Get(':id/export/json')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Export single user with courses as JSON (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User JSON' })
+  async exportUserJson(@Param('id') userId: string) {
+    return this.usersService.exportSingleUserWithCourses(userId);
+  }
+
+  @Get(':id/courses')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user courses (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User courses' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserCourses(@Param('id') userId: string) {
+    return this.usersService.getUserCourses(userId);
+  }
+
+  @Get(':id/products')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user products (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User products' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserProducts(@Param('id') userId: string) {
+    return this.usersService.getUserWithProducts(userId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user by ID (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User found' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(id, updateUserDto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User deleted' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async remove(@Param('id') id: string) {
+    return this.usersService.remove(id);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
@@ -194,7 +288,4 @@ export class UsersController {
   async findAll(@Query() paginationQuery: PaginationQueryDto) {
     return this.usersService.findAll(paginationQuery);
   }
-
-  // ... [Include all other existing methods exactly as they were]
-  // This is just a placeholder - the actual file should contain all original methods
 }
