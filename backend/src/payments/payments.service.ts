@@ -664,12 +664,14 @@ export class PaymentsService {
 
     const linkCode = `PL-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-    // Amount is already in Rial from frontend
+    // Frontend sends amount in Toman; store in Rial for DB consistency (existing rows are Rial)
+    const amountToman = Math.round(Number(dto.amount));
+    const amountRial = this.tomanToRial(amountToman);
     const paymentLink = await this.prisma.paymentLink.create({
       data: {
         linkCode,
         createdById: userId,
-        amount: new Decimal(dto.amount),
+        amount: new Decimal(amountRial),
         customerName: dto.customerName,
         customerPhone: dto.customerMobile,
         description: dto.description,
@@ -701,12 +703,12 @@ export class PaymentsService {
       });
     }
 
-    // Create invoice for payment link (amount in toman)
+    // Create invoice for payment link (amount already in toman)
     const wallet = await this.walletService.getOrCreateWallet(customerUser.id);
     const invoice = await this.invoiceService.createInvoice({
       userId: customerUser.id,
       type: 'PAYMENT_LINK',
-      amount: this.rialToToman(dto.amount), // Convert rial back to toman for invoice
+      amount: amountToman,
       paymentLinkId: paymentLink.id,
       customerName: dto.customerName,
       customerPhone: dto.customerMobile,
@@ -722,8 +724,7 @@ export class PaymentsService {
       success: true,
       paymentLink: {
         ...paymentLink,
-        // Convert rial back to toman for frontend display
-        amount: new Decimal(Math.round(Number(paymentLink.amount) / 10)),
+        amount: new Decimal(amountToman), // return in toman for frontend
         paymentUrl,
       },
       invoice,
@@ -792,7 +793,7 @@ export class PaymentsService {
       throw new NotFoundException('کاربر یافت نشد');
     }
 
-    const amountInToman = Math.round(Number(paymentLink.amount) / 10); // Convert rial to toman
+    const amountInToman = Math.round(Number(paymentLink.amount) / 10); // stored in Rial → toman for display
 
     // Find or create invoice
     let invoice = await this.prisma.invoice.findFirst({
@@ -831,6 +832,7 @@ export class PaymentsService {
     if (!transaction) {
       // Create new transaction and payment request
       const orderId = this.generateOrderId();
+      const amountInRial = this.tomanToRial(amountInToman);
 
       transaction = await this.prisma.transaction.create({
         data: {
@@ -838,7 +840,7 @@ export class PaymentsService {
           invoiceId: invoice.id,
           paymentLinkId: paymentLink.id,
           type: 'PAYMENT',
-          amount: new Decimal(amountInToman), // Use toman amount for transaction
+          amount: new Decimal(amountInRial),
           orderId,
           status: 'PENDING',
           description: paymentLink.description || 'پرداخت لینک',
@@ -847,7 +849,6 @@ export class PaymentsService {
       });
 
       // Create payment request - gateway expects rial amount
-      const amountInRial = this.tomanToRial(amountInToman);
       const paymentRequest = await this.gatewayService.createPaymentRequest(
         orderId,
         amountInRial,
@@ -918,7 +919,8 @@ export class PaymentsService {
       throw new NotFoundException('کاربر یافت نشد');
     }
 
-    const amount = Number(paymentLink.amount);
+    const amountInRial = Number(paymentLink.amount); // stored in Rial
+    const amountToman = Math.round(amountInRial / 10);
 
     // Find or create invoice
     let invoice = await this.prisma.invoice.findFirst({
@@ -934,7 +936,7 @@ export class PaymentsService {
       invoice = await this.invoiceService.createInvoice({
         userId: customerUser.id,
         type: 'PAYMENT_LINK',
-        amount,
+        amount: amountToman,
         paymentLinkId: paymentLink.id,
         customerName: paymentLink.customerName,
         customerPhone: paymentLink.customerPhone,
@@ -945,14 +947,14 @@ export class PaymentsService {
 
     const orderId = this.generateOrderId();
 
-    // Create transaction
+    // Create transaction (amount in Rial for consistency with rest of payments)
     const transaction = await this.prisma.transaction.create({
       data: {
         userId: customerUser.id,
         invoiceId: invoice.id,
         paymentLinkId: paymentLink.id,
         type: 'PAYMENT',
-        amount: new Decimal(amount),
+        amount: new Decimal(amountInRial),
         orderId,
         status: 'PENDING',
         description: paymentLink.description || 'پرداخت لینک',
@@ -960,10 +962,10 @@ export class PaymentsService {
       },
     });
 
-    // Create payment request
+    // Create payment request — gateway expects Rial
     const paymentRequest = await this.gatewayService.createPaymentRequest(
       orderId,
-      amount,
+      amountInRial,
       paymentLink.description || 'پرداخت لینک',
     );
 

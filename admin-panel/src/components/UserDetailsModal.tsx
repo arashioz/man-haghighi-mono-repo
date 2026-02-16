@@ -266,7 +266,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                         <div>
                           <p className="text-sm text-gray-600">مبلغ</p>
                           <p className="text-base font-semibold text-gray-900">
-                            {formatAmount(link.amount)} ریال ({formatAmount(Math.round(link.amount / 10))} تومان)
+                            {formatAmount(Math.round(Number(link.amount) / 10))} تومان
                           </p>
                         </div>
                         <button
@@ -318,7 +318,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
                         <div>
                           <p className="text-sm text-gray-600">مبلغ</p>
                           <p className="text-base font-semibold text-gray-900">
-                            {formatAmount(Number(invoice.amount))} ریال
+                            {formatAmount(Number(invoice.amount))} تومان
                           </p>
                         </div>
                         <div>

@@ -9,7 +9,7 @@ import MobileCard from '../components/MobileCard';
 import { paymentsService, usersService, workshopsService, coursesService, settingsService, API_ORIGIN } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPersianDateTime } from '../utils/dateUtils';
-import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
+import { formatAmountInToman } from '../utils/currencyUtils';
 import { Workshop, Course } from '../types';
 import { getImageUrl } from '../utils/imageUtils';
 
@@ -188,55 +188,44 @@ const PaymentLinks: React.FC = () => {
   };
 
   const handlePhoneChange = async (phone: string) => {
-    setNewLink({...newLink, customerMobile: phone});
+    setNewLink(prev => ({ ...prev, customerMobile: phone }));
 
     if (phone.length === 11 && /^09[0-9]{9}$/.test(phone)) {
-      const exists = await checkPhoneExists(phone);
-      if (exists === true) {
-        // Phone exists, try to get customer info and auto-fill name
-        try {
-          const customer = await usersService.getUserByPhone(phone);
-          if (customer && customer.firstName) {
-            // Auto-fill customer name from existing user data
-            const fullName = `${customer.firstName} ${customer.lastName || ''}`.trim();
-            setNewLink(prev => ({
-              ...prev,
-              customerMobile: phone,
-              customerName: fullName
-            }));
-            console.log(`Auto-filled customer name: ${fullName}`);
-          }
-
-          // Fetch customer payment history
-          setLoadingCustomerHistory(true);
-          try {
-            const history = await paymentsService.getCustomerPaymentHistory(phone);
-            setCustomerHistory(history);
-          } catch (error) {
-            console.error('Error fetching customer history:', error);
-            setCustomerHistory(null);
-          } finally {
-            setLoadingCustomerHistory(false);
-          }
-        } catch (error) {
-          console.error('Error fetching customer info:', error);
-          // Even if we can't fetch customer info, keep the phone number
-          setNewLink(prev => ({
-            ...prev,
-            customerMobile: phone
-          }));
-          // Show a warning that name couldn't be auto-filled
-          console.warn('Could not auto-fill customer name. User may need to enter it manually.');
+      setPhoneCheckLoading(true);
+      try {
+        const customer = await usersService.getUserByPhone(phone);
+        setCustomerExists(true);
+        if (customer && (customer.firstName || customer.lastName)) {
+          const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+          setNewLink(prev => ({ ...prev, customerMobile: phone, customerName: fullName }));
         }
-      } else if (exists === false) {
-        // Phone doesn't exist, clear name and show new customer modal
-        setNewLink(prev => ({...prev, customerMobile: phone, customerName: ''}));
-        setIsNewCustomerModalOpen(true);
+        try {
+          const links = await paymentsService.getCustomerPaymentLinks(phone);
+          setExistingCustomerLinks(links);
+        } catch {
+          setExistingCustomerLinks([]);
+        }
+        setLoadingCustomerHistory(true);
+        try {
+          const history = await paymentsService.getCustomerPaymentHistory(phone);
+          setCustomerHistory(history);
+        } catch {
+          setCustomerHistory(null);
+        } finally {
+          setLoadingCustomerHistory(false);
+        }
+      } catch {
+        // کاربر در لیست نیست — همان منطق موبایل: پاپ‌آپ افزودن کاربر جدید باز شود
+        setCustomerExists(false);
+        setNewLink(prev => ({ ...prev, customerMobile: phone, customerName: '' }));
+        setExistingCustomerLinks([]);
         setCustomerHistory(null);
+        setIsNewCustomerModalOpen(true);
+      } finally {
+        setPhoneCheckLoading(false);
       }
     } else {
-      // Invalid phone, clear name and customer data
-      setNewLink(prev => ({...prev, customerMobile: phone, customerName: ''}));
+      setNewLink(prev => ({ ...prev, customerMobile: phone, customerName: '' }));
       setCustomerExists(null);
       setExistingCustomerLinks([]);
       setCustomerHistory(null);
@@ -295,17 +284,10 @@ const PaymentLinks: React.FC = () => {
     setCreateLinkLoading(true);
 
     try {
-      // Parse amount as Toman and validate
-      let amountInRial: number;
-      try {
-        amountInRial = parseTomanAmount(newLink.amount);
-      } catch (error) {
-        setError('مبلغ وارد شده معتبر نیست');
-        return;
-      }
-
-      if (amountInRial < 1000) { // 100 Toman = 1000 Rial
-        setError('مبلغ باید حداقل 100 تومان باشد');
+      // مبلغ به تومان وارد می‌شود؛ همان عدد را به API می‌فرستیم (فقط در درگاه به ریال تبدیل می‌شود)
+      const amountToman = parseInt(String(newLink.amount).replace(/\D/g, ''), 10);
+      if (isNaN(amountToman) || amountToman < 100) {
+        setError('مبلغ باید حداقل ۱۰۰ تومان باشد');
         return;
       }
 
@@ -326,7 +308,7 @@ const PaymentLinks: React.FC = () => {
       await paymentsService.createPaymentLink({
         customerName: newLink.customerName,
         customerMobile: newLink.customerMobile,
-        amount: amountInRial, // Amount is already in Rial for API
+        amount: amountToman, // مبلغ به تومان (در بک‌اند فقط هنگام ارسال به درگاه به ریال تبدیل می‌شود)
         description: description || undefined,
         workshopTitle: linkType === 'workshop' && newLink.workshopId ?
           availableWorkshops.find(w => w.id === newLink.workshopId)?.title : undefined,
@@ -404,7 +386,7 @@ const PaymentLinks: React.FC = () => {
     const cleanPhone = phone.startsWith('0') ? phone.substring(1) : phone;
     const whatsappPhone = `98${cleanPhone}`;
 
-    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmountInToman(amount)} تومان (${formatAmountInRial(amount)} ریال)\nلینک پرداخت:\n${link}`;
+    let message = `سلام ${name}\nمبلغ پرداختی: ${formatAmountInToman(amount)} تومان\nلینک پرداخت:\n${link}`;
 
     // Use WhatsApp template if enabled
     if (settings?.messageTemplateEnabled && settings?.whatsappTemplateText) {
@@ -787,7 +769,6 @@ const PaymentLinks: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">{formatAmountInToman(group.totalAmount)} تومان</div>
-                        <div className="text-sm text-gray-500">{formatAmountInRial(group.totalAmount)} ریال</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
@@ -861,7 +842,6 @@ const PaymentLinks: React.FC = () => {
                       <tr key={link.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-semibold text-gray-900">{formatAmountInToman(link.amount)} تومان</div>
-                          <div className="text-sm text-gray-500">{formatAmountInRial(link.amount)} ریال</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -1207,7 +1187,6 @@ getImageUrl                {/* Customer History */}
               {newLink.workshopId && (
                 <p className="text-sm text-gray-500 mt-1">
                   مبلغ: {formatAmountInToman(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} تومان
-                  ({formatAmountInRial(availableWorkshops.find(w => w.id === newLink.workshopId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
@@ -1243,7 +1222,6 @@ getImageUrl                {/* Customer History */}
               {newLink.courseId && (
                 <p className="text-sm text-gray-500 mt-1">
                   مبلغ: {formatAmountInToman(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} تومان
-                  ({formatAmountInRial(availableCourses.find(c => c.id === newLink.courseId)?.price || 0)} ریال)
                 </p>
               )}
             </div>
@@ -1310,7 +1288,7 @@ getImageUrl                {/* Customer History */}
             />
             {newLink.amount && (
               <p className="text-sm text-gray-500 mt-1">
-                معادل: {formatAmountInRial(parseInt(newLink.amount) * 10)} ریال
+                {Number(newLink.amount.replace(/\D/g, '')).toLocaleString('fa-IR')} تومان
               </p>
             )}
             {(linkType === 'workshop' && newLink.workshopId) || (linkType === 'course' && newLink.courseId) ? (

@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usersService, paymentsService, workshopsService, settingsService } from '../services/api';
 // import { usersService, paymentsService, workshopsService, settingsService } from '../services/api'; // Mocked for demo
 import MobileLayout from './MobileLayout';
-import { formatAmountInToman, formatAmountInRial, parseTomanAmount } from '../utils/currencyUtils';
+import { formatAmountInToman, formatAmountInRial } from '../utils/currencyUtils';
 import MobileCard from './MobileCard';
 import MobileModal from './MobileModal';
 import { MobileFormField, MobileInput, MobileButton } from './MobileForm';
@@ -239,17 +239,14 @@ const MobileSellerDashboard: React.FC = () => {
     if (!customerPhone || !amount) return;
 
     try {
-      let amountInRial: number;
-      try {
-        amountInRial = parseTomanAmount(amount || '0');
-      } catch (error) {
-        console.error('Error parsing amount:', error);
+      const amountToman = parseInt(String(amount).replace(/\D/g, ''), 10);
+      if (isNaN(amountToman) || amountToman < 100) {
         return;
       }
 
       const paymentData: any = {
         customerMobile: customerPhone,
-        amount: amountInRial, // Amount in Rial for API
+        amount: amountToman, // مبلغ به تومان (در بک‌اند فقط هنگام ارسال به درگاه به ریال تبدیل می‌شود)
         isAggregate: isAggregateLink,
         aggregateCount: isAggregateLink ? parseInt(aggregateCount) : undefined,
       };

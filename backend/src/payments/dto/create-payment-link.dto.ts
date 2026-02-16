@@ -15,8 +15,9 @@ export class CreatePaymentLinkDto {
   })
   customerMobile: string;
 
+  /** مبلغ به تومان (فقط هنگام ارسال به درگاه به ریال تبدیل می‌شود) */
   @IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 })
-  @Min(1)
+  @Min(100, { message: 'حداقل مبلغ ۱۰۰ تومان است' })
   amount: number;
 
   @IsString()

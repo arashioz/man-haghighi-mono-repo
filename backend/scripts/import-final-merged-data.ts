@@ -85,6 +85,7 @@ async function importUsersWithCourses() {
         const products = userEntry.products || [];
         
         const rawPhone = userAny.user_login || userAny.phone || userAny.username;
+        // نرمال: فقط رقم، حداکثر ۱۱ رقم (اگر بیشتر بود ۲ رقم آخر و غیره حذف می‌شود تا تکراری نشود)
         const phone = rawPhone ? normalizePhone(String(rawPhone).trim()) : null;
         const email = userAny.user_email || userAny.email;
         const password = userAny.user_pass || userAny.password;
@@ -95,7 +96,11 @@ async function importUsersWithCourses() {
           continue;
         }
 
-        // Check if user exists by phone or email
+        if (rawPhone && rawPhone.replace(/\D/g, '').length > 11) {
+          console.log(`  Normalized phone: ${rawPhone} -> ${phone}`);
+        }
+
+        // Check if user exists by normalized phone or email
         const existingUser = await prisma.user.findFirst({
           where: {
             OR: [
@@ -106,16 +111,16 @@ async function importUsersWithCourses() {
         });
 
         if (existingUser) {
-          console.log(`User exists - Phone: ${phone}, Email: ${email}`);
+          console.log(`User exists (skip duplicate) - Phone: ${phone}, Email: ${email}`);
           skippedCount++;
           continue;
         }
 
-        // Create new user with only valid fields (phone normalized like rest of app)
+        // Create new user with normalized phone (username = phone; if duplicate username, add suffix)
         const userData: any = {
           phone: phone,
-          username: phone, // Use normalized phone as username
-          isOld: true, // Mark as imported user
+          username: phone,
+          isOld: true,
         };
 
         // Only add email if it exists and is valid
@@ -137,10 +142,22 @@ async function importUsersWithCourses() {
           userData.lastName = userAny.user_nicename;
         }
 
-        // Create the user
-        const newUser = await prisma.user.create({
-          data: userData
-        });
+        // Create the user (if username duplicate, use phone + suffix)
+        let newUser;
+        try {
+          newUser = await prisma.user.create({
+            data: userData
+          });
+        } catch (createErr: any) {
+          if (createErr?.code === 'P2002' && createErr?.meta?.target?.includes('username')) {
+            const suffix = (userAny.id || userEntry?.user_info?.id || '').toString().slice(-6) || Date.now().toString(36);
+            userData.username = `${phone}_${suffix}`;
+            newUser = await prisma.user.create({ data: userData });
+            console.log(`  Created with unique username: ${userData.username}`);
+          } else {
+            throw createErr;
+          }
+        }
 
         // Process products and create purchases
         for (const product of products) {
