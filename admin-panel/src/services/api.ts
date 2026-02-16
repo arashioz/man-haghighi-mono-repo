@@ -120,6 +120,15 @@ export const authService = {
     const response = await api.get('/auth/profile');
     return response.data;
   },
+
+  changePassword: async (data: { currentPassword?: string; newPassword: string; confirmPassword?: string }): Promise<{ message: string }> => {
+    const response = await api.patch('/auth/password', {
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword ?? data.newPassword,
+    });
+    return response.data;
+  },
 };
 
 export const usersService = {

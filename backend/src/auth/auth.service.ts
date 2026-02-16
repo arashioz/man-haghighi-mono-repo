@@ -228,25 +228,31 @@ export class AuthService {
         throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
       }
 
-      const deviceType = this.normalizeDeviceType((loginDto as any).deviceType);
-      const existingSession = await this.getExistingSession(user.id);
-      if (existingSession) {
-        throw new ConflictException({
-          code: 'LOGGED_IN_ELSEWHERE',
-          deviceType: existingSession.deviceType,
-          message: 'این اکانت روی دستگاه دیگری فعال است.',
-          forceLogoutToken: this.createForceLogoutToken(user.id),
-        });
+      // Session tracking (single device) only for regular users, not admin
+      let sessionId: string | undefined;
+      if (user.role === 'USER') {
+        const deviceType = this.normalizeDeviceType((loginDto as any).deviceType);
+        const existingSession = await this.getExistingSession(user.id);
+        if (existingSession) {
+          throw new ConflictException({
+            code: 'LOGGED_IN_ELSEWHERE',
+            deviceType: existingSession.deviceType,
+            message: 'این اکانت روی دستگاه دیگری فعال است.',
+            forceLogoutToken: this.createForceLogoutToken(user.id),
+          });
+        }
+        sessionId = await this.createOrReplaceSession(user.id, deviceType);
       }
-      const sessionId = await this.createOrReplaceSession(user.id, deviceType);
 
-      const token = this.jwtService.sign({
+      const tokenPayload: Record<string, any> = {
         sub: user.id,
         email: user.email,
         phone: user.phone,
         role: user.role,
-        sessionId,
-      });
+      };
+      if (sessionId) tokenPayload.sessionId = sessionId;
+
+      const token = this.jwtService.sign(tokenPayload);
 
       const legacyUser = user as any;
 
@@ -390,16 +396,18 @@ export class AuthService {
       return null;
     }
 
-    // Single-device: require valid session in JWT
-    const sessionId = payload.sessionId;
-    if (!sessionId) {
-      return null;
-    }
-    const session = await this.prisma.userSession.findUnique({
-      where: { userId: String(user.id) },
-    });
-    if (!session || session.sessionId !== sessionId) {
-      return null;
+    // Single-device session check only for regular users; admin can use multiple devices
+    if (user.role === 'USER') {
+      const sessionId = payload.sessionId;
+      if (!sessionId) {
+        return null;
+      }
+      const session = await this.prisma.userSession.findUnique({
+        where: { userId: String(user.id) },
+      });
+      if (!session || session.sessionId !== sessionId) {
+        return null;
+      }
     }
 
     return user;
@@ -751,12 +759,19 @@ export class AuthService {
       select: authUserPublicSelect as any,
     });
 
-    const token = this.jwtService.sign({
+    const tokenPayload: Record<string, any> = {
       sub: user.id,
       email: user.email,
       phone: user.phone,
       role: user.role,
-    });
+    };
+    if (user.role === 'USER') {
+      const session = await this.prisma.userSession.findUnique({
+        where: { userId: user.id },
+      });
+      if (session) tokenPayload.sessionId = session.sessionId;
+    }
+    const token = this.jwtService.sign(tokenPayload);
 
     return {
       user,
@@ -779,10 +794,6 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('User not found');
-    }
-
-    if (user.role !== 'USER') {
-      throw new UnauthorizedException('Password change is only available for regular users');
     }
 
     // If user must change password, skip current password validation

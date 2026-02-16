@@ -104,7 +104,7 @@ export class AuthController {
   @Patch('password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Change user password (for USER role only)' })
+  @ApiOperation({ summary: 'Change current user password (all roles)' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid current password or unauthorized' })
   async changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {

@@ -56,33 +56,159 @@ async function setLoginUsernameForAllUsers() {
   let skipped = 0;
   for (let i = 0; i < users.length; i += UPDATE_BATCH_SIZE) {
     const batch = users.slice(i, i + UPDATE_BATCH_SIZE);
-    await prisma.$transaction(async (tx) => {
-      for (const u of batch) {
-        const loginId = normalizePhone(u.phone) || normalizeEmail(u.email);
-        if (!loginId) {
-          skipped++;
-          continue;
-        }
-        if (u.username === loginId) {
-          skipped++;
-          continue;
-        }
-        try {
-          await tx.user.update({
-            where: { id: u.id },
-            data: { username: loginId },
-          });
-          updated++;
-          if (updated <= 5 || updated % 500 === 0) {
-            console.log(`  username تنظیم شد: ${u.id} -> ${loginId}`);
-          }
-        } catch (e) {
-          console.error(`  خطا در اپدیت user ${u.id}:`, e);
-        }
+    // هر کاربر را جداگانه اپدیت می‌کنیم تا خطا در یکی تراکنش بقیه را abort نکند (25P02)
+    for (const u of batch) {
+      const loginId = normalizePhone(u.phone) || normalizeEmail(u.email);
+      if (!loginId) {
+        skipped++;
+        continue;
       }
-    });
+      if (u.username === loginId) {
+        skipped++;
+        continue;
+      }
+      try {
+        await prisma.user.update({
+          where: { id: u.id },
+          data: { username: loginId },
+        });
+        updated++;
+        if (updated <= 5 || updated % 500 === 0) {
+          console.log(`  username تنظیم شد: ${u.id} -> ${loginId}`);
+        }
+      } catch (e) {
+        console.error(`  خطا در اپدیت user ${u.id}:`, e);
+      }
+    }
   }
   console.log(`  تعداد به‌روزرسانی‌شده: ${updated}, بدون تغییر: ${skipped}`);
+}
+
+/** یک کاربر و در صورت وجود دوره‌هاش را در یک تراکنش جدا وارد می‌کند تا خطا در یکی باعث 25P02 برای بقیه نشود. */
+async function importOneUser(userData: ImportUser): Promise<{ userCreated: boolean; enrollmentsCreated: number }> {
+  const normalizedPhone = normalizePhone(userData.phone);
+  const normalizedEmail = normalizeEmail(userData.email);
+  const loginId = normalizedPhone || normalizedEmail;
+
+  if (!loginId) {
+    return { userCreated: false, enrollmentsCreated: 0 };
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const existingByPhone = normalizedPhone
+      ? await tx.user.findUnique({ where: { phone: normalizedPhone } })
+      : null;
+    const existingByEmail = normalizedEmail
+      ? await tx.user.findUnique({ where: { email: normalizedEmail } })
+      : null;
+    const existingUser = existingByPhone || existingByEmail;
+
+    if (existingUser) {
+      return { userCreated: false, enrollmentsCreated: 0 };
+    }
+
+    const user = await tx.user.create({
+      data: {
+        phone: normalizedPhone || null,
+        email: normalizedEmail || userData.email?.trim() || null,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        username: loginId,
+        role: 'USER',
+        isOld: true,
+      },
+    });
+
+    let enrollmentsCreated = 0;
+    if (userData.purchasedCourses && Array.isArray(userData.purchasedCourses)) {
+      for (const courseData of userData.purchasedCourses) {
+        const courseId = courseData.courseId || courseData.course?.id;
+        if (!courseId) continue;
+        const courseExists = await tx.course.findUnique({ where: { id: courseId } });
+        if (!courseExists) continue;
+        await tx.courseEnrollment.create({
+          data: {
+            userId: user.id,
+            courseId,
+            enrolledAt: new Date(courseData.enrolledAt || courseData.createdAt || new Date()),
+          },
+        });
+        enrollmentsCreated++;
+      }
+    }
+    return { userCreated: true, enrollmentsCreated };
+  });
+}
+
+/** فقط دوره‌ها را برای کاربران موجود (بر اساس phone/email) از فایل JSON اضافه می‌کند. */
+async function addEnrollmentsOnly(filePath: string) {
+  console.log(`Reading user data from: ${filePath}`);
+  const fileContent = fs.readFileSync(filePath, 'utf8');
+  const usersData: ImportUser[] = JSON.parse(fileContent);
+  console.log(`Found ${usersData.length} users in file to process for enrollments`);
+
+  let usersMatched = 0;
+  let enrollmentsAdded = 0;
+  let enrollmentsSkipped = 0;
+  let courseNotFound = 0;
+
+  for (let i = 0; i < usersData.length; i++) {
+    const userData = usersData[i];
+    const normalizedPhone = normalizePhone(userData.phone);
+    const normalizedEmail = normalizeEmail(userData.email);
+    if (!normalizedPhone && !normalizedEmail) continue;
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+          ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+        ],
+      },
+    });
+    if (!existing) continue;
+
+    usersMatched++;
+    if (!userData.purchasedCourses?.length) continue;
+
+    for (const courseData of userData.purchasedCourses) {
+      const courseId = courseData.courseId || courseData.course?.id;
+      if (!courseId) continue;
+
+      const courseExists = await prisma.course.findUnique({ where: { id: courseId } });
+      if (!courseExists) {
+        courseNotFound++;
+        continue;
+      }
+
+      try {
+        await prisma.courseEnrollment.upsert({
+          where: {
+            userId_courseId: { userId: existing.id, courseId },
+          },
+          create: {
+            userId: existing.id,
+            courseId,
+            enrolledAt: new Date(courseData.enrolledAt || courseData.createdAt || new Date()),
+          },
+          update: {},
+        });
+        enrollmentsAdded++;
+        if (enrollmentsAdded <= 10 || enrollmentsAdded % 500 === 0) {
+          console.log(`  enrollment: user ${existing.id} -> course ${courseId}`);
+        }
+      } catch (e) {
+        console.error(`  خطا در enrollment user ${existing.id} course ${courseId}:`, e);
+        enrollmentsSkipped++;
+      }
+    }
+  }
+
+  console.log('Enrollments-only completed:');
+  console.log(`- Users matched (existing): ${usersMatched}`);
+  console.log(`- Enrollments added: ${enrollmentsAdded}`);
+  console.log(`- Skipped (error): ${enrollmentsSkipped}`);
+  console.log(`- Course not found in DB: ${courseNotFound}`);
 }
 
 async function importUsers(filePath: string) {
@@ -96,96 +222,30 @@ async function importUsers(filePath: string) {
   let importedEnrollments = 0;
   let skippedUsers = 0;
   let invalidUsers = 0;
+  let failedUsers = 0;
 
-  for (let i = 0; i < usersData.length; i += BATCH_SIZE) {
-    const batch = Math.min(BATCH_SIZE, usersData.length - i);
-    const currentBatch = usersData.slice(i, i + batch);
+  for (let i = 0; i < usersData.length; i++) {
+    const userData = usersData[i];
+    const loginId = normalizePhone(userData.phone) || normalizeEmail(userData.email);
+    if (!loginId) {
+      invalidUsers++;
+      continue;
+    }
 
     try {
-      await prisma.$transaction(async (tx) => {
-        for (const userData of currentBatch) {
-          const normalizedPhone = normalizePhone(userData.phone);
-          const normalizedEmail = normalizeEmail(userData.email);
-          const loginId = normalizedPhone || normalizedEmail;
-
-          if (!loginId) {
-            console.log(`Skipping user with no phone and no email (ID: ${userData.id})`);
-            invalidUsers++;
-            continue;
-          }
-
-          const existingByPhone = normalizedPhone
-            ? await tx.user.findUnique({ where: { phone: normalizedPhone } })
-            : null;
-          const existingByEmail = normalizedEmail
-            ? await tx.user.findUnique({ where: { email: normalizedEmail } })
-            : null;
-          const existingUser = existingByPhone || existingByEmail;
-
-          if (existingUser) {
-            console.log(`User ${loginId} already exists, skipping`);
-            skippedUsers++;
-            continue;
-          }
-
-          // شناسه ورود: اول شماره همراه، در نبود آن ایمیل
-          const user = await tx.user.create({
-            data: {
-              phone: normalizedPhone || null,
-              email: normalizedEmail || userData.email?.trim() || null,
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              username: loginId,
-              role: 'USER',
-              isOld: true,
-            },
-          });
-
-          importedUsers++;
-
-          // Create course enrollments if they exist
-          if (userData.purchasedCourses && Array.isArray(userData.purchasedCourses)) {
-            console.log(`Processing ${userData.purchasedCourses.length} courses for user ${user.id}`);
-            for (const courseData of userData.purchasedCourses) {
-              try {
-                const courseId = courseData.courseId || courseData.course?.id;
-                if (!courseId) {
-                  console.log(`No course ID found for user ${user.id}, skipping`);
-                  continue;
-                }
-
-                const courseExists = await tx.course.findUnique({
-                  where: { id: courseId },
-                });
-
-                if (!courseExists) {
-                  console.log(`Course ${courseId} not found, skipping enrollment`);
-                  continue;
-                }
-
-                await tx.courseEnrollment.create({
-                  data: {
-                    userId: user.id,
-                    courseId: courseId,
-                    enrolledAt: new Date(courseData.enrolledAt || courseData.createdAt || new Date()),
-                  },
-                });
-                importedEnrollments++;
-                console.log(`Created enrollment for user ${user.id} in course ${courseId}`);
-              } catch (e) {
-                console.error(`Error creating enrollment for user ${user.id}:`, {
-                  courseData,
-                  error: e,
-                });
-              }
-            }
-          } else {
-            console.log(`No purchased courses found for user ${user.id}`);
-          }
+      const result = await importOneUser(userData);
+      if (result.userCreated) {
+        importedUsers++;
+        importedEnrollments += result.enrollmentsCreated;
+        if (importedUsers <= 5 || importedUsers % 500 === 0) {
+          console.log(`  imported user ${i + 1}/${usersData.length}: ${loginId} (${result.enrollmentsCreated} courses)`);
         }
-      });
+      } else {
+        skippedUsers++;
+      }
     } catch (error) {
-      console.error(`Error processing batch starting at user ${i}:`, error);
+      failedUsers++;
+      console.error(`Error importing user at index ${i} (${loginId}):`, error);
     }
   }
 
@@ -194,14 +254,18 @@ async function importUsers(filePath: string) {
   console.log(`- Course enrollments: ${importedEnrollments}`);
   console.log(`- Users skipped (already existed): ${skippedUsers}`);
   console.log(`- Users skipped (no phone and no email): ${invalidUsers}`);
+  console.log(`- Users failed: ${failedUsers}`);
 
   await setLoginUsernameForAllUsers();
 }
 
-// آرگومان‌ها: [--update-only] یا [مسیر فایل JSON]
-// --update-only: فقط username تمام کاربران را اپدیت کن (شماره یا ایمیل)، بدون import از فایل
+// آرگومان‌ها:
+//   --update-only       فقط username تمام کاربران را اپدیت کن (شماره یا ایمیل)
+//   --enrollments-only  فقط دوره‌ها را برای کاربران موجود از فایل اضافه کن (بدون ساخت کاربر جدید)
+//   [مسیر فایل JSON]   مسیر فایل؛ پیش‌فرض: moc-old-data/users_with_courses_2025-12-23.json
 const args = process.argv.slice(2);
 const updateOnly = args.includes('--update-only');
+const enrollmentsOnly = args.includes('--enrollments-only');
 const filePathArg = args.find((a) => !a.startsWith('--'));
 const defaultPath = path.join(process.cwd(), 'moc-old-data/users_with_courses_2025-12-23.json');
 const filePath = filePathArg || defaultPath;
@@ -221,6 +285,10 @@ async function main() {
       console.error('Could not list moc-old-data directory');
     }
     process.exit(1);
+  }
+  if (enrollmentsOnly) {
+    await addEnrollmentsOnly(filePath);
+    return;
   }
   await importUsers(filePath);
 }
