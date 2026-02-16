@@ -27,6 +27,7 @@ model User {
   role                   UserRole  @default(USER)
   isActive               Boolean   @default(true)
   isOld                  Boolean   @default(false) // Flag for old imported users
+  isForeign              Boolean   @default(false) // کاربر خارجی: ورود با ایمیل و رمز، بدون نیاز به شماره
   mustChangePassword     Boolean   @default(false) // Force user to change password on next login
   parentId               String?
   isBlocked              Boolean   @default(false) // Rate limit blocking

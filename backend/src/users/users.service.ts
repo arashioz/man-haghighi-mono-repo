@@ -45,6 +45,7 @@ export class UsersService {
       role,
       isActive,
       isOld,
+      isForeign,
     } = createUserDto;
 
     const normalizedEmail = email ? email.trim().toLowerCase() : null;
@@ -57,7 +58,11 @@ export class UsersService {
     if (role === 'ADMIN' && !normalizedEmail) {
       throw new ConflictException('Admin users must have an email');
     }
-    if (role !== 'ADMIN' && !normalizedPhone) {
+    if (isForeign) {
+      if (!normalizedEmail) {
+        throw new ConflictException('کاربر خارجی باید ایمیل داشته باشد');
+      }
+    } else if (role !== 'ADMIN' && !normalizedPhone) {
       throw new ConflictException('Non-admin users must have a phone number');
     }
 
@@ -75,9 +80,11 @@ export class UsersService {
       }
     }
 
-    // Build desired username from provided names, falling back to phone/email
+    // Build desired username: برای کاربر خارجی از ایمیل استفاده می‌کنیم تا با ایمیل وارد شود
     let desiredUsername = '';
-    if (firstName && lastName) {
+    if (isForeign && normalizedEmail) {
+      desiredUsername = normalizedEmail;
+    } else if (firstName && lastName) {
       desiredUsername = `${firstName.trim()} ${lastName.trim()}`.trim();
     } else if (firstName) {
       desiredUsername = firstName.trim();
@@ -141,6 +148,7 @@ export class UsersService {
           role: userRole,
           isActive: isActive ?? true,
           isOld: isOld ?? false,
+          isForeign: isForeign ?? false,
           username: finalUsername,
           ...(password ? { password, confirmPassword } : {}),
         });
@@ -164,6 +172,7 @@ export class UsersService {
       role: userRole,
       isActive: isActive ?? true,
       isOld,
+      isForeign: isForeign ?? false,
     } as any;
 
     if (hashedPassword) {

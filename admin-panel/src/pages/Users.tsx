@@ -69,6 +69,7 @@ const Users: React.FC = () => {
     gender: '',
     role: 'USER' as 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER',
     isActive: true,
+    isForeign: false,
     selectedCourses: [] as string[],
   });
   const [editingUserCourses, setEditingUserCourses] = useState<string[]>([]);
@@ -277,14 +278,17 @@ const Users: React.FC = () => {
       setError('مدیران باید ایمیل داشته باشند');
       return;
     }
-    
-    if (newUser.role !== 'ADMIN' && !newUser.phone.trim()) {
+    if (newUser.isForeign && !newUser.email.trim()) {
+      setError('کاربر خارجی باید ایمیل داشته باشد');
+      return;
+    }
+    if (newUser.role !== 'ADMIN' && !newUser.isForeign && !newUser.phone.trim()) {
       setError('کاربران غیرمدیر باید شماره تلفن داشته باشند');
       return;
     }
 
-    // Validate phone number format for non-admin users
-    if (newUser.role !== 'ADMIN' && newUser.phone.trim() && !validatePhone(newUser.phone)) {
+    // Validate phone number format for non-admin users (when phone is provided)
+    if (newUser.role !== 'ADMIN' && !newUser.isForeign && newUser.phone.trim() && !validatePhone(newUser.phone)) {
       setError('فرمت شماره تلفن نامعتبر است. شماره باید با 0 شروع شود و 10 یا 11 رقم داشته باشد (مثال: 09123456789)');
       return;
     }
@@ -308,6 +312,7 @@ const Users: React.FC = () => {
         userData.password = newUser.password;
         userData.confirmPassword = newUser.confirmPassword;
       }
+      if (newUser.isForeign) userData.isForeign = true;
 
       const createdUser = await usersService.create(userData);
       setUsers([...users, createdUser]);
@@ -341,6 +346,7 @@ const Users: React.FC = () => {
         gender: '',
         role: 'USER',
         isActive: true,
+        isForeign: false,
         selectedCourses: [],
       });
     } catch (err: any) {
@@ -1028,33 +1034,42 @@ const Users: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              شماره تلفن {newUser.role !== 'ADMIN' && <span className="text-red-500">*</span>}
+              شماره تلفن {newUser.role !== 'ADMIN' && !newUser.isForeign && <span className="text-red-500">*</span>}
             </label>
             <input
               type="tel"
               value={newUser.phone}
               onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required={newUser.role !== 'ADMIN'}
+              required={newUser.role !== 'ADMIN' && !newUser.isForeign}
               disabled={newUser.role === 'ADMIN'}
             />
             {newUser.role === 'ADMIN' && (
               <p className="text-xs text-gray-500 mt-1">مدیران فقط با ایمیل وارد می‌شوند</p>
             )}
+            {newUser.isForeign && (
+              <p className="text-xs text-gray-500 mt-1">برای کاربر خارجی شماره اختیاری است</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              ایمیل {newUser.role === 'ADMIN' && <span className="text-red-500">*</span>}
+              ایمیل {(newUser.role === 'ADMIN' || newUser.isForeign) && <span className="text-red-500">*</span>}
             </label>
             <input
               type="email"
               value={newUser.email}
               onChange={(e) => setNewUser({...newUser, email: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required={newUser.role === 'ADMIN'}
-              disabled={newUser.role !== 'ADMIN'}
+              required={newUser.role === 'ADMIN' || newUser.isForeign}
+              disabled={newUser.role !== 'ADMIN' && !newUser.isForeign}
             />
-            {newUser.role !== 'ADMIN' && (
+            {newUser.role === 'ADMIN' && !newUser.isForeign && (
+              <p className="text-xs text-gray-500 mt-1">مدیران فقط با ایمیل وارد می‌شوند</p>
+            )}
+            {newUser.isForeign && (
+              <p className="text-xs text-gray-500 mt-1">کاربر خارجی با ایمیل و رمز عبور وارد می‌شود</p>
+            )}
+            {newUser.role !== 'ADMIN' && !newUser.isForeign && (
               <p className="text-xs text-gray-500 mt-1">کاربران عادی فقط با شماره تلفن وارد می‌شوند</p>
             )}
           </div>
@@ -1105,6 +1120,20 @@ const Users: React.FC = () => {
               <option value="ADMIN">مدیر</option>
             </select>
           </div>
+          {newUser.role === 'USER' && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="new-user-is-foreign"
+                checked={newUser.isForeign}
+                onChange={(e) => setNewUser({...newUser, isForeign: e.target.checked})}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="new-user-is-foreign" className="mr-2 block text-sm text-gray-900">
+                کاربر خارجی است (ورود با ایمیل)
+              </label>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               دوره‌های اختصاصی

@@ -59,6 +59,11 @@ export class CreateUserDto {
   @IsBoolean()
   isOld?: boolean;
 
+  @ApiProperty({ example: false, description: 'کاربر خارجی: ورود با ایمیل، بدون شماره تلفن' })
+  @IsOptional()
+  @IsBoolean()
+  isForeign?: boolean;
+
   @ApiProperty({ example: 'کارشناسی ارشد', required: false })
   @IsOptional()
   @IsString()
@@ -169,6 +174,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   isOld?: boolean;
+
+  @ApiProperty({ example: false, required: false, description: 'کاربر خارجی' })
+  @IsOptional()
+  @IsBoolean()
+  isForeign?: boolean;
 
   @ApiProperty({ example: 'کارشناسی ارشد', required: false })
   @IsOptional()
