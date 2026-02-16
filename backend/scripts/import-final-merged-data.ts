@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { normalizePhone } from '../src/common/utils/phone.utils';
 
 const prisma = new PrismaClient();
 
@@ -83,12 +84,13 @@ async function importUsersWithCourses() {
         const userAny = userEntry.user_info || userEntry;
         const products = userEntry.products || [];
         
-        const phone = userAny.user_login || userAny.phone || userAny.username;
+        const rawPhone = userAny.user_login || userAny.phone || userAny.username;
+        const phone = rawPhone ? normalizePhone(String(rawPhone).trim()) : null;
         const email = userAny.user_email || userAny.email;
         const password = userAny.user_pass || userAny.password;
         
         if (!phone) {
-          console.log(`Skipping user without phone: ${JSON.stringify(userAny)}`);
+          console.log(`Skipping user without valid phone (raw: ${rawPhone}): ${JSON.stringify(userAny)}`);
           skippedCount++;
           continue;
         }
@@ -109,10 +111,10 @@ async function importUsersWithCourses() {
           continue;
         }
 
-        // Create new user with only valid fields
+        // Create new user with only valid fields (phone normalized like rest of app)
         const userData: any = {
           phone: phone,
-          username: phone, // Use phone as username
+          username: phone, // Use normalized phone as username
           isOld: true, // Mark as imported user
         };
 
