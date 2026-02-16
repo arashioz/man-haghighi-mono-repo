@@ -28,6 +28,27 @@ const authUserPublicSelect = {
   updatedAt: true,
 } as const;
 
+/** نوع خروجی select با authUserPublicSelect تا مقایسهٔ role و استفاده از id خطای تایپ ندهد. */
+type AuthUserPublic = {
+  id: string;
+  email: string | null;
+  phone: string | null;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: UserRole;
+  isActive: boolean;
+  isOld: boolean;
+  mustChangePassword: boolean;
+  education: string | null;
+  university: string | null;
+  job: string | null;
+  state: string | null;
+  gender: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -390,7 +411,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       select: authUserPublicSelect as any,
-    });
+    }) as unknown as AuthUserPublic | null;
 
     if (!user || !user.isActive) {
       return null;
@@ -757,7 +778,7 @@ export class AuthService {
       where: { id: userId },
       data: updateData,
       select: authUserPublicSelect as any,
-    });
+    }) as unknown as AuthUserPublic;
 
     const tokenPayload: Record<string, any> = {
       sub: user.id,
