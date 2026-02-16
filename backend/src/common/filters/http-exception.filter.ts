@@ -137,6 +137,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (allowedOrigins.length === 0) {
       allowedOrigins = [
         'https://admin.manehaghighi.com',
+        'https://sales.manehaghighi.com',
         'https://manehaghighi.com',
         'https://www.manehaghighi.com',
         'https://api.manehaghighi.com',
@@ -148,11 +149,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (origin) {
       const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
-      
+      const isSubdomain = /^https?:\/\/[a-z0-9-]+\.manehaghighi\.com$/i.test(normalizedOrigin);
+
       const isAllowed = allowedOrigins.some(allowed => {
         const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
         return normalizedAllowed === normalizedOrigin;
-      }) || normalizedOrigin.endsWith('.manehaghighi.com') || normalizedOrigin === 'https://manehaghighi.com';
+      }) || isSubdomain || normalizedOrigin === 'https://manehaghighi.com' || normalizedOrigin === 'http://manehaghighi.com';
       
       this.logger.debug(`CORS Check: origin=${origin}, isAllowed=${isAllowed}`);
       

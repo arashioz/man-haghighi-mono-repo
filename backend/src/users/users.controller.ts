@@ -183,6 +183,18 @@ export class UsersController {
     return this.usersService.getSellerStats(req.user.id);
   }
 
+  /** Alternative route for user products (static path to avoid 404 with some proxies/routing). */
+  @Get('with-products/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user with products and courses (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User with products' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getUserWithProductsByParam(@Param('id') userId: string) {
+    return this.usersService.getUserWithProducts(userId);
+  }
+
   @Get('export/json')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

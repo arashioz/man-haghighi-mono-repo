@@ -15,9 +15,7 @@ const getApiBaseUrl = () => {
 
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    const isHttps = window.location.protocol === 'https:';
 
-    // If on localhost, use local API
     if (isLocalHost(hostname)) {
       if (envUrl && (envUrl.includes('localhost') || envUrl.includes('127.0.0.1'))) {
         return normalizeUrl(envUrl);
@@ -25,16 +23,12 @@ const getApiBaseUrl = () => {
       return DEFAULT_LOCAL_API;
     }
 
-    // If page is loaded over HTTPS (production), ensure API URL uses HTTPS
-    if (isHttps) {
-      if (envUrl) {
-        // Replace http:// with https:// if needed
-        const url = normalizeUrl(envUrl);
-        return url.replace(/^http:\/\//, 'https://');
-      }
-      // Use HTTPS default for production
-      return DEFAULT_SERVER_API;
+    // Production: همان دامنه (/api) تا nginx پراکسی کند و ERR_FAILED ندهد
+    if (envUrl) {
+      const url = normalizeUrl(envUrl);
+      return url.replace(/^http:\/\//, 'https://');
     }
+    return '/api';
   }
 
   if (envUrl) {
@@ -45,7 +39,12 @@ const getApiBaseUrl = () => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
-export const API_ORIGIN = API_BASE_URL.endsWith('/api') ? API_BASE_URL.slice(0, -4) : API_BASE_URL;
+export const API_ORIGIN =
+  API_BASE_URL === '/api' || API_BASE_URL.startsWith('/')
+    ? (typeof window !== 'undefined' ? window.location.origin : '')
+    : API_BASE_URL.endsWith('/api')
+      ? API_BASE_URL.slice(0, -4)
+      : API_BASE_URL;
 
 // Global error handler that can be set by React components
 let globalErrorHandler: ((error: ApiError) => void) | null = null;
@@ -56,6 +55,7 @@ export const setGlobalErrorHandler = (handler: (error: ApiError) => void) => {
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -164,7 +164,7 @@ export const usersService = {
 
 
   getUserWithProducts: async (id: string) => {
-    const response = await api.get(`/users/${id}/products`);
+    const response = await api.get(`/users/with-products/${id}`);
     return response.data;
   },
 
