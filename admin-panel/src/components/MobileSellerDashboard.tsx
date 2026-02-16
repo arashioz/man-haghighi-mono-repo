@@ -119,16 +119,14 @@ const MobileSellerDashboard: React.FC = () => {
   };
 
 
-  // Handle amount input change
+  // Handle amount input: only digits so چند رقمی works on mobile/desktop
   const handleAmountChange = (value: string) => {
-    // const numericValue = value.replace(/[^\d]/g, '');
-    setAmount(value);
+    const digitsOnly = value.replace(/\D/g, '');
+    setAmount(digitsOnly);
   };
 
-  // Format amount for display
-  const getFormattedAmount = () => {
-    return amount ? Number(amount).toLocaleString() : '';
-  };
+  // Display raw digits in input (no locale formatting) so typing multi-digit works
+  const getDisplayAmount = () => amount;
 
   const handlePhoneChange = async (phone: string) => {
     setCustomerPhone(phone);
@@ -151,9 +149,10 @@ const MobileSellerDashboard: React.FC = () => {
           const response = await usersService.getUserByPhone(phone);
           setCustomerName(`${response.firstName} ${response.lastName}`.trim());
         } catch (error) {
-          // User doesn't exist, that's ok
+          // User doesn't exist — open add-new-customer popup
           setCustomerName('');
           setNewCustomerData(prev => ({ ...prev, phone }));
+          setIsCreateCustomerModalOpen(true);
         }
 
         // Get customer payment history
@@ -670,10 +669,16 @@ const MobileSellerDashboard: React.FC = () => {
           <MobileFormField label="مبلغ (تومان)" required>
             <MobileInput
               type="text"
-              placeholder="۱۰۰۰۰۰"
-              value={getFormattedAmount()}
+              inputMode="numeric"
+              placeholder="مثال: 100000"
+              value={getDisplayAmount()}
               onChange={(e) => handleAmountChange(e.target.value)}
             />
+            {amount && (
+              <p className="text-xs text-gray-500 mt-1">
+                معادل {Number(amount).toLocaleString('fa-IR')} تومان
+              </p>
+            )}
           </MobileFormField>
 
           {/* Aggregate Link Option */}

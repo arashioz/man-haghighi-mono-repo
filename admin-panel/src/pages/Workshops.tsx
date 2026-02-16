@@ -377,7 +377,6 @@ const Workshops: React.FC = () => {
         </div>
       )}
 
-      {}
       <div className="mb-6">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8 space-x-reverse">
@@ -596,7 +595,7 @@ const Workshops: React.FC = () => {
             <input
               type="text"
               value={newWorkshop.title}
-              onChange={(e) => setNewWorkshop({...newWorkshop, title: e.target.value})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, title: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -607,7 +606,7 @@ const Workshops: React.FC = () => {
             </label>
             <textarea
               value={newWorkshop.description}
-              onChange={(e) => setNewWorkshop({...newWorkshop, description: e.target.value})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, description: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={3}
               maxLength={2000}
@@ -622,7 +621,7 @@ const Workshops: React.FC = () => {
             </label>
             <PersianDatePicker
               value={newWorkshop.date}
-              onChange={(value) => setNewWorkshop({...newWorkshop, date: value})}
+              onChange={(value) => setNewWorkshop((prev) => ({ ...prev, date: value }))}
               placeholder="تاریخ برگزاری کارگاه را انتخاب کنید"
             />
           </div>
@@ -633,7 +632,7 @@ const Workshops: React.FC = () => {
             <input
               type="text"
               value={newWorkshop.location}
-              onChange={(e) => setNewWorkshop({...newWorkshop, location: e.target.value})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, location: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -644,7 +643,7 @@ const Workshops: React.FC = () => {
             <input
               type="number"
               value={newWorkshop.maxParticipants}
-              onChange={(e) => setNewWorkshop({...newWorkshop, maxParticipants: Number(e.target.value)})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, maxParticipants: Math.max(0, parseInt(e.target.value, 10) || 0) }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="1"
             />
@@ -656,10 +655,10 @@ const Workshops: React.FC = () => {
             <input
               type="number"
               value={newWorkshop.price}
-              onChange={(e) => setNewWorkshop({...newWorkshop, price: parseFloat(e.target.value) || 0})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               min="0"
-              step="0.01"
+              step="1"
             />
           </div>
           <div>
@@ -669,7 +668,7 @@ const Workshops: React.FC = () => {
             <input
               type="file"
               accept="image/*"
-              onChange={(e) => setNewWorkshop({...newWorkshop, thumbnail: e.target.files?.[0] || null})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, thumbnail: e.target.files?.[0] || null }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             {newWorkshop.thumbnail && (
@@ -686,7 +685,7 @@ const Workshops: React.FC = () => {
               type="file"
               multiple
               accept="video/*"
-              onChange={(e) => setNewWorkshop({...newWorkshop, videos: Array.from(e.target.files || [])})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, videos: Array.from(e.target.files || []) }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             {newWorkshop.videos.length > 0 && (
@@ -703,7 +702,7 @@ const Workshops: React.FC = () => {
               type="file"
               multiple
               accept="audio/*"
-              onChange={(e) => setNewWorkshop({...newWorkshop, audios: Array.from(e.target.files || [])})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, audios: Array.from(e.target.files || []) }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             {newWorkshop.audios.length > 0 && (
@@ -716,7 +715,7 @@ const Workshops: React.FC = () => {
             <input
               type="checkbox"
               checked={newWorkshop.isActive}
-              onChange={(e) => setNewWorkshop({...newWorkshop, isActive: e.target.checked})}
+              onChange={(e) => setNewWorkshop((prev) => ({ ...prev, isActive: e.target.checked }))}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label className="mr-2 block text-sm text-gray-900">
@@ -751,7 +750,6 @@ const Workshops: React.FC = () => {
         </form>
       </Modal>
 
-      {}
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => {

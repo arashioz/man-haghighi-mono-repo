@@ -5,7 +5,7 @@ import Modal from '../components/Modal';
 import RichTextEditor from '../components/RichTextEditor';
 import SeoPreview from '../components/SeoPreview';
 import ProgressBar from '../components/ProgressBar';
-import { articlesService } from '../services/api';
+import { articlesService, API_ORIGIN } from '../services/api';
 import { Article } from '../types';
 
 const Articles: React.FC = () => {
@@ -16,7 +16,10 @@ const Articles: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState('');
   const [activeTab, setActiveTab] = useState<'editor' | 'seo' | 'advanced'>('editor');
+  const [editActiveTab, setEditActiveTab] = useState<'editor' | 'seo' | 'advanced'>('editor');
   
   // Article form state
   const [newArticle, setNewArticle] = useState({
@@ -59,11 +62,15 @@ const Articles: React.FC = () => {
         page: pageNum,
         limit: 10,
       });
-      const data = response?.data ?? [];
+      // پشتیبانی از شکل { data, meta } و حالت آرایه‌ای
+      const rawData = response?.data ?? response;
+      const data = Array.isArray(rawData) ? rawData : [];
       const meta = response?.meta ?? {};
-      setArticles(Array.isArray(data) ? data : []);
-      setTotalPages(meta.totalPages ?? 1);
-      setTotalItems(meta.total ?? 0);
+      const total = typeof meta.total === 'number' ? meta.total : 0;
+      const totalPagesCount = typeof meta.totalPages === 'number' ? meta.totalPages : Math.max(1, total ? Math.ceil(total / 10) : 1);
+      setArticles(data);
+      setTotalPages(totalPagesCount);
+      setTotalItems(total);
       setCurrentPage(pageNum);
     } catch (err: any) {
       setError(err.response?.data?.message || 'خطا در دریافت مقالات');
@@ -149,48 +156,78 @@ const Articles: React.FC = () => {
   const handleUpdateArticle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingArticle?.id) return;
-
+    setEditError('');
     try {
-      const updatedArticle = await articlesService.update(editingArticle.id, editingArticle);
-      
+      const payload = {
+        title: editingArticle.title,
+        slug: editingArticle.slug,
+        content: editingArticle.content,
+        excerpt: editingArticle.excerpt,
+        metaTitle: editingArticle.metaTitle,
+        metaDescription: editingArticle.metaDescription,
+        metaKeywords: editingArticle.metaKeywords,
+        focusKeyword: editingArticle.focusKeyword,
+        author: editingArticle.author,
+        published: editingArticle.published,
+        tags: editingArticle.tags,
+      };
+      const updatedArticle = await articlesService.update(editingArticle.id, payload);
       if (editFeaturedImageFile) {
         await uploadFeaturedImage(editingArticle.id, editFeaturedImageFile);
       }
-
-      setArticles(articles.map(article => 
-        article.id === editingArticle.id ? updatedArticle : article
+      setArticles(articles.map(article =>
+        article.id === editingArticle.id ? { ...article, ...updatedArticle } : article
       ));
       setIsEditModalOpen(false);
       setEditingArticle(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در ویرایش مقاله');
+      setEditError(err.response?.data?.message || 'خطا در ویرایش مقاله');
     }
   };
 
-  const handleEditArticle = (article: Article) => {
-    setEditingArticle({
-      ...article,
-      id: article.id || '',
-      title: article.title || '',
-      slug: article.slug || '',
-      content: article.content || '',
-      excerpt: article.excerpt || '',
-      metaTitle: article.metaTitle || '',
-      metaDescription: article.metaDescription || '',
-      focusKeyword: article.focusKeyword || '',
-      author: article.author || '',
-      published: article.published || false,
-      featuredImage: article.featuredImage || undefined,
-      metaKeywords: article.metaKeywords || [],
-      tags: article.tags || [],
-      createdAt: article.createdAt || new Date().toISOString(),
-      updatedAt: article.updatedAt || new Date().toISOString(),
-      readingTime: article.readingTime || 0,
-      viewCount: article.viewCount || 0
-    });
-    setEditFeaturedImageFile(null);
-    setEditImagePreview(article.featuredImage || null);
+  const getFeaturedImageUrl = (img: string | undefined) => {
+    if (!img) return null;
+    if (img.startsWith('http')) return img;
+    return `${API_ORIGIN}/uploads/${img}`;
+  };
+
+  const handleEditArticle = async (article: Article) => {
+    setEditLoading(true);
+    setEditError('');
     setIsEditModalOpen(true);
+    setEditingArticle(null);
+    try {
+      const full = await articlesService.getById(article.id);
+      const art: Article = {
+        ...full,
+        id: full.id || '',
+        title: full.title || '',
+        slug: full.slug || '',
+        content: full.content || '',
+        excerpt: full.excerpt || '',
+        metaTitle: full.metaTitle || '',
+        metaDescription: full.metaDescription || '',
+        focusKeyword: full.focusKeyword || '',
+        author: full.author || '',
+        published: full.published ?? false,
+        featuredImage: full.featuredImage || undefined,
+        metaKeywords: full.metaKeywords || [],
+        tags: full.tags || [],
+        createdAt: full.createdAt || new Date().toISOString(),
+        updatedAt: full.updatedAt || new Date().toISOString(),
+        readingTime: full.readingTime ?? 0,
+        viewCount: full.viewCount ?? 0,
+      };
+      setEditingArticle(art);
+      setEditActiveTab('editor');
+      setEditFeaturedImageFile(null);
+      setEditImagePreview(getFeaturedImageUrl(full.featuredImage) || full.featuredImage || null);
+    } catch (err: any) {
+      setEditError(err.response?.data?.message || 'خطا در بارگذاری مقاله');
+      setIsEditModalOpen(false);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleDeleteArticle = async (id: string) => {
@@ -257,7 +294,7 @@ const Articles: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           {article.featuredImage ? (
-                            <img src={article.featuredImage} alt={article.title} className="h-10 w-10 rounded-lg object-cover" />
+                            <img src={getFeaturedImageUrl(article.featuredImage) || article.featuredImage} alt={article.title} className="h-10 w-10 rounded-lg object-cover" />
                           ) : (
                             <div className="h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center text-white">
                               {article.title?.[0] || 'A'}
@@ -330,31 +367,57 @@ const Articles: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-gray-200">
               <div className="text-sm text-gray-700">
-                نمایش {articles.length} از {totalItems} مقاله
+                {totalItems > 0
+                  ? `نمایش ${(currentPage - 1) * 10 + 1} تا ${Math.min(currentPage * 10, totalItems)} از ${totalItems} مقاله`
+                  : `نمایش ${articles.length} مقاله`}
               </div>
-              <div className="flex space-x-2 space-x-reverse">
+              <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => fetchArticles(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className={`px-3 py-1 border rounded-md ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                  className={`px-3 py-1.5 border rounded-md text-sm ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
                 >
                   قبلی
                 </button>
-                {Array.from({length: totalPages}, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => fetchArticles(page)}
-                    className={`px-3 py-1 border rounded-md ${currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {(() => {
+                  const pages: number[] = [];
+                  const show = 5;
+                  let start = Math.max(1, currentPage - Math.floor(show / 2));
+                  let end = Math.min(totalPages, start + show - 1);
+                  if (end - start + 1 < show) start = Math.max(1, end - show + 1);
+                  for (let p = start; p <= end; p++) pages.push(p);
+                  return (
+                    <>
+                      {start > 1 && (
+                        <>
+                          <button onClick={() => fetchArticles(1)} className="px-3 py-1.5 border rounded-md text-sm text-gray-700 hover:bg-gray-100">1</button>
+                          {start > 2 && <span className="px-1 text-gray-500">…</span>}
+                        </>
+                      )}
+                      {pages.map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => fetchArticles(page)}
+                          className={`px-3 py-1.5 border rounded-md text-sm min-w-[2.25rem] ${currentPage === page ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-700 hover:bg-gray-100'}`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      {end < totalPages && (
+                        <>
+                          {end < totalPages - 1 && <span className="px-1 text-gray-500">…</span>}
+                          <button onClick={() => fetchArticles(totalPages)} className="px-3 py-1.5 border rounded-md text-sm text-gray-700 hover:bg-gray-100">{totalPages}</button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => fetchArticles(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className={`px-3 py-1 border rounded-md ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
+                  className={`px-3 py-1.5 border rounded-md text-sm ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 hover:bg-gray-100'}`}
                 >
                   بعدی
                 </button>
@@ -373,31 +436,327 @@ const Articles: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="مقاله جدید"
-        size="large"
+        size="xl"
       >
         <form onSubmit={handleAddArticle} className="space-y-4">
-          {/* Tabs and form content would go here */}
-          {/* Similar to the original implementation */}
+          <div className="flex border-b border-gray-200 mb-4">
+            {(['editor', 'seo', 'advanced'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                {tab === 'editor' ? 'ویرایشگر' : tab === 'seo' ? 'سئو' : 'پیشرفته'}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'editor' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">عنوان</label>
+                <input
+                  type="text"
+                  value={newArticle.title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">اسلاگ</label>
+                <input
+                  type="text"
+                  value={newArticle.slug}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, slug: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">محتوا</label>
+                <RichTextEditor
+                  value={newArticle.content}
+                  onChange={(content) => setNewArticle(prev => ({ ...prev, content }))}
+                  height={280}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">خلاصه</label>
+                <textarea
+                  value={newArticle.excerpt}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, excerpt: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">تصویر شاخص</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) {
+                      setFeaturedImageFile(f);
+                      setImagePreview(URL.createObjectURL(f));
+                    }
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+                {imagePreview && <img src={imagePreview} alt="پیش‌نمایش" className="mt-2 h-24 rounded object-cover" />}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">نویسنده</label>
+                <input
+                  type="text"
+                  value={newArticle.author}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, author: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="new-published"
+                  checked={newArticle.published}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, published: e.target.checked }))}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="new-published" className="mr-2 text-sm text-gray-700">منتشر شود</label>
+              </div>
+            </div>
+          )}
+          {activeTab === 'seo' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">عنوان متا</label>
+                <input
+                  type="text"
+                  value={newArticle.metaTitle}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, metaTitle: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">توضیحات متا</label>
+                <textarea
+                  value={newArticle.metaDescription}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, metaDescription: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">کلمه کلیدی تمرکز</label>
+                <input
+                  type="text"
+                  value={newArticle.focusKeyword}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, focusKeyword: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">کلمات کلیدی متا (با کاما)</label>
+                <input
+                  type="text"
+                  value={newArticle.metaKeywords.join(', ')}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, metaKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+              <SeoPreview title={newArticle.metaTitle} description={newArticle.metaDescription} slug={newArticle.slug} />
+            </div>
+          )}
+          {activeTab === 'advanced' && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">برچسب‌ها (با کاما)</label>
+                <input
+                  type="text"
+                  value={newArticle.tags.join(', ')}
+                  onChange={(e) => setNewArticle(prev => ({ ...prev, tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">انصراف</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">ذخیره</button>
+          </div>
         </form>
       </Modal>
 
       {/* Edit Article Modal */}
-      {editingArticle && (
-        <Modal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingArticle(null);
-          }}
-          title="ویرایش مقاله"
-          size="large"
-        >
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingArticle(null);
+          setEditError('');
+        }}
+        title="ویرایش مقاله"
+        size="xl"
+      >
+        {editLoading ? (
+          <div className="py-8 flex justify-center"><LoadingSpinner /></div>
+        ) : editingArticle ? (
           <form onSubmit={handleUpdateArticle} className="space-y-4">
-            {/* Tabs and form content would go here */}
-            {/* Similar to the original implementation */}
+            {editError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">{editError}</div>
+            )}
+            <div className="flex border-b border-gray-200 mb-4">
+              {(['editor', 'seo', 'advanced'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setEditActiveTab(tab)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${editActiveTab === tab ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                >
+                  {tab === 'editor' ? 'ویرایشگر' : tab === 'seo' ? 'سئو' : 'پیشرفته'}
+                </button>
+              ))}
+            </div>
+            {editActiveTab === 'editor' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">عنوان</label>
+                  <input
+                    type="text"
+                    value={editingArticle.title}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, title: e.target.value, slug: generateSlug(e.target.value), metaTitle: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">اسلاگ</label>
+                  <input
+                    type="text"
+                    value={editingArticle.slug}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, slug: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">محتوا</label>
+                  <RichTextEditor
+                    value={editingArticle.content}
+                    onChange={(content) => setEditingArticle(prev => prev ? { ...prev, content } : null)}
+                    height={280}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">خلاصه</label>
+                  <textarea
+                    value={editingArticle.excerpt || ''}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, excerpt: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">تصویر شاخص</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) {
+                        setEditFeaturedImageFile(f);
+                        setEditImagePreview(URL.createObjectURL(f));
+                      }
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                  {(editImagePreview || editingArticle.featuredImage) && (
+                    <img src={editImagePreview || getFeaturedImageUrl(editingArticle.featuredImage) || ''} alt="پیش‌نمایش" className="mt-2 h-24 rounded object-cover" />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">نویسنده</label>
+                  <input
+                    type="text"
+                    value={editingArticle.author || ''}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, author: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="edit-published"
+                    checked={editingArticle.published}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, published: e.target.checked } : null)}
+                    className="rounded border-gray-300"
+                  />
+                  <label htmlFor="edit-published" className="mr-2 text-sm text-gray-700">منتشر شود</label>
+                </div>
+              </div>
+            )}
+            {editActiveTab === 'seo' && editingArticle && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">عنوان متا</label>
+                  <input
+                    type="text"
+                    value={editingArticle.metaTitle || ''}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, metaTitle: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">توضیحات متا</label>
+                  <textarea
+                    value={editingArticle.metaDescription || ''}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, metaDescription: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">کلمه کلیدی تمرکز</label>
+                  <input
+                    type="text"
+                    value={editingArticle.focusKeyword || ''}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, focusKeyword: e.target.value } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">کلمات کلیدی متا (با کاما)</label>
+                  <input
+                    type="text"
+                    value={(editingArticle.metaKeywords || []).join(', ')}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, metaKeywords: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <SeoPreview title={editingArticle.metaTitle || ''} description={editingArticle.metaDescription || ''} slug={editingArticle.slug} />
+              </div>
+            )}
+            {editActiveTab === 'advanced' && editingArticle && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">برچسب‌ها (با کاما)</label>
+                  <input
+                    type="text"
+                    value={(editingArticle.tags || []).join(', ')}
+                    onChange={(e) => setEditingArticle(prev => prev ? { ...prev, tags: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } : null)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <button type="button" onClick={() => { setIsEditModalOpen(false); setEditingArticle(null); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">انصراف</button>
+              <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">ذخیره تغییرات</button>
+            </div>
           </form>
-        </Modal>
-      )}
+        ) : !editLoading && (
+          <div className="py-8 text-center text-gray-500">مقاله‌ای انتخاب نشده است.</div>
+        )}
+      </Modal>
     </div>
   );
 };

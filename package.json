@@ -52,6 +52,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/arashioz/man-haghighi-mono-repo.git"
+  },
+  "dependencies": {
+    "react-dom": "19.1.0",
+    "react-native-web": "~0.21.0"
   }
 }
-

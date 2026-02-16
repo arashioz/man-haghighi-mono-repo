@@ -2,7 +2,8 @@ import { Injectable, Logger, UnauthorizedException, ConflictException } from '@n
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, ForceLogoutAllDto } from './dto/auth.dto';
+import { DEVICE_TYPES, DeviceType } from './dto/auth.dto';
 import * as bcrypt from 'bcryptjs';
 import { normalizePhone } from '../common/utils/phone.utils';
 import { SmsService } from '../sms/sms.service';
@@ -227,11 +228,24 @@ export class AuthService {
         throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
       }
 
+      const deviceType = this.normalizeDeviceType((loginDto as any).deviceType);
+      const existingSession = await this.getExistingSession(user.id);
+      if (existingSession) {
+        throw new ConflictException({
+          code: 'LOGGED_IN_ELSEWHERE',
+          deviceType: existingSession.deviceType,
+          message: 'این اکانت روی دستگاه دیگری فعال است.',
+          forceLogoutToken: this.createForceLogoutToken(user.id),
+        });
+      }
+      const sessionId = await this.createOrReplaceSession(user.id, deviceType);
+
       const token = this.jwtService.sign({
         sub: user.id,
         email: user.email,
         phone: user.phone,
         role: user.role,
+        sessionId,
       });
 
       const legacyUser = user as any;
@@ -330,6 +344,42 @@ export class AuthService {
     };
   }
 
+
+  private normalizeDeviceType(deviceType?: string): DeviceType {
+    if (deviceType && DEVICE_TYPES.includes(deviceType as DeviceType)) {
+      return deviceType as DeviceType;
+    }
+    return 'DESKTOP';
+  }
+
+  private async getExistingSession(userId: string) {
+    return this.prisma.userSession.findUnique({
+      where: { userId },
+    });
+  }
+
+  private async createOrReplaceSession(userId: string, deviceType: DeviceType, userAgent?: string) {
+    const sessionId = require('crypto').randomUUID();
+    await this.prisma.userSession.upsert({
+      where: { userId },
+      create: { userId, sessionId, deviceType, userAgent: userAgent ?? null },
+      update: { sessionId, deviceType, userAgent: userAgent ?? null, updatedAt: new Date() },
+    });
+    return sessionId;
+  }
+
+  private async deleteSessionForUser(userId: string) {
+    await this.prisma.userSession.deleteMany({ where: { userId } });
+  }
+
+  /** توکن یک‌بارمصرف برای خروج از همه دستگاه‌ها (۲ دقیقه اعتبار) - بدون نیاز به OTP/رمز دوباره */
+  private createForceLogoutToken(userId: string): string {
+    return this.jwtService.sign(
+      { sub: userId, purpose: 'force_logout' },
+      { expiresIn: '2m' },
+    );
+  }
+
   async validateUser(payload: any) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
@@ -337,6 +387,18 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
+      return null;
+    }
+
+    // Single-device: require valid session in JWT
+    const sessionId = payload.sessionId;
+    if (!sessionId) {
+      return null;
+    }
+    const session = await this.prisma.userSession.findUnique({
+      where: { userId: String(user.id) },
+    });
+    if (!session || session.sessionId !== sessionId) {
       return null;
     }
 
@@ -459,6 +521,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid OTP');
     }
 
+    const deviceType = this.normalizeDeviceType((verifyOtpDto as any).deviceType);
+    const existingSession = await this.getExistingSession(user.id);
+    if (existingSession) {
+      throw new ConflictException({
+        code: 'LOGGED_IN_ELSEWHERE',
+        deviceType: existingSession.deviceType,
+        message: 'این اکانت روی دستگاه دیگری فعال است.',
+        forceLogoutToken: this.createForceLogoutToken(user.id),
+      });
+    }
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -467,11 +540,14 @@ export class AuthService {
       } as any,
     });
 
+    const sessionId = await this.createOrReplaceSession(user.id, deviceType);
+
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
       phone: user.phone,
       role: user.role,
+      sessionId,
     });
 
     const mustChangePassword = (user as any).mustChangePassword === true;
@@ -499,6 +575,73 @@ export class AuthService {
       token,
       mustChangePassword: mustChangePassword,
     };
+  }
+
+  async forceLogoutAll(dto: ForceLogoutAllDto) {
+    const token = typeof dto.forceLogoutToken === 'string' ? dto.forceLogoutToken.trim() : '';
+    if (token) {
+      try {
+        const payload = this.jwtService.verify<{ sub: string; purpose?: string }>(token);
+        if (payload.purpose !== 'force_logout' || !payload.sub) {
+          throw new UnauthorizedException('توکن نامعتبر است');
+        }
+        await this.deleteSessionForUser(payload.sub);
+        return { success: true, message: 'از همه دستگاه‌ها خارج شدید.' };
+      } catch {
+        throw new UnauthorizedException('توکن منقضی یا نامعتبر است. دوباره وارد شوید و روی «خروج از همه دستگاه‌ها» بزنید.');
+      }
+    }
+
+    const hasLogin = typeof dto.login === 'string' && dto.login.trim() !== '';
+    const hasPassword = typeof dto.password === 'string' && dto.password.trim() !== '';
+    const hasPhone = typeof dto.phone === 'string' && dto.phone.trim() !== '';
+    const hasOtp = typeof dto.otp === 'string' && dto.otp.trim() !== '';
+
+    if (hasLogin && hasPassword) {
+      const loginInput = dto.login!.trim();
+      const normalizedEmail = loginInput.includes('@') ? loginInput.toLowerCase() : null;
+      const normalizedPhone = normalizePhone(loginInput);
+      const orConditions: Prisma.UserWhereInput[] = [
+        { username: { equals: loginInput, mode: Prisma.QueryMode.insensitive } },
+      ];
+      if (normalizedEmail) orConditions.push({ email: { equals: normalizedEmail, mode: Prisma.QueryMode.insensitive } });
+      if (normalizedPhone) orConditions.push({ phone: normalizedPhone });
+
+      const user = await this.prisma.user.findFirst({ where: { OR: orConditions } });
+      if (!user || !user.password) {
+        throw new UnauthorizedException('کاربری با این مشخصات یافت نشد');
+      }
+      const valid = await bcrypt.compare(dto.password!, user.password);
+      if (!valid) {
+        throw new UnauthorizedException('رمز عبور اشتباه است');
+      }
+      await this.deleteSessionForUser(user.id);
+      return { success: true, message: 'از همه دستگاه‌ها خارج شدید.' };
+    }
+
+    if (hasPhone && hasOtp) {
+      const normalizedPhone = normalizePhone(dto.phone!);
+      if (!normalizedPhone) {
+        throw new UnauthorizedException('شماره تلفن نامعتبر است');
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { phone: normalizedPhone },
+        select: { id: true, otp: true, otpExpiresAt: true },
+      }) as any;
+      if (!user || !user.otp || !user.otpExpiresAt) {
+        throw new UnauthorizedException('کد OTP نامعتبر یا منقضی شده است');
+      }
+      if (new Date() > user.otpExpiresAt) {
+        throw new UnauthorizedException('کد OTP منقضی شده است');
+      }
+      if (user.otp !== dto.otp) {
+        throw new UnauthorizedException('کد OTP اشتباه است');
+      }
+      await this.deleteSessionForUser(user.id);
+      return { success: true, message: 'از همه دستگاه‌ها خارج شدید.' };
+    }
+
+    throw new UnauthorizedException('ورودی نامعتبر. login و password یا phone و otp را ارسال کنید.');
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto) {

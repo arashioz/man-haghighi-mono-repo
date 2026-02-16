@@ -1296,24 +1296,16 @@ getImageUrl                {/* Customer History */}
             <label className="block text-sm font-medium text-gray-700 mb-2">مبلغ (تومان)</label>
             <input
               type="text"
+              inputMode="numeric"
               value={formattedAmount}
               onChange={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, '');
-                setNewLink({...newLink, amount: value});
-                setFormattedAmount(value);
-              }}
-              onFocus={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, '');
-                e.target.value = value;
-                setFormattedAmount(value);
-              }}
-              onBlur={(e) => {
-                const value = e.target.value.replace(/[^\d]/g, '');
+                const value = e.target.value.replace(/\D/g, '');
+                setNewLink((prev) => ({ ...prev, amount: value }));
                 setFormattedAmount(value);
               }}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left"
               required
-              placeholder="مثال: ۱۰۰,۰۰۰"
+              placeholder="مثال: 100000"
               dir="ltr"
             />
             {newLink.amount && (

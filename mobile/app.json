@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "من حقیقی",
+    "slug": "manehaghighi-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "manehaghighi",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.manehaghighi.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.manehaghighi.mobile"
+    },
+    "plugins": [
+      "expo-av"
+    ],
+    "extra": {
+      "apiUrl": "https://api.manehaghighi.com/api"
+    }
+  }
+}

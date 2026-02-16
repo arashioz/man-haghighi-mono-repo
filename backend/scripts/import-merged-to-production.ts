@@ -93,8 +93,13 @@ async function main() {
   let productsCreated = 0;
   let productsSkipped = 0;
   let errors = 0;
+  let processedCount = 0;
 
   for (const [legacyId, { user_info: ui, products = [] }] of entries) {
+    processedCount++;
+    if (processedCount % 100 === 0) {
+      console.log(`Processed ${processedCount}/${entries.length} users...`);
+    }
     const email = normalize(ui.user_email);
     const login = normalize(ui.user_login);
     const phone = normalize(ui.phone as string) || normalize(ui.user_phone as string);

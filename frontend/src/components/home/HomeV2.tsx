@@ -13,8 +13,11 @@ import {
 } from '../../types';
 import { getImageUrl, getImageUrlWithFallback } from '../../utils/imageUtils';
 import { API_ORIGIN } from '../../services/api';
+import { articlesService } from '../../services/api';
 import VideoPodcastModal from '../VideoPodcastModal';
 import VideoPodcastCard from '../VideoPodcastCard';
+
+const ARTICLES_PAGE_SIZE = 10;
 
 type HomeV2Props = {
   sliders: Slider[];
@@ -193,12 +196,32 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
   const primaryWorkshop = workshops[0] ?? null;
 
-  const featuredArticles = useMemo(() => {
-    // Filter out articles without images if needed
-    return articles
-      .filter(article => article.featuredImage || article.content?.includes('<img'))
-      .slice(0, 3);
-  }, [articles]);
+  // Articles section: 10 per page with pagination (fetched in this component)
+  const [articlesList, setArticlesList] = useState<Article[]>([]);
+  const [articlesPage, setArticlesPage] = useState(1);
+  const [articlesTotalPages, setArticlesTotalPages] = useState(1);
+  const [articlesTotal, setArticlesTotal] = useState(0);
+  const [articlesLoading, setArticlesLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setArticlesLoading(true);
+    articlesService.getPublished({ page: articlesPage, limit: ARTICLES_PAGE_SIZE })
+      .then((res) => {
+        if (!cancelled) {
+          setArticlesList(res.data ?? []);
+          setArticlesTotalPages(res.meta?.totalPages ?? 1);
+          setArticlesTotal(res.meta?.total ?? 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setArticlesList([]);
+      })
+      .finally(() => {
+        if (!cancelled) setArticlesLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [articlesPage]);
 
   const featuredPodcasts = useMemo(() => {
     return podcasts;
@@ -1538,66 +1561,96 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 هر مقاله یک راهنمای عملی برای ساخت زندگی بهتر.
               </motion.p>
             </div>
-            {featuredArticles.length > 0 ? (
-              <div className="grid gap-6 md:grid-cols-3">
-                {featuredArticles.map((article, index) => {
-                  const articleImage = article.featuredImage 
-                    ? getImageUrlWithFallback(article.featuredImage, curatedAssets.gallery[index % curatedAssets.gallery.length])
-                    : curatedAssets.gallery[index % curatedAssets.gallery.length];
-                  
-                  return (
-                    <motion.div
-                      key={article.id}
-                      variants={fadeUp}
-                      whileHover={{ y: -8, scale: 1.02 }}
-                      onClick={() => navigate(`/articles/${article.slug}`)}
-                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
-                    >
-                      <div className="relative h-56 overflow-hidden">
-                        <img
-                          src={articleImage}
-                          alt={article.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                        <div className="absolute top-4 right-4">
-                          <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
-                            مقاله
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
-                          {article.title}
-                        </h3>
-                        {article.excerpt && (
-                          <p className="text-sm text-white/70 mb-4 line-clamp-3 leading-relaxed">
-                            {article.excerpt}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                          <span className="text-xs uppercase tracking-[0.3em] text-yellow-400">
-                            مطالعه بیشتر
-                          </span>
-                          <svg
-                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 8l4 4m0 0l-4 4m4-4H3"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+            {articlesLoading && articlesList.length === 0 ? (
+              <div className="flex justify-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-yellow-400 border-t-transparent" />
               </div>
+            ) : articlesList.length > 0 ? (
+              <>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                  {articlesList.map((article, index) => {
+                    const fallbackImage = curatedAssets.gallery[index % curatedAssets.gallery.length];
+                    const articleImage = getImageUrlWithFallback(article.featuredImage, fallbackImage);
+                    return (
+                      <motion.div
+                        key={article.id}
+                        variants={fadeUp}
+                        whileHover={{ y: -8, scale: 1.02 }}
+                        onClick={() => navigate(`/articles/${article.slug}`)}
+                        className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                      >
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={articleImage}
+                            alt={article.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            onError={(e) => {
+                              const t = e.target as HTMLImageElement;
+                              if (t.src !== fallbackImage) t.src = fallbackImage;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+                          <div className="absolute top-3 right-3">
+                            <span className="px-2 py-0.5 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                              مقاله
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-base font-bold mb-2 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                            {article.title}
+                          </h3>
+                          {article.excerpt && (
+                            <p className="text-xs text-white/70 line-clamp-2 leading-relaxed">
+                              {article.excerpt}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between pt-3 border-t border-white/10 mt-2">
+                            <span className="text-xs uppercase tracking-[0.2em] text-yellow-400">
+                              بیشتر
+                            </span>
+                            <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                {/* Pagination */}
+                {articlesTotalPages > 1 && (
+                  <motion.div variants={fadeUp} className="mt-10 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setArticlesPage((p) => Math.max(1, p - 1))}
+                      disabled={articlesPage <= 1 || articlesLoading}
+                      className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-white/10 transition"
+                    >
+                      قبلی
+                    </button>
+                    <span className="px-4 py-2 text-sm text-white/80">
+                      صفحه {articlesPage} از {articlesTotalPages} ({articlesTotal} مقاله)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setArticlesPage((p) => Math.min(articlesTotalPages, p + 1))}
+                      disabled={articlesPage >= articlesTotalPages || articlesLoading}
+                      className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white disabled:opacity-50 hover:bg-white/10 transition"
+                    >
+                      بعدی
+                    </button>
+                  </motion.div>
+                )}
+                <motion.div variants={fadeUp} className="mt-8 text-center">
+                  <button
+                    onClick={() => navigate('/articles')}
+                    className="rounded-full border border-white/30 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-white transition hover:border-white hover:bg-white/10"
+                  >
+                    مشاهده همه مقالات
+                  </button>
+                </motion.div>
+              </>
             ) : (
               <div className="text-center py-16 border border-white/10 rounded-[32px] bg-[#0a0a0a]">
                 <p className="text-white/60">مقالاتی برای نمایش وجود ندارد</p>

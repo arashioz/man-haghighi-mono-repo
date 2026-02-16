@@ -251,8 +251,10 @@ export const usersService = {
       params.append('role', filters.role);
     }
 
-    const response = await api.get(`/users/export/json?${params.toString()}`, {
-      responseType: 'blob'
+    const url = `/users/export/json${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await api.get(url, {
+      responseType: 'blob',
+      timeout: 120000, // 2 min for large exports
     });
     return response.data;
   },
