@@ -43,11 +43,11 @@ export default function LoginScreen() {
       await login(id, password);
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
+        setError(err?.response?.data?.message || 'این اکانت روی دستگاه دیگری فعال است.');
         setLoggedElsewhereModal({
           deviceType: err.response.data.deviceType || 'DESKTOP',
           forceLogoutToken: err.response.data.forceLogoutToken || '',
         });
-        setError('');
       } else {
         const msg =
           err.response?.data?.message ||
@@ -98,12 +98,12 @@ export default function LoginScreen() {
           <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
             {loggedElsewhereModal && (
               <>
-                <Text style={styles.modalTitle}>ورود از دستگاه دیگر</Text>
+                <Text style={styles.modalTitle}>این اکانت روی دستگاه دیگری فعال است</Text>
                 <Text style={styles.modalText}>
                   شما با دستگاه دیگری ({deviceTypeLabel[loggedElsewhereModal.deviceType] || loggedElsewhereModal.deviceType}) وارد شده‌اید.
                 </Text>
                 <Text style={styles.modalSubtext}>
-                  برای ورود از این دستگاه، ابتدا از همه دستگاه‌ها خارج شوید.
+                  برای ورود از این دستگاه، روی دکمه زیر بزنید تا از همه جا خارج شوید.
                 </Text>
                 <TouchableOpacity
                   style={[styles.modalButton, forceLogoutLoading && styles.buttonDisabled]}
@@ -113,7 +113,7 @@ export default function LoginScreen() {
                   {forceLogoutLoading ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.buttonText}>خروج از همه دستگاه‌ها</Text>
+                    <Text style={styles.buttonText}>خروج از همه جا</Text>
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity

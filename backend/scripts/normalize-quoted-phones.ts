@@ -33,15 +33,19 @@ function normalizePhone(input?: string | null): string | null {
   return digits;
 }
 
-/** آیا شماره در دیتابیس با کوتیشن ذخیره شده؟ */
+/** کوتیشن و کاراکترهای اضافه: دابل/تک کوتیشن، یونیکد، فاصله، بک‌اسلش */
+const QUOTE_OR_EXTRA = /["'"\u201C\u201D\u2018\u2019\s\\]/g;
+const QUOTE_OR_EXTRA_TEST = /["'"\u201C\u201D\u2018\u2019\s\\]/;
+
+/** آیا شماره کوتیشن یا کاراکتر اضافه دارد؟ (نیاز به نرمال‌سازی) */
 function hasQuotedPhone(phone: string | null): boolean {
-  return typeof phone === 'string' && phone.includes('"');
+  return typeof phone === 'string' && QUOTE_OR_EXTRA_TEST.test(phone);
 }
 
-/** حذف کوتیشن از رشته و بعد نرمال */
+/** حذف همهٔ کوتیشن/فاصله و بعد نرمال */
 function stripQuotesAndNormalize(phone: string | null): string | null {
   if (!phone) return null;
-  const stripped = phone.replace(/"/g, '').trim();
+  const stripped = phone.replace(QUOTE_OR_EXTRA, '').trim();
   return normalizePhone(stripped);
 }
 
@@ -78,7 +82,7 @@ async function main() {
 
   const byNormalized: Record<string, UserRow[]> = {};
   for (const u of allUsersWithPhone) {
-    const stripped = u.phone ? u.phone.replace(/"/g, '').trim() : '';
+    const stripped = u.phone ? u.phone.replace(QUOTE_OR_EXTRA, '').trim() : '';
     const norm = normalizePhone(stripped || u.phone);
     if (!norm) continue;
     if (!byNormalized[norm]) byNormalized[norm] = [];
@@ -87,11 +91,11 @@ async function main() {
 
   const normsWithQuoted = new Set<string>();
   for (const u of allUsersWithPhone) {
-    if (!hasQuotedPhone(u.phone)) continue;
     const norm = stripQuotesAndNormalize(u.phone);
-    if (norm) normsWithQuoted.add(norm);
+    if (!norm) continue;
+    if (u.phone !== norm) normsWithQuoted.add(norm);
   }
-  console.log(`شماره‌های نرمالی که حداقل یک رکورد با کوتیشن دارند: ${normsWithQuoted.size}`);
+  console.log(`شماره‌های نرمالی که حداقل یک رکورد «غیرتمیز» دارند (کوتیشن/فاصله و غیره): ${normsWithQuoted.size}`);
 
   if (normsWithQuoted.size === 0) {
     console.log('هیچ رکوردی برای نرمال‌سازی یافت نشد.');
@@ -106,12 +110,12 @@ async function main() {
     const group = byNormalized[norm] || [];
     if (group.length === 0) continue;
 
-    const quotedInGroup = group.filter((u) => hasQuotedPhone(u.phone));
-    if (quotedInGroup.length === 0) continue;
+    const dirtyInGroup = group.filter((u) => u.phone !== norm);
+    if (dirtyInGroup.length === 0) continue;
 
     if (group.length === 1) {
       const u = group[0];
-      console.log(`\nفقط یک رکورد (با کوتیشن): ${u.phone} → ${norm} (${u.username})`);
+      console.log(`\nفقط یک رکورد (شماره غیرتمیز): ${JSON.stringify(u.phone)} → ${norm} (${u.username})`);
       if (!DRY_RUN) {
         await prisma.user.update({ where: { id: u.id }, data: { phone: norm } });
       }
@@ -188,7 +192,7 @@ async function main() {
       deletedCount++;
     }
 
-    if (hasQuotedPhone(keepUser.phone)) {
+    if (keepUser.phone !== norm) {
       if (!DRY_RUN) {
         await prisma.user.update({ where: { id: keepUser.id }, data: { phone: norm } });
       }

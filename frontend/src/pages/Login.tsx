@@ -71,11 +71,11 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
+        setError(err?.response?.data?.message || 'این اکانت روی دستگاه دیگری فعال است.');
         setLoggedElsewhereModal({
           deviceType: err.response.data.deviceType || 'DESKTOP',
           forceLogoutToken: err.response.data.forceLogoutToken || '',
         });
-        setError(null);
       } else {
         setError(getErrorMessage(err));
       }
@@ -102,11 +102,11 @@ const Login: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       if (err?.response?.status === 409 && err?.response?.data?.code === 'LOGGED_IN_ELSEWHERE') {
+        setError(err?.response?.data?.message || 'این اکانت روی دستگاه دیگری فعال است.');
         setLoggedElsewhereModal({
           deviceType: err.response.data.deviceType || 'DESKTOP',
           forceLogoutToken: err.response.data.forceLogoutToken || '',
         });
-        setError(null);
       } else {
         setError(getErrorMessage(err));
       }
@@ -174,13 +174,16 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       {/* مودال ورود از دستگاه دیگر */}
       {loggedElsewhereModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="logged-elsewhere-title">
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
+            <p id="logged-elsewhere-title" className="font-medium text-red-700 mb-2">
+              این اکانت روی دستگاه دیگری فعال است
+            </p>
             <p className="text-gray-800 mb-4">
               شما با دستگاه دیگری ({deviceTypeLabel[loggedElsewhereModal?.deviceType] || loggedElsewhereModal?.deviceType}) وارد شده‌اید.
             </p>
             <p className="text-sm text-gray-600 mb-6">
-              برای ورود از این دستگاه، ابتدا از همه دستگاه‌ها خارج شوید.
+              برای ورود از این دستگاه، روی دکمه زیر بزنید تا از همه جا خارج شوید.
             </p>
             <button
               type="button"
@@ -188,7 +191,7 @@ const Login: React.FC = () => {
               disabled={forceLogoutLoading}
               className="w-full py-2.5 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {forceLogoutLoading ? 'در حال انجام...' : 'خروج از همه دستگاه‌ها'}
+              {forceLogoutLoading ? 'در حال انجام...' : 'خروج از همه جا'}
             </button>
             <button
               type="button"
