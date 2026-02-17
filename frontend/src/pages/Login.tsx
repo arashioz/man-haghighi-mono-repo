@@ -4,11 +4,38 @@ import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
 
+/** پیام خطا را به زبان کاربر و قابل فهم برمی‌گرداند (هم خطای بک‌اند هم خطای شبکه) */
 const getErrorMessage = (err: any): string => {
+  // پیام مستقیم از بک‌اند (همهٔ خطاهای لاگین که سرور برمی‌گرداند)
   const msg = err?.response?.data?.message;
-  if (typeof msg === 'string') return msg;
-  if (Array.isArray(msg)) return msg[0] || 'خطایی رخ داد.';
-  return err?.message || 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
+  if (typeof msg === 'string' && msg.trim()) return msg.trim();
+  if (Array.isArray(msg) && msg.length > 0 && typeof msg[0] === 'string') return msg[0].trim();
+
+  const status = err?.response?.status;
+  const code = err?.code;
+
+  // خطاهای شناخته‌شدهٔ HTTP
+  if (status === 401) return 'کاربر ثبت نام نشده یا اطلاعات ورود اشتباه است.';
+  if (status === 403) return 'دسترسی مجاز نیست.';
+  if (status === 404) return 'سرویس در دسترس نیست.';
+  if (status === 429) return 'درخواست زیاد. چند دقیقه دیگر تلاش کنید.';
+  if (status >= 500) return 'مشکلی در سرور پیش آمده. کمی بعد دوباره تلاش کنید.';
+
+  // خطای اتصال / شبکه — به‌جای «Network Error» یا «timeout» پیام فارسی
+  if (!err?.response) {
+    if (code === 'ECONNABORTED' || err?.message?.toLowerCase?.().includes('timeout')) {
+      return 'اتصال به سرور طول کشید. اینترنت را بررسی کنید و دوباره تلاش کنید.';
+    }
+    if (code === 'ERR_NETWORK' || err?.message === 'Network Error') {
+      return 'اتصال به سرور برقرار نشد. اینترنت یا در دسترس بودن سایت را بررسی کنید.';
+    }
+    if (code === 'ERR_CONNECTION_REFUSED' || code === 'ECONNREFUSED') {
+      return 'سرور در دسترس نیست. کمی بعد دوباره تلاش کنید.';
+    }
+    return 'اتصال برقرار نشد. اینترنت را بررسی کنید و دوباره تلاش کنید.';
+  }
+
+  return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
 };
 
 const deviceTypeLabel: Record<string, string> = {
@@ -172,6 +199,25 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* پاپ‌آپ خطا — هر خطای API (غیر از 409 لاگین از دستگاه دیگر) */}
+      {error && !loggedElsewhereModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="error-title">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
+            <p id="error-title" className="font-medium text-red-700 mb-3">
+              خطا
+            </p>
+            <p className="text-gray-800 mb-6 text-right">{error}</p>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="w-full py-2.5 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            >
+              متوجه شدم
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* مودال ورود از دستگاه دیگر */}
       {loggedElsewhereModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="logged-elsewhere-title">

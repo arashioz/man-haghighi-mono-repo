@@ -226,12 +226,11 @@ export class AuthService {
     });
 
     if (!user) {
-      // Explicit message when no account matches the provided login
-      throw new UnauthorizedException('کاربری با این مشخصات یافت نشد');
+      throw new UnauthorizedException('کاربر ثبت نام نشده');
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Account is not active');
+      throw new UnauthorizedException('حساب کاربری غیرفعال است');
     }
 
     const hasPasswordInput = typeof password === 'string' && password.trim() !== '';
@@ -246,21 +245,27 @@ export class AuthService {
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('نام کاربری یا رمز عبور اشتباه است');
+        throw new UnauthorizedException('پسورد یا نام کاربری اشتباه است');
       }
 
       // Session tracking (single device) only for regular users, not admin
+      // فقط وقتی سشن در چند دقیقهٔ اخیر فعال بوده 409 بده؛ وگرنه سشن قدیمی را جایگزین کن و ورود بده
+      const ACTIVE_SESSION_MINUTES = 15;
       let sessionId: string | undefined;
       if (user.role === 'USER') {
         const deviceType = this.normalizeDeviceType((loginDto as any).deviceType);
         const existingSession = await this.getExistingSession(user.id);
         if (existingSession) {
-          throw new ConflictException({
-            code: 'LOGGED_IN_ELSEWHERE',
-            deviceType: existingSession.deviceType,
-            message: 'این اکانت روی دستگاه دیگری فعال است.',
-            forceLogoutToken: this.createForceLogoutToken(user.id),
-          });
+          const updatedAt = existingSession.updatedAt.getTime();
+          const now = Date.now();
+          if (now - updatedAt < ACTIVE_SESSION_MINUTES * 60 * 1000) {
+            throw new ConflictException({
+              code: 'LOGGED_IN_ELSEWHERE',
+              deviceType: existingSession.deviceType,
+              message: 'این اکانت روی دستگاه دیگری فعال است.',
+              forceLogoutToken: this.createForceLogoutToken(user.id),
+            });
+          }
         }
         sessionId = await this.createOrReplaceSession(user.id, deviceType);
       }
@@ -527,38 +532,43 @@ export class AuthService {
     }) as any;
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('کاربر ثبت نام نشده');
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Account is not active');
+      throw new UnauthorizedException('حساب کاربری غیرفعال است');
     }
 
     if (user.role !== 'USER') {
-      throw new UnauthorizedException('OTP authentication is only available for regular users');
+      throw new UnauthorizedException('ورود با کد فقط برای کاربران عادی امکان‌پذیر است');
     }
 
     if (!user.otp || !user.otpExpiresAt) {
-      throw new UnauthorizedException('No OTP found. Please request a new OTP.');
+      throw new UnauthorizedException('کد تایید یافت نشد. دوباره درخواست کد بدهید.');
     }
 
     if (new Date() > user.otpExpiresAt) {
-      throw new UnauthorizedException('OTP has expired. Please request a new OTP.');
+      throw new UnauthorizedException('کد تایید منقضی شده. دوباره درخواست کد بدهید.');
     }
 
     if (user.otp !== otp) {
-      throw new UnauthorizedException('Invalid OTP');
+      throw new UnauthorizedException('کد تایید اشتباه است');
     }
 
     const deviceType = this.normalizeDeviceType((verifyOtpDto as any).deviceType);
     const existingSession = await this.getExistingSession(user.id);
+    const ACTIVE_SESSION_MINUTES = 15;
     if (existingSession) {
-      throw new ConflictException({
-        code: 'LOGGED_IN_ELSEWHERE',
-        deviceType: existingSession.deviceType,
-        message: 'این اکانت روی دستگاه دیگری فعال است.',
-        forceLogoutToken: this.createForceLogoutToken(user.id),
-      });
+      const updatedAt = existingSession.updatedAt.getTime();
+      const now = Date.now();
+      if (now - updatedAt < ACTIVE_SESSION_MINUTES * 60 * 1000) {
+        throw new ConflictException({
+          code: 'LOGGED_IN_ELSEWHERE',
+          deviceType: existingSession.deviceType,
+          message: 'این اکانت روی دستگاه دیگری فعال است.',
+          forceLogoutToken: this.createForceLogoutToken(user.id),
+        });
+      }
     }
 
     await this.prisma.user.update({
@@ -638,11 +648,11 @@ export class AuthService {
 
       const user = await this.prisma.user.findFirst({ where: { OR: orConditions } });
       if (!user || !user.password) {
-        throw new UnauthorizedException('کاربری با این مشخصات یافت نشد');
+        throw new UnauthorizedException('کاربر ثبت نام نشده');
       }
       const valid = await bcrypt.compare(dto.password!, user.password);
       if (!valid) {
-        throw new UnauthorizedException('رمز عبور اشتباه است');
+        throw new UnauthorizedException('پسورد یا نام کاربری اشتباه است');
       }
       await this.deleteSessionForUser(user.id);
       return { success: true, message: 'از همه دستگاه‌ها خارج شدید.' };
