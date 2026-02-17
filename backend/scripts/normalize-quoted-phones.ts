@@ -1,13 +1,11 @@
 /**
  * نرمال‌سازی شماره‌های داخل کوتیشن و ادغام با رکورد تمیز
  *
- * چه کار می‌کند:
- * ۱. همه کاربرانی که فیلد phone آن‌ها حاوی کاراکتر " است پیدا می‌شوند (مثل "09129582534").
- * ۲. برای هر کدام شمارهٔ نرمال محاسبه می‌شود: حذف کوتیشن + نرمال‌سازی شماره (مثلاً 09129582534).
- * ۳. اگر کاربر دیگری با همان شمارهٔ نرمال (بدون کوتیشن) وجود داشته باشد → دو رکورد برای یک شماره داریم.
- * ۴. بین این دو، رکوردی که «دارای رکورد» است (دوره، تراکنش، ویدئو، کیف‌پول و ...) به‌عنوان اصلی نگه داشته می‌شود؛
- *    دادهٔ رکورد دیگر به او منتقل و رکورد دیگر حذف می‌شود. اگر رکورد نگه‌داشته‌شده خودش phone با کوتیشن داشت، آپدیت به شمارهٔ نرمال می‌شود.
- * ۵. اگر فقط یک رکورد (همان با کوتیشن) بود → فقط همان رکورد آپدیت می‌شود و phone به شمارهٔ نرمال (بدون کوتیشن) تنظیم می‌شود.
+ * قانون:
+ * - رکوردی که شماره‌اش با کوتیشن است (مثل "09129582534") و دوره دارد = اصلی → نگه داشته می‌شود.
+ * - رکوردی که همان شماره را بدون کوتیشن دارد و دوره ندارد → حذف می‌شود (داده‌اش در صورت وجود به اصلی منتقل می‌شود).
+ * - اگر هر دو دوره داشتند، اصلی = همان که کوتیشن دارد؛ دیگری ادغام و حذف می‌شود.
+ * - در پایان شمارهٔ رکورد اصلی به نرمال (بدون کوتیشن) آپدیت می‌شود.
  *
  * اجرا: npx ts-node scripts/normalize-quoted-phones.ts
  * حالت خشک: npx ts-node scripts/normalize-quoted-phones.ts --dry-run
@@ -124,13 +122,17 @@ async function main() {
     }
 
     const counts = await Promise.all(group.map((u) => countUserRecords(u.id)));
-    const withCounts = group.map((u, i) => ({ user: u, count: counts[i] }));
-    withCounts.sort((a, b) => b.count - a.count);
+    const withCounts = group.map((u, i) => ({ user: u, count: counts[i], quoted: hasQuotedPhone(u.phone) }));
+    // اصلی = رکوردی که شماره‌اش کوتیشن دارد؛ اگر چندتا کوتیشن داشتند، اونی که رکورد/دوره بیشتر داره
+    withCounts.sort((a, b) => {
+      if (a.quoted !== b.quoted) return a.quoted ? -1 : 1;
+      return b.count - a.count;
+    });
     const keepUser = withCounts[0].user;
     const toRemove = withCounts.slice(1).map((x) => x.user);
 
     console.log(`\nشماره نرمال: ${norm} (${group.length} رکورد)`);
-    console.log(`  نگه‌داشتن (دارای رکورد بیشتر): ${keepUser.firstName} ${keepUser.lastName} (${keepUser.username}) - ${keepUser.id} [رکورد: ${withCounts[0].count}]`);
+    console.log(`  نگه‌داشتن (اصلی، با کوتیشن/رکورد بیشتر): ${keepUser.firstName} ${keepUser.lastName} (${keepUser.username}) - ${keepUser.id} [کوتیشن: ${withCounts[0].quoted}, رکورد: ${withCounts[0].count}]`);
     for (const u of toRemove) {
       const c = withCounts.find((x) => x.user.id === u.id)!;
       console.log(`  حذف و ادغام: ${u.firstName} ${u.lastName} (${u.username}) - ${u.id} [رکورد: ${c.count}]`);
