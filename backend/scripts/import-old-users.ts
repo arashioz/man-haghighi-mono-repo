@@ -173,6 +173,27 @@ function buildLegacyCourseTitle(productName: string, productId: string): string 
   return productName.includes(productId) ? productName : `${productName} (${productId})`;
 }
 
+function isPhoneUniqueConstraintError(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+  if (error.code !== 'P2002') {
+    return false;
+  }
+
+  const target = (error.meta as any)?.target;
+
+  if (Array.isArray(target)) {
+    return target.includes('user_phone') || target.includes('phone');
+  }
+
+  if (typeof target === 'string') {
+    return target.includes('user_phone') || target.includes('phone');
+  }
+
+  return false;
+}
+
 async function resetOldUserData() {
   logSection('Resetting existing imported users');
   const deletedOldProducts = await prisma.oldProduct.deleteMany({});
@@ -454,10 +475,28 @@ async function upsertOldUser(user: NormalizedOldUser, hashedPassword: string, op
     }
 
     if (!options.dryRun) {
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: updateData,
-      });
+      try {
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: updateData,
+        });
+      } catch (error) {
+        if (isPhoneUniqueConstraintError(error)) {
+          console.warn(
+            `⚠️ Skipping phone update for legacy user ${user.legacyId} because the normalized phone is already used by another user.`,
+          );
+          // Remove phone from update and retry the update so other fields are still synced
+          if ('phone' in updateData) {
+            delete updateData.phone;
+          }
+          await prisma.user.update({
+            where: { id: existing.id },
+            data: updateData,
+          });
+        } else {
+          throw error;
+        }
+      }
 
       if (productsPayload.length > 0) {
         await prisma.oldProduct.createMany({
@@ -513,9 +552,24 @@ async function upsertOldUser(user: NormalizedOldUser, hashedPassword: string, op
   };
 
   if (!options.dryRun) {
-    const created = await prisma.user.create({
-      data: createData,
-    });
+    let created;
+    try {
+      created = await prisma.user.create({
+        data: createData,
+      });
+    } catch (error) {
+      if (isPhoneUniqueConstraintError(error) && createData.phone) {
+        console.warn(
+          `⚠️ Phone ${createData.phone} for legacy user ${user.legacyId} is already used. Creating user without this phone number.`,
+        );
+        const { phone: _omitPhone, ...createDataWithoutPhone } = createData;
+        created = await prisma.user.create({
+          data: createDataWithoutPhone,
+        });
+      } else {
+        throw error;
+      }
+    }
 
     if (productsPayload.length > 0) {
       await prisma.oldProduct.createMany({

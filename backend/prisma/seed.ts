@@ -521,11 +521,11 @@ async function main() {
   console.log(`✅ ${audios.length} audios processed`);
 
   // ✅ 10. Seed old users using import-old-users.ts
-  const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
+  // const jsonPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data.json');
   const cleanedUsersPath = path.join(process.cwd(), 'moc-old-data', 'final_merged_data_cleaned.json');
   const usersJsonPath = path.join(process.cwd(), 'moc-old-data', 'users.json');
   
-  if (fs.existsSync(cleanedUsersPath) || fs.existsSync(jsonPath) || fs.existsSync(usersJsonPath)) {
+  if (fs.existsSync(cleanedUsersPath)  || fs.existsSync(usersJsonPath)) {
     console.log('');
     console.log('🔄 Importing old users using import-old-users.ts...');
     try {
