@@ -99,9 +99,14 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
+      const message = error.response?.data?.message;
+      if (typeof message === 'string' && message.trim()) {
+        try {
+          sessionStorage.setItem('login_401_message', message.trim());
+        } catch (_) {}
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Only redirect to login if we're not already on login page
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

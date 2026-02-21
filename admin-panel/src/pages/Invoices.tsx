@@ -4,7 +4,10 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import MobileCard from '../components/MobileCard';
 import { paymentsService } from '../services/api';
-import { formatAmountInToman } from '../utils/currencyUtils';
+
+/** مبلغ فاکتور در API به تومان است؛ فقط فرمت نمایش */
+const formatToman = (tomanAmount: number): string =>
+  Number(tomanAmount).toLocaleString('fa-IR');
 
 interface SalesPersonStats {
   salesPerson: {
@@ -30,6 +33,10 @@ interface Invoice {
   status: string;
   type: string;
   createdAt: string;
+  description?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  paidAt?: string | null;
   user?: {
     id: string;
     firstName?: string;
@@ -42,6 +49,7 @@ interface Invoice {
     fullName: string;
     phone: string;
   } | null;
+  paymentLink?: { linkCode?: string } | null;
 }
 
 type TabType = 'courses' | 'payment-links' | 'salespersons';
@@ -54,13 +62,28 @@ const Invoices: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState<string>('');
+  const [courseStatusFilter, setCourseStatusFilter] = useState<string>('');
+  const [paymentLinkStatusFilter, setPaymentLinkStatusFilter] = useState<string>('');
+  const [coursePage, setCoursePage] = useState(1);
+  const [paymentLinkPage, setPaymentLinkPage] = useState(1);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const limit = 20;
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [courseData, paymentLinkData, statsData] = await Promise.all([
-        paymentsService.getAllCourseInvoices(),
-        paymentsService.getPaymentLinkInvoices(),
+        paymentsService.getAllCourseInvoices({
+          page: coursePage,
+          limit,
+          status: courseStatusFilter || undefined,
+        }),
+        paymentsService.getPaymentLinkInvoices({
+          page: paymentLinkPage,
+          limit,
+          status: paymentLinkStatusFilter || undefined,
+          salesPersonId: selectedSalesPerson || undefined,
+        }),
         paymentsService.getSalesPersonsPaymentStats()
       ]);
 
@@ -76,7 +99,7 @@ const Invoices: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [coursePage, paymentLinkPage, courseStatusFilter, paymentLinkStatusFilter, selectedSalesPerson]);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -113,9 +136,11 @@ const Invoices: React.FC = () => {
     { id: 'salespersons' as TabType, label: 'آمار فروشندگان', count: salesPersonsStats.salesPersons?.length || 0 },
   ];
 
-  const filteredPaymentLinkInvoices = selectedSalesPerson
-    ? paymentLinkInvoices.data.filter(invoice => invoice.salesPerson?.id === selectedSalesPerson)
-    : paymentLinkInvoices.data;
+  const filteredPaymentLinkInvoices = paymentLinkInvoices.data;
+  const handlePrintInvoice = () => {
+    window.print();
+    setSelectedInvoice(null);
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -125,7 +150,7 @@ const Invoices: React.FC = () => {
     <div className="ios-fade-in">
       <PageHeader
         title="مدیریت فاکتورها"
-        description="دسته‌بندی و رهگیری تراکنش‌های مالی"
+        description="دسته‌بندی و رهگیری تراکنش‌های مالی. همه مبالغ به تومان هستند؛ درگاه پرداخت به ریال کار می‌کند."
       />
 
       {error && (
@@ -164,10 +189,23 @@ const Invoices: React.FC = () => {
       {activeTab === 'courses' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <h3 className="text-lg font-semibold text-gray-900">فاکتورهای دوره‌ها</h3>
-              <div className="text-sm text-gray-500">
-                مجموع: {courseInvoices.meta?.total || 0} فاکتور
+              <div className="flex items-center gap-3 flex-wrap">
+                <select
+                  value={courseStatusFilter}
+                  onChange={(e) => { setCourseStatusFilter(e.target.value); setCoursePage(1); }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">همه وضعیت‌ها</option>
+                  <option value="PENDING">در انتظار</option>
+                  <option value="PAID">پرداخت شده</option>
+                  <option value="FAILED">ناموفق</option>
+                  <option value="CANCELLED">لغو شده</option>
+                </select>
+                <span className="text-sm text-gray-500">
+                  مجموع: {courseInvoices.meta?.total ?? 0} فاکتور
+                </span>
               </div>
             </div>
 
@@ -185,7 +223,11 @@ const Invoices: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {courseInvoices.data.map((invoice) => (
-                  <MobileCard key={invoice.id}>
+                  <MobileCard
+                    key={invoice.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedInvoice(invoice)}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 space-x-reverse mb-2">
@@ -209,7 +251,7 @@ const Invoices: React.FC = () => {
 
                       <div className="text-left">
                         <div className="text-lg font-bold text-gray-900">
-                          {formatAmountInToman(invoice.amount)} تومان
+                          {formatToman(invoice.amount)} تومان
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {getTypeText(invoice.type)}
@@ -220,6 +262,29 @@ const Invoices: React.FC = () => {
                 ))}
               </div>
             )}
+            {courseInvoices.meta?.totalPages > 1 && (
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  type="button"
+                  disabled={coursePage <= 1}
+                  onClick={() => setCoursePage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  قبلی
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-600">
+                  {coursePage} از {courseInvoices.meta.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={coursePage >= (courseInvoices.meta?.totalPages ?? 1)}
+                  onClick={() => setCoursePage(p => p + 1)}
+                  className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  بعدی
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -227,12 +292,23 @@ const Invoices: React.FC = () => {
       {activeTab === 'payment-links' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <h3 className="text-lg font-semibold text-gray-900">فاکتورهای فروشندگان</h3>
-              <div className="flex items-center space-x-3 space-x-reverse">
+              <div className="flex items-center gap-3 flex-wrap">
+                <select
+                  value={paymentLinkStatusFilter}
+                  onChange={(e) => { setPaymentLinkStatusFilter(e.target.value); setPaymentLinkPage(1); }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">همه وضعیت‌ها</option>
+                  <option value="PENDING">در انتظار</option>
+                  <option value="PAID">پرداخت شده</option>
+                  <option value="FAILED">ناموفق</option>
+                  <option value="CANCELLED">لغو شده</option>
+                </select>
                 <select
                   value={selectedSalesPerson}
-                  onChange={(e) => setSelectedSalesPerson(e.target.value)}
+                  onChange={(e) => { setSelectedSalesPerson(e.target.value); setPaymentLinkPage(1); }}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">همه فروشندگان</option>
@@ -242,9 +318,9 @@ const Invoices: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <div className="text-sm text-gray-500">
-                  نمایش: {filteredPaymentLinkInvoices.length} فاکتور
-                </div>
+                <span className="text-sm text-gray-500">
+                  مجموع: {paymentLinkInvoices.meta?.total ?? 0} فاکتور
+                </span>
               </div>
             </div>
 
@@ -261,7 +337,11 @@ const Invoices: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {filteredPaymentLinkInvoices.map((invoice) => (
-                  <MobileCard key={invoice.id}>
+                  <MobileCard
+                    key={invoice.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedInvoice(invoice)}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 space-x-reverse mb-2">
@@ -290,7 +370,7 @@ const Invoices: React.FC = () => {
 
                       <div className="text-left">
                         <div className="text-lg font-bold text-gray-900">
-                          {formatAmountInToman(invoice.amount)} تومان
+                          {formatToman(invoice.amount)} تومان
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           {getTypeText(invoice.type)}
@@ -299,6 +379,29 @@ const Invoices: React.FC = () => {
                     </div>
                   </MobileCard>
                 ))}
+              </div>
+            )}
+            {paymentLinkInvoices.meta?.totalPages > 1 && (
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  type="button"
+                  disabled={paymentLinkPage <= 1}
+                  onClick={() => setPaymentLinkPage(p => Math.max(1, p - 1))}
+                  className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  قبلی
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-600">
+                  {paymentLinkPage} از {paymentLinkInvoices.meta.totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={paymentLinkPage >= (paymentLinkInvoices.meta?.totalPages ?? 1)}
+                  onClick={() => setPaymentLinkPage(p => p + 1)}
+                  className="px-3 py-1 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  بعدی
+                </button>
               </div>
             )}
           </div>
@@ -416,6 +519,84 @@ const Invoices: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* مودال جزئیات فاکتور */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">جزئیات فاکتور #{selectedInvoice.invoiceNumber}</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedInvoice(null)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                aria-label="بستن"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div id="invoice-detail-print" className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span className="text-gray-500">وضعیت:</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium w-fit ${getStatusBadgeClass(selectedInvoice.status)}`}>
+                  {getStatusText(selectedInvoice.status)}
+                </span>
+                <span className="text-gray-500">نوع:</span>
+                <span>{getTypeText(selectedInvoice.type)}</span>
+                <span className="text-gray-500">مبلغ (تومان):</span>
+                <span className="font-bold">{formatToman(selectedInvoice.amount)} تومان</span>
+                <span className="text-gray-500">تاریخ ایجاد:</span>
+                <span>{new Date(selectedInvoice.createdAt).toLocaleDateString('fa-IR')}</span>
+                {selectedInvoice.paidAt && (
+                  <>
+                    <span className="text-gray-500">تاریخ پرداخت:</span>
+                    <span>{new Date(selectedInvoice.paidAt).toLocaleDateString('fa-IR')}</span>
+                  </>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">مشتری</h4>
+                <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                  <p><span className="text-gray-500">نام:</span> {selectedInvoice.customerName || `${selectedInvoice.user?.firstName || ''} ${selectedInvoice.user?.lastName || ''}`.trim() || '-'}</p>
+                  <p><span className="text-gray-500">موبایل:</span> {selectedInvoice.customerPhone || selectedInvoice.user?.phone || '-'}</p>
+                  {selectedInvoice.user?.email && <p><span className="text-gray-500">ایمیل:</span> {selectedInvoice.user.email}</p>}
+                </div>
+              </div>
+              {selectedInvoice.salesPerson && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">فروشنده</h4>
+                  <p className="text-sm">{selectedInvoice.salesPerson.fullName} — {selectedInvoice.salesPerson.phone}</p>
+                </div>
+              )}
+              {selectedInvoice.description && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">توضیحات</h4>
+                  <p className="text-sm text-gray-600">{selectedInvoice.description}</p>
+                </div>
+              )}
+              {selectedInvoice.paymentLink?.linkCode && (
+                <p className="text-xs text-gray-500">کد لینک: {selectedInvoice.paymentLink.linkCode}</p>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => { window.print(); setSelectedInvoice(null); }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                چاپ فاکتور
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedInvoice(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                بستن
+              </button>
+            </div>
           </div>
         </div>
       )}

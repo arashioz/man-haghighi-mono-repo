@@ -437,6 +437,7 @@ export class UsersService {
       avatar,
       isActive,
       isOld,
+      isForeign,
       role,
       education,
       university,
@@ -462,9 +463,15 @@ export class UsersService {
     } else if (phone === null || phone.trim() === '') {
       normalizedPhone = null;
     } else {
-      normalizedPhone = normalizePhone(phone);
-      if (!normalizedPhone) {
-        throw new ConflictException('Invalid phone number format');
+      const trimmed = phone.trim();
+      // For foreign users allow any phone format; otherwise require Iranian format
+      if (isForeign) {
+        normalizedPhone = trimmed;
+      } else {
+        normalizedPhone = normalizePhone(phone);
+        if (!normalizedPhone) {
+          throw new ConflictException('Invalid phone number format');
+        }
       }
     }
 
@@ -573,6 +580,10 @@ export class UsersService {
 
     if (isOld !== undefined) {
       updateData.isOld = isOld;
+    }
+
+    if (isForeign !== undefined) {
+      updateData.isForeign = isForeign;
     }
 
     if (role !== undefined) {

@@ -9,6 +9,7 @@ export interface User {
   role: 'ADMIN' | 'SALES_MANAGER' | 'SALES_PERSON' | 'USER';
   isActive: boolean;
   isOld?: boolean;
+  isForeign?: boolean;
   isBlocked?: boolean;
   blockedUntil?: string;
   rateLimitViolations?: number;

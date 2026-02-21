@@ -36,7 +36,7 @@ const ErrorDisplay: React.FC = () => {
       details.push(`کد وضعیت: ${error.statusCode}`);
     }
 
-    if (process.env.NODE_ENV === 'development' && error.error) {
+    if (error.error) {
       details.push(`نوع خطا: ${error.error}`);
     }
 
@@ -66,12 +66,12 @@ const ErrorDisplay: React.FC = () => {
               </div>
             )}
 
-            {process.env.NODE_ENV === 'development' && error.stack && (
-              <details className="mt-2">
+            {error.stack && (
+              <details className="mt-2" open={false}>
                 <summary className="text-xs cursor-pointer hover:opacity-80">
-                  جزئیات فنی (برای توسعه‌دهندگان)
+                  جزئیات فنی و متن خطا
                 </summary>
-                <pre className="text-xs mt-2 bg-black/10 p-2 rounded overflow-x-auto whitespace-pre-wrap font-mono">
+                <pre className="text-xs mt-2 bg-black/10 p-2 rounded overflow-x-auto whitespace-pre-wrap font-mono max-h-48 overflow-y-auto">
                   {error.stack}
                 </pre>
               </details>

@@ -479,8 +479,8 @@ const UsersManagement: React.FC = () => {
     
     setError(''); // Clear any previous errors
 
-    // Validate phone number format if provided and user is not admin
-    if (editingUser.role !== 'ADMIN' && editingUser.phone && editingUser.phone.trim() && !validatePhone(editingUser.phone)) {
+    // Validate Iranian phone format only when phone provided, not admin, and not foreign
+    if (editingUser.role !== 'ADMIN' && !editingUser.isForeign && editingUser.phone && editingUser.phone.trim() && !validatePhone(editingUser.phone)) {
       setError('فرمت شماره تلفن نامعتبر است. شماره باید با 0 شروع شود و 10 یا 11 رقم داشته باشد (مثال: 09123456789)');
       return;
     }
@@ -509,15 +509,24 @@ const UsersManagement: React.FC = () => {
     }
     
     try {
+      const phoneTrimmed = editingUser.phone?.trim();
+      const phoneValue = phoneTrimmed
+        ? (editingUser.isForeign ? phoneTrimmed : normalizePhoneNumber(editingUser.phone || ''))
+        : null;
+      if (phoneTrimmed && !editingUser.isForeign && !phoneValue) {
+        setError('فرمت شماره تلفن نامعتبر است.');
+        return;
+      }
       // Only send editable fields
       const updateData: any = {
         username: editingUser.username,
-        phone: normalizePhoneNumber(editingUser.phone || ''),
-        email: editingUser.email,
+        phone: phoneValue,
+        email: editingUser.email ?? '',
         firstName: editingUser.firstName,
         lastName: editingUser.lastName,
         isActive: editingUser.isActive,
         role: editingUser.role,
+        isForeign: editingUser.isForeign,
       };
       
       // Add password if provided
@@ -1485,15 +1494,22 @@ const UsersManagement: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                شماره تلفن
+                شماره تلفن {(editingUser.role !== 'ADMIN' && !editingUser.isForeign && !editingUser.email) && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="tel"
                 value={editingUser.phone || ''}
                 onChange={(e) => editingUser && setEditingUser({...editingUser, phone: e.target.value})}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
+                required={editingUser.role !== 'ADMIN' && !editingUser.isForeign && !editingUser.email}
+                placeholder={editingUser.isForeign ? 'اختیاری' : '09123456789'}
               />
+              {editingUser.isForeign && (
+                <p className="text-xs text-gray-500 mt-1">برای کاربر خارجی شماره اختیاری است</p>
+              )}
+              {(editingUser.email && !editingUser.isForeign) && (
+                <p className="text-xs text-gray-500 mt-1">با وجود ایمیل، شماره اختیاری است</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1525,6 +1541,20 @@ const UsersManagement: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">نقش مدیر سایت قابل تغییر نیست</p>
               )}
             </div>
+            {editingUser.role === 'USER' && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="edit-user-is-foreign"
+                  checked={!!editingUser.isForeign}
+                  onChange={(e) => editingUser && setEditingUser({...editingUser, isForeign: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="edit-user-is-foreign" className="mr-2 block text-sm text-gray-900">
+                  کاربر خارجی است (ورود با ایمیل)
+                </label>
+              </div>
+            )}
             <div className="border-t border-gray-200 pt-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">تغییر رمز عبور</h3>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">

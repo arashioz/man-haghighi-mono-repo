@@ -120,10 +120,14 @@ api.interceptors.response.use(
 
     // Only redirect to login for 401 errors, not validation errors (400)
     if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
+      const message = error.response?.data?.message;
+      if (typeof message === 'string' && message.trim()) {
+        try {
+          sessionStorage.setItem('login_401_message', message.trim());
+        } catch (_) {}
+      }
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Use replace to avoid adding to history
-      // Frontend nginx should handle all routes and serve index.html
       if (window.location.pathname !== '/login') {
         window.location.replace('/login');
       }

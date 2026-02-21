@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginCredentials } from '../types';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
+
+const LOGIN_401_KEY = 'login_401_message';
 
 const Login: React.FC = () => {
   const [loginType, setLoginType] = useState<'admin' | 'sales' | 'seller'>('admin');
@@ -14,6 +16,16 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(LOGIN_401_KEY);
+      if (stored && stored.trim()) {
+        sessionStorage.removeItem(LOGIN_401_KEY);
+        setError(stored.trim());
+      }
+    } catch (_) {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

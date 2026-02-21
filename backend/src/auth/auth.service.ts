@@ -426,13 +426,13 @@ export class AuthService {
     if (user.role === 'USER') {
       const sessionId = payload.sessionId;
       if (!sessionId) {
-        return null;
+        throw new UnauthorizedException('این اکانت از دستگاه دیگری وارد شده است. لطفاً دوباره وارد شوید.');
       }
       const session = await this.prisma.userSession.findUnique({
         where: { userId: String(user.id) },
       });
       if (!session || session.sessionId !== sessionId) {
-        return null;
+        throw new UnauthorizedException('این اکانت از دستگاه دیگری وارد شده است. لطفاً دوباره وارد شوید.');
       }
     }
 
