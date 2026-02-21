@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { RegisterCredentials } from '../types';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
+import { getAuthErrorMessage } from '../utils/authErrorUtils';
 
 const Register: React.FC = () => {
   const [credentials, setCredentials] = useState<RegisterCredentials>({
@@ -46,7 +47,7 @@ const Register: React.FC = () => {
       await register(normalizedCredentials);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'ثبت نام ناموفق');
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }

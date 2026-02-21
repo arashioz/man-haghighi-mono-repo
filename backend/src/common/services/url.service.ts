@@ -64,30 +64,52 @@ export class UrlService {
   }
 
   
+  /** مقدار Decimal/شیء را به عدد تبدیل می‌کند تا در JSON خطا ندهد */
+  private toNumber(value: any): number | null {
+    if (value == null) return null;
+    if (typeof value === 'number' && !Number.isNaN(value)) return value;
+    if (typeof value === 'object' && typeof value.toNumber === 'function') return value.toNumber();
+    const n = Number(value);
+    return Number.isNaN(n) ? null : n;
+  }
+
   processCourseData(course: any): any {
     if (!course) return course;
 
     const attachmentFiles = Array.isArray(course.attachments) ? [...course.attachments] : [];
     const courseVideoFiles = Array.isArray(course.courseVideos) ? [...course.courseVideos] : [];
 
+    const priceNum = this.toNumber(course.price);
+    const { price: _p, createdAt, updatedAt, ...rest } = course;
+    const base = {
+      ...rest,
+      price: priceNum ?? 0,
+      createdAt: createdAt instanceof Date ? createdAt.toISOString() : createdAt,
+      updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : updatedAt,
+    };
+
     return {
-      ...course,
+      ...base,
       thumbnail: this.getFileUrl(course.thumbnail),
       videoFile: this.getFileUrl(course.videoFile),
       attachments: this.getFileUrls(attachmentFiles),
       courseVideos: this.getFileUrls(courseVideoFiles),
       attachmentFiles,
       courseVideoFiles,
-      videos: course.videos?.map((video: any) => ({
+      videos: (course.videos || []).map((video: any) => ({
         ...video,
         thumbnail: this.getFileUrl(video.thumbnail),
         videoFile: this.getFileUrl(video.videoFile),
-      })) || [],
-      audios: course.audios?.map((audio: any) => ({
+        createdAt: video.createdAt instanceof Date ? video.createdAt.toISOString() : video.createdAt,
+        updatedAt: video.updatedAt instanceof Date ? video.updatedAt.toISOString() : video.updatedAt,
+      })),
+      audios: (course.audios || []).map((audio: any) => ({
         ...audio,
         thumbnail: this.getFileUrl(audio.thumbnail),
         audioFile: this.getFileUrl(audio.audioFile),
-      })) || [],
+        createdAt: audio.createdAt instanceof Date ? audio.createdAt.toISOString() : audio.createdAt,
+        updatedAt: audio.updatedAt instanceof Date ? audio.updatedAt.toISOString() : audio.updatedAt,
+      })),
     };
   }
 

@@ -58,6 +58,7 @@ export const setGlobalErrorHandler = (handler: (error: ApiError) => void) => {
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -102,8 +103,15 @@ api.interceptors.response.use(
   (error) => {
     // Handle API errors globally
     if (error.response?.data) {
+      const rawMessage = error.response.data.message;
+      const message =
+        typeof rawMessage === 'string' && rawMessage.trim()
+          ? rawMessage.trim()
+          : Array.isArray(rawMessage) && rawMessage.length > 0 && typeof rawMessage[0] === 'string'
+            ? String(rawMessage[0]).trim()
+            : 'خطای نامشخص سرور';
       const apiError: ApiError = {
-        message: error.response.data.message || 'خطای نامشخص سرور',
+        message,
         statusCode: error.response.data.statusCode,
         path: error.response.data.path,
         method: error.response.data.method,
@@ -121,11 +129,10 @@ api.interceptors.response.use(
     // Only redirect to login for 401 errors, not validation errors (400)
     if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
       const message = error.response?.data?.message;
-      if (typeof message === 'string' && message.trim()) {
-        try {
-          sessionStorage.setItem('login_401_message', message.trim());
-        } catch (_) {}
-      }
+      const text = typeof message === 'string' && message.trim() ? message.trim() : 'کاربر وجود ندارد';
+      try {
+        sessionStorage.setItem('login_401_message', text);
+      } catch (_) {}
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {

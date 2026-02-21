@@ -253,6 +253,7 @@ export class AuthService {
       const ACTIVE_SESSION_MINUTES = 15;
       let sessionId: string | undefined;
       if (user.role === 'USER') {
+        await this.deleteSessionsOlderThanDays(1);
         const deviceType = this.normalizeDeviceType((loginDto as any).deviceType);
         const existingSession = await this.getExistingSession(user.id);
         if (existingSession) {
@@ -404,6 +405,14 @@ export class AuthService {
     await this.prisma.userSession.deleteMany({ where: { userId } });
   }
 
+  /** سشن‌های قدیمی‌تر از یک روز را پاک می‌کند */
+  private async deleteSessionsOlderThanDays(days: number) {
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    await this.prisma.userSession.deleteMany({
+      where: { updatedAt: { lt: cutoff } },
+    });
+  }
+
   /** توکن یک‌بارمصرف برای خروج از همه دستگاه‌ها (۲ دقیقه اعتبار) - بدون نیاز به OTP/رمز دوباره */
   private createForceLogoutToken(userId: string): string {
     return this.jwtService.sign(
@@ -419,7 +428,7 @@ export class AuthService {
     }) as unknown as AuthUserPublic | null;
 
     if (!user || !user.isActive) {
-      return null;
+      throw new UnauthorizedException('کاربر وجود ندارد');
     }
 
     // Single-device session check only for regular users; admin can use multiple devices
@@ -555,6 +564,7 @@ export class AuthService {
       throw new UnauthorizedException('کد تایید اشتباه است');
     }
 
+    await this.deleteSessionsOlderThanDays(1);
     const deviceType = this.normalizeDeviceType((verifyOtpDto as any).deviceType);
     const existingSession = await this.getExistingSession(user.id);
     const ACTIVE_SESSION_MINUTES = 15;

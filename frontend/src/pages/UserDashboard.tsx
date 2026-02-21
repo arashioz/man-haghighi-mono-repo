@@ -82,7 +82,9 @@ const UserDashboard: React.FC = () => {
       setInboxMessages(messagesData || []);
       setInvoices(invoicesData || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'خطا در دریافت اطلاعات کاربر');
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message;
+      setError(status === 401 ? (typeof msg === 'string' && msg?.trim() ? msg.trim() : 'کاربر وجود ندارد') : (msg || 'خطا در دریافت اطلاعات کاربر'));
     } finally {
       setLoading(false);
       setMessagesLoading(false);

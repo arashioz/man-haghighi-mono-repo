@@ -3,40 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
-
-/** پیام خطا را به زبان کاربر و قابل فهم برمی‌گرداند (هم خطای بک‌اند هم خطای شبکه) */
-const getErrorMessage = (err: any): string => {
-  // پیام مستقیم از بک‌اند (همهٔ خطاهای لاگین که سرور برمی‌گرداند)
-  const msg = err?.response?.data?.message;
-  if (typeof msg === 'string' && msg.trim()) return msg.trim();
-  if (Array.isArray(msg) && msg.length > 0 && typeof msg[0] === 'string') return msg[0].trim();
-
-  const status = err?.response?.status;
-  const code = err?.code;
-
-  // خطاهای شناخته‌شدهٔ HTTP
-  if (status === 401) return 'کاربر ثبت نام نشده یا اطلاعات ورود اشتباه است.';
-  if (status === 403) return 'دسترسی مجاز نیست.';
-  if (status === 404) return 'سرویس در دسترس نیست.';
-  if (status === 429) return 'درخواست زیاد. چند دقیقه دیگر تلاش کنید.';
-  if (status >= 500) return 'مشکلی در سرور پیش آمده. کمی بعد دوباره تلاش کنید.';
-
-  // خطای اتصال / شبکه — به‌جای «Network Error» یا «timeout» پیام فارسی
-  if (!err?.response) {
-    if (code === 'ECONNABORTED' || err?.message?.toLowerCase?.().includes('timeout')) {
-      return 'اتصال به سرور طول کشید. اینترنت را بررسی کنید و دوباره تلاش کنید.';
-    }
-    if (code === 'ERR_NETWORK' || err?.message === 'Network Error') {
-      return 'اتصال به سرور برقرار نشد. اینترنت یا در دسترس بودن سایت را بررسی کنید.';
-    }
-    if (code === 'ERR_CONNECTION_REFUSED' || code === 'ECONNREFUSED') {
-      return 'سرور در دسترس نیست. کمی بعد دوباره تلاش کنید.';
-    }
-    return 'اتصال برقرار نشد. اینترنت را بررسی کنید و دوباره تلاش کنید.';
-  }
-
-  return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
-};
+import { getAuthErrorMessage } from '../utils/authErrorUtils';
 
 const deviceTypeLabel: Record<string, string> = {
   ANDROID: 'اندروید',
@@ -97,7 +64,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(getErrorMessage(err));
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -122,7 +89,7 @@ const Login: React.FC = () => {
           forceLogoutToken: err.response.data.forceLogoutToken || '',
         });
       } else {
-        setError(getErrorMessage(err));
+        setError(getAuthErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -153,7 +120,7 @@ const Login: React.FC = () => {
           forceLogoutToken: err.response.data.forceLogoutToken || '',
         });
       } else {
-        setError(getErrorMessage(err));
+        setError(getAuthErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -184,7 +151,7 @@ const Login: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError(getErrorMessage(err));
+      setError(getAuthErrorMessage(err));
     } finally {
       setForceLogoutLoading(false);
     }
@@ -209,7 +176,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(getErrorMessage(err));
+      setError(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
