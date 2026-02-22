@@ -6,20 +6,11 @@ export function getAuthErrorMessage(err: any): string {
 
   // پیام مستقیم از بک‌اند (همان چیزی که سرور برمی‌گرداند)
   const msg = data?.message;
-  if (typeof msg === 'string' && msg.trim()) return msg.trim();
-  if (Array.isArray(msg) && msg.length > 0) {
-    const first = msg[0];
-    if (typeof first === 'string' && first.trim()) return first.trim();
-  }
-  if (msg && typeof msg === 'object' && typeof msg.message === 'string' && msg.message.trim()) {
-    return String(msg.message).trim();
-  }
-  if (typeof data === 'string' && data.trim()) return data.trim();
-
+  
   const status = err?.response?.status;
   const code = err?.code;
-return err.response
-  
+  return msg
+
   // if (status === 401) return 'کاربر ثبت نام نشده یا اطلاعات ورود اشتباه است.';
   // if (status === 403) return 'دسترسی مجاز نیست.';
   // if (status === 404) return 'سرویس در دسترس نیست.';
