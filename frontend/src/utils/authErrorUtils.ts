@@ -12,7 +12,7 @@ export function getAuthErrorMessage(err: any): string {
 
   const status = err?.response?.status;
   const code = err?.code;
-
+  console.log(err.response)
   if (status === 401) return err.response
   if (status === 403) return 'دسترسی مجاز نیست.';
   if (status === 404) return 'سرویس در دسترس نیست.';
