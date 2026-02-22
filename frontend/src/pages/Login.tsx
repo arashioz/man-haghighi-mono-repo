@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
@@ -19,6 +19,7 @@ const Login: React.FC = () => {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
   const [sessionOnlineModal, setSessionOnlineModal] = useState<{
@@ -31,25 +32,32 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login: authLogin, setSession } = useAuth();
 
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const message = sessionStorage.getItem('login_401_message');
       sessionStorage.removeItem('login_401_message');
       sessionStorage.removeItem('login_401_session');
-      if (message && message.trim()) setError(message.trim());
+      if (message && message.trim()) {
+        setError(message.trim());
+        setShowErrorModal(true);
+      }
     } catch (_) {}
   }, []);
 
+  const setErrorAndShow = (msg: string | null) => {
+    setError(msg);
+    setShowErrorModal(!!msg);
+  };
+
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrorAndShow(null);
     setLoading(true);
-
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
       await authService.sendOtp(normalizedPhone);
       setStep('otp');
-      setCountdown(120); // 2 minutes countdown
+      setCountdown(120);
       const interval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
@@ -60,7 +68,7 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(getAuthErrorMessage(err));
+      setErrorAndShow(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -68,9 +76,8 @@ const Login: React.FC = () => {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrorAndShow(null);
     setLoading(true);
-
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
       const response = await authService.verifyOtp(normalizedPhone, otp);
@@ -87,7 +94,7 @@ const Login: React.FC = () => {
           retryKind: 'otp',
         });
       } else {
-        setError(getAuthErrorMessage(err));
+        setErrorAndShow(getAuthErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -96,19 +103,14 @@ const Login: React.FC = () => {
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setErrorAndShow(null);
     setSessionOnlineModal(null);
     setLoading(true);
-
     try {
       const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
         ? normalizePhoneNumber(loginInput)
         : loginInput;
-
-      await authLogin({
-        login: normalizedLogin,
-        password: loginPassword,
-      });
+      await authLogin({ login: normalizedLogin, password: loginPassword });
       navigate('/dashboard');
     } catch (err: any) {
       const status = err?.response?.status;
@@ -121,7 +123,7 @@ const Login: React.FC = () => {
           retryKind: 'password',
         });
       } else {
-        setError(getAuthErrorMessage(err));
+        setErrorAndShow(getAuthErrorMessage(err));
       }
     } finally {
       setLoading(false);
@@ -133,7 +135,7 @@ const Login: React.FC = () => {
     const token = sessionOnlineModal.forceLogoutToken;
     const { retryKind } = sessionOnlineModal;
     setForceLogoutLoading(true);
-    setError(null);
+    setErrorAndShow(null);
     try {
       await authService.forceLogoutAll({ forceLogoutToken: token });
       setSessionOnlineModal(null);
@@ -149,7 +151,7 @@ const Login: React.FC = () => {
       }
       navigate('/dashboard');
     } catch (err: any) {
-      setError(getAuthErrorMessage(err));
+      setErrorAndShow(getAuthErrorMessage(err));
     } finally {
       setForceLogoutLoading(false);
     }
@@ -157,9 +159,8 @@ const Login: React.FC = () => {
 
   const handleResendOtp = async () => {
     if (countdown > 0) return;
-    setError(null);
+    setErrorAndShow(null);
     setLoading(true);
-
     try {
       const normalizedPhone = normalizePhoneNumber(phone);
       await authService.sendOtp(normalizedPhone);
@@ -174,23 +175,47 @@ const Login: React.FC = () => {
         });
       }, 1000);
     } catch (err: any) {
-      setError(getAuthErrorMessage(err));
+      setErrorAndShow(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
+  const inputGlass =
+    'w-full px-4 py-3 rounded-xl bg-white/70 dark:bg-white/10 border border-white/40 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent backdrop-blur-sm transition-all';
+  const btnPrimary =
+    'w-full py-3.5 px-4 rounded-xl font-medium text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-white/80 disabled:opacity-70 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/25';
+  const glassCard =
+    'bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/20 rounded-3xl shadow-2xl p-8';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      {error && !sessionOnlineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="error-title">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
-            <p id="error-title" className="font-medium text-red-700 mb-3">خطا</p>
-            <p className="text-gray-800 mb-6 text-right">{error}</p>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-slate-100 via-indigo-50/50 to-violet-100 dark:from-slate-900 dark:via-indigo-950/30 dark:to-slate-900">
+      {/* مودال خطای بک‌اند — فقط وقتی خطا داریم */}
+      {showErrorModal && error && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="error-modal-title"
+        >
+          <div className={`${glassCard} max-w-md w-full`}>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 id="error-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  خطا
+                </h2>
+                <p className="text-gray-700 dark:text-gray-300 text-right leading-relaxed">{error}</p>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => setError(null)}
-              className="w-full py-2.5 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              onClick={() => setErrorAndShow(null)}
+              className={`mt-6 ${btnPrimary}`}
             >
               متوجه شدم
             </button>
@@ -198,97 +223,108 @@ const Login: React.FC = () => {
         </div>
       )}
 
-      {/* پاپ‌آپ: سشن در دیتابیس (UserSession) فعال است — با تأیید رکورد پاک می‌شود و ورود انجام می‌شود */}
+      {/* پاپ‌آپ: اکانت روی دستگاه دیگری فعال است */}
       {sessionOnlineModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog" aria-modal="true" aria-labelledby="session-online-title">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 text-center">
-            <p id="session-online-title" className="font-medium text-red-700 mb-2">
-              این اکانت الان آنلاین است
-            </p>
-            <p className="text-gray-800 mb-2 text-right">
-              {sessionOnlineModal.message}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              این اکانت روی دستگاه دیگری ({deviceTypeLabel[sessionOnlineModal.deviceType] || sessionOnlineModal.deviceType}) لاگین است. با زدن «ورود از اینجا» سشن آن دستگاه پاک می‌شود و از اینجا وارد می‌شوید.
-            </p>
-            <button
-              type="button"
-              onClick={handleReplaceSessionAndLogin}
-              disabled={forceLogoutLoading}
-              className="w-full py-2.5 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {forceLogoutLoading ? 'در حال انجام...' : 'ورود از اینجا (پاک کردن سشن قبلی)'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSessionOnlineModal(null)}
-              disabled={forceLogoutLoading}
-              className="mt-3 w-full py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
-            >
-              انصراف
-            </button>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="session-online-title"
+        >
+          <div className={`${glassCard} max-w-md w-full`}>
+            <div className="flex items-start gap-3 mb-6">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 id="session-online-title" className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  این اکانت الان آنلاین است
+                </h2>
+                <p className="text-gray-700 dark:text-gray-300 text-right text-sm leading-relaxed">
+                  {sessionOnlineModal.message}
+                </p>
+                <p className="text-gray-600 dark:text-gray-400 text-right text-sm mt-2">
+                  این اکانت روی دستگاه دیگری ({deviceTypeLabel[sessionOnlineModal.deviceType] || sessionOnlineModal.deviceType}) لاگین است. با زدن «ورود از اینجا» سشن آن دستگاه پاک می‌شود و از اینجا وارد می‌شوید.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleReplaceSessionAndLogin}
+                disabled={forceLogoutLoading}
+                className={btnPrimary}
+              >
+                {forceLogoutLoading ? 'در حال انجام...' : 'ورود از اینجا (پاک کردن سشن قبلی)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSessionOnlineModal(null)}
+                disabled={forceLogoutLoading}
+                className="w-full py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 transition-colors"
+              >
+                انصراف
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            ورود به حساب کاربری
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            یا{' '}
-            <button
-              onClick={() => navigate('/register')}
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              حساب جدید ایجاد کنید
-            </button>
-          </p>
-          <div className="mt-4 flex justify-center space-x-2 rtl:space-x-reverse">
+      <div className="w-full max-w-md">
+        <div className={glassCard}>
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              ورود به حساب کاربری
+            </h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              یا{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                حساب جدید ایجاد کنید
+              </button>
+            </p>
+          </div>
+
+          <div className="flex rounded-xl bg-white/50 dark:bg-white/5 p-1 gap-1 mb-6">
             <button
               type="button"
-              onClick={() => {
-                setMode('otp');
-                setError(null);
-              }}
-              className={`px-3 py-1 text-sm rounded-md border ${mode === 'otp' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
+              onClick={() => { setMode('otp'); setErrorAndShow(null); }}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === 'otp'
+                  ? 'bg-white dark:bg-white/20 text-indigo-600 dark:text-indigo-300 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
             >
               ورود با کد تایید
             </button>
             <button
               type="button"
-              onClick={() => {
-                setMode('password');
-                setError(null);
-              }}
-              className={`px-3 py-1 text-sm rounded-md border ${mode === 'password' ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'border-gray-200 text-gray-600'}`}
+              onClick={() => { setMode('password'); setErrorAndShow(null); }}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                mode === 'password'
+                  ? 'bg-white dark:bg-white/20 text-indigo-600 dark:text-indigo-300 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
             >
               ورود با رمز عبور
             </button>
           </div>
-        </div>
 
-        {error && (
-          <div className="rounded-md bg-red-50 border border-red-200 p-4 text-right" role="alert">
-            <p className="text-sm font-medium text-red-800">{error}</p>
-          </div>
-        )}
-
-        {mode === 'password' ? (
-          // Password Login Form
-          <form className="mt-8 space-y-6" onSubmit={handlePasswordLogin}>
-            <div className="rounded-md shadow-sm -space-y-px">
+          {mode === 'password' ? (
+            <form onSubmit={handlePasswordLogin} className="space-y-5">
               <div>
-                <label htmlFor="login" className="sr-only">
-                  ایمیل یا نام کاربری
-                </label>
+                <label htmlFor="login" className="sr-only">ایمیل یا نام کاربری</label>
                 <input
                   id="login"
                   type="text"
                   autoComplete="username"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  className={inputGlass}
                   placeholder="ایمیل یا نام کاربری"
                   value={loginInput}
                   onChange={(e) => setLoginInput(e.target.value)}
@@ -296,159 +332,120 @@ const Login: React.FC = () => {
                 />
               </div>
               <div>
-                <label htmlFor="password" className="sr-only">
-                  رمز عبور
-                </label>
+                <label htmlFor="password" className="sr-only">رمز عبور</label>
                 <input
                   id="password"
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  className={inputGlass}
                   placeholder="رمز عبور"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   disabled={loading}
                 />
               </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {loading && (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
+              <button type="submit" disabled={loading} className={btnPrimary}>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    در حال ورود...
+                  </span>
+                ) : (
+                  'ورود'
                 )}
-                {loading ? 'در حال ورود...' : 'ورود'}
               </button>
-            </div>
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('otp');
-                }}
-                className="text-sm text-indigo-600 hover:text-indigo-500"
-              >
-                ورود با کد تایید
-              </button>
-            </div>
-          </form>
-        ) : step === 'phone' ? (
-          // Phone Number Step — سشن از دیتابیس چک می‌شود قبل از ارسال OTP
-          <form className="mt-8 space-y-6" onSubmit={handleSendOtp}>
-            <div>
-              <label htmlFor="phone" className="sr-only">
-                شماره تلفن همراه
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                autoComplete="tel"
-                required
-                pattern="09\d{9}"
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="09123456789"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {loading && (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                )}
-                {loading ? 'در حال ارسال...' : 'ارسال کد تایید'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          // OTP Verification Step
-          <form className="mt-8 space-y-6" onSubmit={handleVerifyOtp}>
-            <div>
-              <p className="text-sm text-gray-600 mb-2 text-center">
-                کد تایید به شماره {phone} ارسال شد
-              </p>
-              <label htmlFor="otp" className="sr-only">
-                کد تایید
-              </label>
-              <input
-                id="otp"
-                type="text"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                required
-                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-center text-2xl tracking-widest"
-                placeholder="------"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="group relative w-full flex justify-center items-center gap-2 py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {loading && (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                )}
-                {loading ? 'در حال تایید...' : 'تایید و ورود'}
-              </button>
-            </div>
-
-            <div className="text-center space-y-2">
-              {countdown > 0 ? (
-                <p className="text-sm text-gray-500">
-                  ارسال مجدد کد تایید در {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
-                </p>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleResendOtp}
-                  disabled={loading}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
-                >
-                  ارسال مجدد کد تایید
-                </button>
-              )}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('phone');
-                    setOtp('');
-                  }}
-                  className="text-sm text-gray-600 hover:text-gray-800"
-                >
-                  تغییر شماره تلفن
+              <div className="text-center">
+                <button type="button" onClick={() => setMode('otp')} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+                  ورود با کد تایید
                 </button>
               </div>
-            </div>
-          </form>
-        )}
+            </form>
+          ) : step === 'phone' ? (
+            <form onSubmit={handleSendOtp} className="space-y-5">
+              <div>
+                <label htmlFor="phone" className="sr-only">شماره تلفن همراه</label>
+                <input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  className={inputGlass}
+                  placeholder="09123456789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+              <button type="submit" disabled={loading} className={btnPrimary}>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    در حال ارسال...
+                  </span>
+                ) : (
+                  'ارسال کد تایید'
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                کد تایید به شماره {phone} ارسال شد
+              </p>
+              <div>
+                <label htmlFor="otp" className="sr-only">کد تایید</label>
+                <input
+                  id="otp"
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  required
+                  className={`${inputGlass} text-center text-2xl tracking-[0.5em]`}
+                  placeholder="------"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={loading}
+                />
+              </div>
+              <button type="submit" disabled={loading || otp.length !== 6} className={btnPrimary}>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    در حال تایید...
+                  </span>
+                ) : (
+                  'تایید و ورود'
+                )}
+              </button>
+              <div className="text-center space-y-2">
+                {countdown > 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    ارسال مجدد کد تا {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+                  </p>
+                ) : (
+                  <button type="button" onClick={handleResendOtp} disabled={loading} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50">
+                    ارسال مجدد کد تایید
+                  </button>
+                )}
+                <div>
+                  <button type="button" onClick={() => { setStep('phone'); setOtp(''); }} className="text-sm text-gray-600 dark:text-gray-400 hover:underline">
+                    تغییر شماره تلفن
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

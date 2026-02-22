@@ -132,6 +132,7 @@ export class AssignSalesPersonDto {
 export class UpdateUserDto {
   @ApiProperty({ example: 'john@example.com' })
   @IsOptional()
+  @ValidateIf((o) => o.email != null && o.email !== '')
   @IsEmail()
   email?: string;
 
@@ -167,16 +168,19 @@ export class UpdateUserDto {
 
   @ApiProperty({ example: true })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   isActive?: boolean;
 
   @ApiProperty({ example: false })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   isOld?: boolean;
 
   @ApiProperty({ example: false, required: false, description: 'کاربر خارجی' })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   isForeign?: boolean;
 
@@ -207,12 +211,14 @@ export class UpdateUserDto {
 
   @ApiProperty({ example: 'newpassword123', required: false, description: 'New password for the user. Admin can change any user password.' })
   @IsOptional()
+  @ValidateIf((o) => o.password != null && o.password !== '')
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password?: string;
 
   @ApiProperty({ example: 'newpassword123', required: false, description: 'Confirm new password. Must match password.' })
   @IsOptional()
+  @ValidateIf((o) => o.password != null && o.password !== '')
   @IsString()
   @Match('password', { message: 'Confirm password must match password' })
   confirmPassword?: string;
