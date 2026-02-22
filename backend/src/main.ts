@@ -31,6 +31,44 @@ async function bootstrap() {
 
 
 
+  const allowedOrigins = [
+    'https://admin.manehaghighi.com',
+    'https://sales.manehaghighi.com',
+    'https://manehaghighi.com',
+    'https://www.manehaghighi.com',
+  ];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile apps)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'Range',
+      'Content-Range',
+      'Accept-Ranges',
+      'Cache-Control',
+      'Pragma',
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range', 'Accept-Ranges', 'Content-Location'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
+  });
+
   app.use(require('express').json({ limit: '10gb' }));
   app.use(require('express').urlencoded({ limit: '10gb', extended: true }));
 
