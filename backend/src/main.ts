@@ -31,20 +31,42 @@ async function bootstrap() {
 
 
 
-  const allowedOrigins = [
-    'https://admin.manehaghighi.com',
-    'https://sales.manehaghighi.com',
-    'https://manehaghighi.com',
-    'https://www.manehaghighi.com',
+  const allowedOriginPatterns = [
+    /^https:\/\/(www\.)?manehaghighi\.com$/,
+    /^https:\/\/admin\.manehaghighi\.com$/,
+    /^https:\/\/sales\.manehaghighi\.com$/,
+    /^https:\/\/api\.manehaghighi\.com$/,
+    /^http:\/\/localhost(:\d+)?$/,
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+    /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+    /^https?:\/\/localhost(:\d+)?$/,
   ];
-  
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // curl / mobile
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
+      if (!origin) return callback(null, true); // curl / mobile / Postman
+      const normalized = origin.replace(/\/$/, '');
+      const allowed = allowedOriginPatterns.some((re) => re.test(normalized));
+      if (allowed) return callback(null, true);
+      callback(null, false);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'Range',
+      'Accept-Ranges',
+      'Content-Range',
+      'Cache-Control',
+      'Pragma',
+    ],
+    exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range', 'Accept-Ranges'],
+    optionsSuccessStatus: 204,
+    maxAge: 86400,
   });
   app.use(require('express').json({ limit: '20gb' }));
   app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
