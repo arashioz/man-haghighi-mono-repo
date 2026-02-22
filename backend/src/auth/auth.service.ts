@@ -401,8 +401,13 @@ export class AuthService {
     return sessionId;
   }
 
-  private async deleteSessionForUser(userId: string) {
-    await this.prisma.userSession.deleteMany({ where: { userId } });
+  /** سشن‌های این کاربر را پاک می‌کند؛ حتی سشن قدیمی یا نبود رکورد بدون ارور انجام می‌شود */
+  private async deleteSessionForUser(userId: string): Promise<void> {
+    try {
+      await this.prisma.userSession.deleteMany({ where: { userId } });
+    } catch (e) {
+      this.logger.warn(`deleteSessionForUser(${userId}) failed (ignored):`, e);
+    }
   }
 
   /** سشن‌های قدیمی‌تر از یک روز را پاک می‌کند */
@@ -434,18 +439,40 @@ export class AuthService {
     // Single-device session check only for regular users; admin can use multiple devices
     if (user.role === 'USER') {
       const sessionId = payload.sessionId;
-      if (!sessionId) {
-        throw new UnauthorizedException('این اکانت از دستگاه دیگری وارد شده است. لطفاً دوباره وارد شوید.');
-      }
       const session = await this.prisma.userSession.findUnique({
         where: { userId: String(user.id) },
       });
-      if (!session || session.sessionId !== sessionId) {
-        throw new UnauthorizedException('این اکانت از دستگاه دیگری وارد شده است. لطفاً دوباره وارد شوید.');
+      const sessionMismatch = !sessionId || !session || session.sessionId !== sessionId;
+      if (sessionMismatch) {
+        const message = 'این اکانت از دستگاه دیگری وارد شده است. لطفاً دوباره وارد شوید.';
+        if (session) {
+          throw new UnauthorizedException({
+            message,
+            session: { deviceType: session.deviceType, updatedAt: session.updatedAt },
+          });
+        }
+        throw new UnauthorizedException({ message });
       }
     }
 
     return user;
+  }
+
+  async checkSessionByPhone(phone: string): Promise<{ hasSession: boolean; session?: { deviceType: string; updatedAt: Date } }> {
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return { hasSession: false };
+    const user = await this.prisma.user.findUnique({
+      where: { phone: normalizedPhone },
+    });
+    if (!user) return { hasSession: false };
+    const session = await this.prisma.userSession.findUnique({
+      where: { userId: user.id },
+    });
+    if (!session) return { hasSession: false };
+    return {
+      hasSession: true,
+      session: { deviceType: session.deviceType, updatedAt: session.updatedAt },
+    };
   }
 
   async sendOtp(sendOtpDto: SendOtpDto) {

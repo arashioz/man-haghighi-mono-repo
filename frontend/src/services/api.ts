@@ -72,6 +72,7 @@ api.interceptors.request.use((config) => {
     '/auth/register',
     '/auth/send-otp',
     '/auth/verify-otp',
+    '/auth/sessions/check-by-phone',
   ];
   
   // Check if the current request is to a public endpoint
@@ -128,10 +129,14 @@ api.interceptors.response.use(
 
     // Only redirect to login for 401 errors, not validation errors (400)
     if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
-      const message = error.response?.data?.message;
+      const data = error.response?.data;
+      const message = data?.message;
       const text = typeof message === 'string' && message.trim() ? message.trim() : 'کاربر وجود ندارد';
       try {
         sessionStorage.setItem('login_401_message', text);
+        if (data?.session && typeof data.session === 'object') {
+          sessionStorage.setItem('login_401_session', JSON.stringify(data.session));
+        }
       } catch (_) {}
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -152,6 +157,11 @@ export const authService = {
 
   register: async (credentials: RegisterCredentials): Promise<AuthResponse> => {
     const response = await api.post('/auth/register', credentials);
+    return response.data;
+  },
+
+  checkSessionByPhone: async (phone: string): Promise<{ hasSession: boolean; session?: { deviceType: string; updatedAt: string } }> => {
+    const response = await api.post('/auth/sessions/check-by-phone', { phone });
     return response.data;
   },
 

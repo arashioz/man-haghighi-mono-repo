@@ -101,6 +101,14 @@ export class SendOtpDto {
   phone: string;
 }
 
+export class CheckSessionByPhoneDto {
+  @ApiProperty({ example: '09123456789' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
+  phone: string;
+}
+
 export class VerifyOtpDto {
   @ApiProperty({ example: '09123456789' })
   @IsString()

@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Get, Request, Patch } from '@nestjs/
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, ForceLogoutAllDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, ForceLogoutAllDto, CheckSessionByPhoneDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
 
@@ -58,6 +58,16 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async forceLogoutAll(@Body() dto: ForceLogoutAllDto) {
     return this.authService.forceLogoutAll(dto);
+  }
+
+  @Post('sessions/check-by-phone')
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({ summary: 'Check if user has active session in DB (by phone)' })
+  @ApiResponse({ status: 200, description: 'hasSession and optional session (deviceType, updatedAt)' })
+  async checkSessionByPhone(@Body() dto: CheckSessionByPhoneDto) {
+    return this.authService.checkSessionByPhone(dto.phone);
   }
 
   @Post('send-otp')
