@@ -37,8 +37,10 @@ async function bootstrap() {
 
   // Apply helmet with proper security configuration
   // CSP temporarily disabled to allow app access
+  // crossOriginResourcePolicy: cross-origin تا عکس/مدیا از API روی فرانت (دامنه دیگر) لود شود
   app.use(helmet({
     contentSecurityPolicy: false, // Disabled temporarily
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: {
       maxAge: 31536000, // 1 year
       includeSubDomains: true,
