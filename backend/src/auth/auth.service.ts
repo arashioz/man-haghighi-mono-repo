@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Prisma, UserRole } from '@prisma/client';
@@ -226,11 +226,11 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('کاربر ثبت نام نشده');
+      throw new BadRequestException('کاربر ثبت نام نشده');
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('حساب کاربری غیرفعال است');
+      throw new BadRequestException('حساب کاربری غیرفعال است');
     }
 
     const hasPasswordInput = typeof password === 'string' && password.trim() !== '';
@@ -240,12 +240,12 @@ export class AuthService {
         const message = user.role === 'USER'
           ? 'برای ورود با رمز عبور، ابتدا رمز عبور تعیین کنید یا از ورود با کد یکبارمصرف استفاده کنید.'
           : 'Password not set for this user. Please use OTP authentication.';
-        throw new UnauthorizedException(message);
+        throw new BadRequestException(message);
       }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        throw new UnauthorizedException('پسورد یا نام کاربری اشتباه است');
+        throw new BadRequestException('پسورد یا نام کاربری اشتباه است');
       }
 
       // Session tracking (single device) only for regular users, not admin

@@ -127,8 +127,11 @@ api.interceptors.response.use(
       }
     }
 
-    // Only redirect to login for 401 errors, not validation errors (400)
-    if (error.response?.status === 401 && error.config?.url !== '/auth/login') {
+    // فقط برای ۴۰۱هایی که مربوط به درخواست لاگین/ثبت‌نام نیستند redirect و پاک‌کردن توکن
+    // برای POST /auth/login و مشابه، ارور را دست‌نخورده به catch می‌دهیم تا پیام بک‌اند نمایش داده شود
+    const isAuthLoginOrRegister =
+      error.config?.url?.includes('auth/login') || error.config?.url?.includes('auth/register');
+    if (error.response?.status === 401 && !isAuthLoginOrRegister) {
       const data = error.response?.data;
       const message = data?.message;
       const text = typeof message === 'string' && message.trim() ? message.trim() : 'کاربر وجود ندارد';
