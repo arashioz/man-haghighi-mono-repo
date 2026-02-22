@@ -17,14 +17,12 @@ export function getAuthErrorMessage(err: any): string {
   if (typeof data === 'string' && data.trim()) return data.trim();
 
   const status = err?.response?.status;
-  const code = err?.code;
-return err.response
-  
-  // if (status === 401) return 'کاربر ثبت نام نشده یا اطلاعات ورود اشتباه است.';
-  // if (status === 403) return 'دسترسی مجاز نیست.';
-  // if (status === 404) return 'سرویس در دسترس نیست.';
-  // if (status === 429) return 'درخواست زیاد. چند دقیقه دیگر تلاش کنید.';
-  // if (status >= 500) return 'مشکلی در سرور پیش آمده. کمی بعد دوباره تلاش کنید.';
+  if (status === 401) return 'کاربر ثبت‌نام نشده یا اطلاعات ورود اشتباه است.';
+  if (status === 403) return 'دسترسی مجاز نیست.';
+  if (status === 404) return 'سرویس در دسترس نیست.';
+  if (status === 429) return 'درخواست زیاد. چند دقیقه دیگر تلاش کنید.';
+  if (status >= 500) return 'مشکلی در سرور پیش آمده. کمی بعد دوباره تلاش کنید.';
 
-  // return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
+  if (err?.message && typeof err.message === 'string' && err.message.trim()) return err.message.trim();
+  return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
 }
