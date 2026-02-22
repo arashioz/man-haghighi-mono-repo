@@ -44,37 +44,30 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // curl / mobile / Postman
-      const normalized = origin.replace(/\/$/, '');
-      const allowed = allowedOriginPatterns.some((re) => re.test(normalized));
-      if (allowed) return callback(null, true);
-      callback(null, false);
+      if (!origin) return callback(null, true); // Postman, curl
+      const allowed = [
+        'https://manehaghighi.com',
+        'https://www.manehaghighi.com',
+        'https://admin.manehaghighi.com',
+        'https://sales.manehaghighi.com',
+      ];
+      callback(null, allowed.includes(origin));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'Origin',
-      'X-Requested-With',
-      'Range',
-      'Accept-Ranges',
-      'Content-Range',
-      'Cache-Control',
-      'Pragma',
-    ],
-    exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range', 'Accept-Ranges'],
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS','HEAD'],
+    allowedHeaders: ['Content-Type','Authorization','Accept','Origin','X-Requested-With'],
+    exposedHeaders: ['Content-Length','Content-Type'],
     optionsSuccessStatus: 204,
-    maxAge: 86400,
   });
   app.use(require('express').json({ limit: '20gb' }));
   app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
 
   // Apply helmet with proper security configuration
   // CSP temporarily disabled to allow app access
+  // crossOriginResourcePolicy: cross-origin تا عکس/مدیا از api روی فرانت (دامنه دیگر) لود شود
   app.use(helmet({
     contentSecurityPolicy: false, // Disabled temporarily
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     hsts: {
       maxAge: 31536000, // 1 year
       includeSubDomains: true,
