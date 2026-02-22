@@ -6,6 +6,15 @@ import { normalizePhoneNumber } from '../utils/phoneUtils';
 
 const LOGIN_401_KEY = 'login_401_message';
 
+function getBackendErrorMessage(err: any): string {
+  const data = err?.response?.data;
+  if (!data) return err?.message || 'ورود ناموفق';
+  const msg = data.message;
+  if (Array.isArray(msg)) return msg.join(' ');
+  if (typeof msg === 'string' && msg.trim()) return msg.trim();
+  return data.error || err?.message || 'ورود ناموفق';
+}
+
 const Login: React.FC = () => {
   const [loginType, setLoginType] = useState<'admin' | 'sales' | 'seller'>('admin');
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -13,7 +22,8 @@ const Login: React.FC = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -22,7 +32,8 @@ const Login: React.FC = () => {
       const stored = sessionStorage.getItem(LOGIN_401_KEY);
       if (stored && stored.trim()) {
         sessionStorage.removeItem(LOGIN_401_KEY);
-        setError(stored.trim());
+        setErrorModalMessage(stored.trim());
+        setShowErrorModal(true);
       }
     } catch (_) {}
   }, []);
@@ -30,7 +41,8 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setShowErrorModal(false);
+    setErrorModalMessage('');
 
     try {
       // Normalize phone number if login input is a phone number (not admin)
@@ -43,10 +55,16 @@ const Login: React.FC = () => {
       await login(normalizedCredentials);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'ورود ناموفق');
+      setErrorModalMessage(getBackendErrorMessage(err));
+      setShowErrorModal(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeErrorModal = () => {
+    setShowErrorModal(false);
+    setErrorModalMessage('');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,8 +84,7 @@ const Login: React.FC = () => {
             </h1>
             <p className="text-gray-600">پلتفرم حقیقی</p>
           </div>
-          
-          {}
+
           <div className="flex justify-center mb-6">
             <div className="bg-gray-100 rounded-lg p-1 flex">
               <button
@@ -105,24 +122,7 @@ const Login: React.FC = () => {
               </button>
             </div>
           </div>
-          
-          {}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="mr-3">
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="login" className="block text-sm font-medium text-gray-700 mb-2">
@@ -183,8 +183,7 @@ const Login: React.FC = () => {
               )}
             </button>
           </form>
-          
-          {}
+
           {/* <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 mb-2">
               <strong>اطلاعات آزمایشی:</strong>
@@ -211,6 +210,43 @@ const Login: React.FC = () => {
           </div> */}
         </div>
       </div>
+
+      {/* مودال خطای بک‌اند */}
+      {showErrorModal && errorModalMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="error-modal-title"
+        >
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-red-100">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 id="error-modal-title" className="text-lg font-semibold text-gray-900 mb-1">
+                  خطا
+                </h2>
+                <p className="text-gray-700 text-right leading-relaxed">
+                  {errorModalMessage}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                onClick={closeErrorModal}
+                className="px-6 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+              >
+                متوجه شدم
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
