@@ -13,7 +13,7 @@ export function getAuthErrorMessage(err: any): string {
   const status = err?.response?.status;
   const code = err?.code;
 
-  if (status === 401) return 'کاربر ثبت نام نشده یا اطلاعات ورود اشتباه است.';
+  if (status === 401) return err.response
   if (status === 403) return 'دسترسی مجاز نیست.';
   if (status === 404) return 'سرویس در دسترس نیست.';
   if (status === 409) return 'این اطلاعات قبلاً ثبت شده است.';
