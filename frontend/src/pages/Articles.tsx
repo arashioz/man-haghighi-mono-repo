@@ -68,7 +68,7 @@ const Articles: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-violet-400"></div>
       </div>
     );
   }
@@ -97,7 +97,7 @@ const Articles: React.FC = () => {
           >
             <motion.p
               variants={fadeUp}
-              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400 mb-4"
             >
               مقالات
             </motion.p>
@@ -140,7 +140,7 @@ const Articles: React.FC = () => {
                     variants={fadeUp}
                     whileHover={{ y: -8, scale: 1.02 }}
                     onClick={() => navigate(`/articles/${article.slug}`)}
-                    className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                    className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-violet-500/30 hover:shadow-[0_25px_60px_-20px_rgba(139,92,246,0.3)]"
                   >
                     <div className="relative h-56 overflow-hidden">
                       <img
@@ -150,13 +150,13 @@ const Articles: React.FC = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
                       <div className="absolute top-4 right-4">
-                        <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                        <span className="px-3 py-1 bg-violet-400/20 backdrop-blur rounded-full text-xs font-semibold text-violet-400 uppercase tracking-wider">
                           مقاله
                         </span>
                       </div>
                     </div>
                     <div className="p-6">
-                      <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                      <h3 className="text-xl font-bold mb-3 text-white group-hover:text-violet-400 transition-colors line-clamp-2">
                         {article.title}
                       </h3>
                       {article.excerpt && (
@@ -165,11 +165,11 @@ const Articles: React.FC = () => {
                         </p>
                       )}
                       <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                        <span className="text-xs uppercase tracking-[0.3em] text-yellow-400">
+                        <span className="text-xs uppercase tracking-[0.3em] text-violet-400">
                           مطالعه بیشتر
                         </span>
                         <svg
-                          className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                          className="w-5 h-5 text-violet-400 transform group-hover:translate-x-1 transition-transform"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"

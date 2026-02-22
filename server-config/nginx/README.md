@@ -46,3 +46,13 @@
 - **HTTPS:** ریدایرکت خودکار از پورت ۸۰ به ۴۴۳ برای همهٔ دامنه‌ها.
 
 این فایل باید از **داخل بلوک `http { }`** لود شود (مثلاً با `include /etc/nginx/sites-enabled/*;` در nginx.conf). بلوک `map` برای CORS در ابتدای همین فایل قرار دارد.
+
+---
+
+## رفع خطای CORS: «No 'Access-Control-Allow-Origin' header»
+
+اگر از `manehaghighi.com` به `api.manehaghighi.com` درخواست می‌زنید و این خطا را می‌بینید:
+
+1. **فایل واحد:** روی سرور باید **همان یک فایل** `haghighi` (که هم map و هم بلوک `server` برای api.manehaghighi.com را دارد) لود شود. اگر api.manehaghighi.com در فایل دیگری تعریف شده، آن فایل به متغیر `$cors_api_origin` دسترسی ندارد و هدر CORS خالی می‌ماند.
+2. **لود map داخل `http`:** در `nginx.conf` داخل بلوک `http { }` فقط `include`هایی مثل `include /etc/nginx/sites-enabled/*;` داشته باشید و فایل `haghighi` را از همان جا include کنید. اگر فایل کانفیگ api را از جای دیگری (مثلاً خارج از `http`) include کنید، map کار نمی‌کند.
+3. **به‌روزرسانی و ریلود:** بعد از هر تغییر، حتماً `sudo nginx -t && sudo systemctl reload nginx` بزنید و در مرورگر یک بار Hard Refresh (Ctrl+Shift+R) یا حالت ناشناس امتحان کنید.

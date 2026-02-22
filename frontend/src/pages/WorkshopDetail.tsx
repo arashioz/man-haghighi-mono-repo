@@ -70,7 +70,7 @@ const WorkshopDetail: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-violet-400 mx-auto mb-4"></div>
           <p className="text-white/60 text-sm">در حال بارگذاری...</p>
         </div>
       </div>
@@ -99,7 +99,7 @@ const WorkshopDetail: React.FC = () => {
           <p className="text-red-400 mb-4">{error || 'کارگاه یافت نشد'}</p>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-2 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-full text-yellow-400 text-sm font-semibold transition-colors"
+            className="px-6 py-2 bg-violet-400/20 hover:bg-violet-400/30 border border-violet-400/30 rounded-full text-violet-400 text-sm font-semibold transition-colors"
           >
             بازگشت به صفحه اصلی
           </button>
@@ -134,7 +134,7 @@ const WorkshopDetail: React.FC = () => {
               <span className={`px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wider ${
                 workshop.isActive
                   ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                  : 'bg-yellow-400/20 text-yellow-400 border border-yellow-400/30'
+                  : 'bg-violet-400/20 text-violet-400 border border-violet-400/30'
               }`}>
                 {workshop.isActive ? 'رویداد فعال' : 'رویداد آتی'}
               </span>
@@ -174,7 +174,7 @@ const WorkshopDetail: React.FC = () => {
             {/* Description */}
             {workshop.description && (
               <div className="border border-white/10 rounded-[32px] p-8 bg-black/40 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold mb-4 text-yellow-400">درباره کارگاه</h2>
+                <h2 className="text-2xl font-bold mb-4 text-violet-400">درباره کارگاه</h2>
                 <p className="text-white/80 leading-relaxed whitespace-pre-line">
                   {workshop.description}
                 </p>
@@ -185,7 +185,7 @@ const WorkshopDetail: React.FC = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 border border-white/10 rounded-[32px] p-6 bg-black/40 backdrop-blur-sm">
-              <h3 className="text-xl font-bold mb-6 text-yellow-400">اطلاعات کارگاه</h3>
+              <h3 className="text-xl font-bold mb-6 text-violet-400">اطلاعات کارگاه</h3>
               
               <div className="space-y-4 mb-6">
                 <div>
@@ -225,7 +225,7 @@ const WorkshopDetail: React.FC = () => {
                 disabled={!workshop.isActive}
                 className={`w-full rounded-full px-6 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-300 ${
                   workshop.isActive
-                    ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] hover:scale-105'
+                    ? 'bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] hover:scale-105'
                     : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
                 }`}
               >
@@ -269,7 +269,7 @@ const WorkshopDetail: React.FC = () => {
                   onChange={(e) =>
                     setPreRegisterData({ ...preRegisterData, customerName: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-yellow-400/50 transition-colors"
+                  className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/50 transition-colors"
                   required
                   placeholder="نام و نام خانوادگی خود را وارد کنید"
                 />
@@ -285,7 +285,7 @@ const WorkshopDetail: React.FC = () => {
                   onChange={(e) =>
                     setPreRegisterData({ ...preRegisterData, customerPhone: e.target.value })
                   }
-                  className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-yellow-400/50 transition-colors"
+                  className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-violet-400/50 transition-colors"
                   required
                   placeholder="09123456789"
                 />
@@ -303,7 +303,7 @@ const WorkshopDetail: React.FC = () => {
                 <button
                   type="submit"
                   disabled={preRegisterLoading}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 text-black rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all duration-300 disabled:opacity-50 font-semibold"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 text-black rounded-lg hover:from-violet-500 hover:to-violet-600 transition-all duration-300 disabled:opacity-50 font-semibold"
                 >
                   {preRegisterLoading ? 'در حال ثبت...' : 'پیش‌ثبت‌نام'}
                 </button>

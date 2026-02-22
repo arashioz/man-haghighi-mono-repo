@@ -61,7 +61,7 @@ const About: React.FC = () => {
           <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-6">
             <motion.p
               variants={fadeUp}
-              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400"
             >
               درباره ما
             </motion.p>
@@ -75,7 +75,7 @@ const About: React.FC = () => {
             <motion.div variants={fadeUp} className="flex flex-wrap gap-4">
               <button
                 onClick={() => navigate('/contact')}
-                className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                className="rounded-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] transition hover:scale-105"
               >
                 ارتباط با ما
               </button>
@@ -128,15 +128,15 @@ const About: React.FC = () => {
 
               <motion.div variants={fadeUp} className="grid gap-4 sm:grid-cols-3">
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
-                  <p className="text-3xl font-black text-yellow-400">8+</p>
+                  <p className="text-3xl font-black text-violet-400">8+</p>
                   <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">سال فعالیت</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
-                  <p className="text-3xl font-black text-yellow-400">2000+</p>
+                  <p className="text-3xl font-black text-violet-400">2000+</p>
                   <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">کارگاه آموزشی</p>
                 </div>
                 <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur">
-                  <p className="text-3xl font-black text-yellow-400">200K+</p>
+                  <p className="text-3xl font-black text-violet-400">200K+</p>
                   <p className="mt-2 text-xs uppercase tracking-[0.35em] text-white/60">شرکت‌کننده</p>
                 </div>
               </motion.div>
@@ -185,7 +185,7 @@ const About: React.FC = () => {
                     className="h-16 w-16 rounded-2xl object-cover border border-white/20"
                   />
                   <div className="flex-1">
-                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-yellow-400">فراز قورچیان</p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-violet-400">فراز قورچیان</p>
                     <p className="mt-2 text-white/70 text-sm">موسس، مدیرعامل و راهبر گروه آموزشی من حقیقی</p>
                   </div>
                 </div>
@@ -208,7 +208,7 @@ const About: React.FC = () => {
             className="space-y-8"
           >
             <motion.div variants={fadeUp} className="space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">حوزه‌ها</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400">حوزه‌ها</p>
               <h2 className="text-3xl font-bold sm:text-4xl text-right">آنچه در من حقیقی پیدا می‌کنید</h2>
               <p className="max-w-3xl text-white/70 text-right">
                 کارگاه‌ها و دوره‌های ما حول هسته‌های کلیدی خودشناسی، ناخودآگاه، روابط و معنا طراحی شده‌اند—هم برای حضور
@@ -221,9 +221,9 @@ const About: React.FC = () => {
                 <motion.div
                   key={item.title}
                   variants={fadeUp}
-                  className="rounded-[32px] border border-white/10 bg-[#0a0a0a] p-8 hover:border-yellow-500/30 transition-colors"
+                  className="rounded-[32px] border border-white/10 bg-[#0a0a0a] p-8 hover:border-violet-500/30 transition-colors"
                 >
-                  <p className="text-xs uppercase tracking-[0.5em] text-yellow-400">محور آموزشی</p>
+                  <p className="text-xs uppercase tracking-[0.5em] text-violet-400">محور آموزشی</p>
                   <h3 className="mt-4 text-2xl font-bold text-right">{item.title}</h3>
                   <p className="mt-4 text-white/70 leading-relaxed text-right">{item.desc}</p>
                 </motion.div>
@@ -241,9 +241,9 @@ const About: React.FC = () => {
             viewport={{ once: true, amount: 0.3 }}
             className="relative overflow-hidden rounded-[40px] border border-white/10 bg-gradient-to-r from-black via-[#0b0b0b] to-black p-10"
           >
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-yellow-500/20 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-violet-500/20 to-transparent" />
             <div className="relative space-y-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">هم‌مسیر شوید</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400">هم‌مسیر شوید</p>
               <h2 className="text-3xl font-bold sm:text-4xl text-right">
                 چه حضوری، چه آنلاین—شما هم بخشی از داستان ما هستید
               </h2>

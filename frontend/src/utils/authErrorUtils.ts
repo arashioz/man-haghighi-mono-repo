@@ -1,10 +1,10 @@
 /**
- * پیام خطا را از بک‌اند برمی‌گرداند؛ فقط وقتی سرور پیامی نفرستاده از متن پیش‌فرض استفاده می‌شود.
+ * پیام خطا را از بک‌اند برمی‌گرداند؛ اول همیشه response.data.message چک می‌شود تا متن مستقیم بک‌اند نمایش داده شود.
  */
 export function getAuthErrorMessage(err: any): string {
   const data = err?.response?.data;
 
-  // پیام مستقیم از بک‌اند (همان چیزی که سرور برمی‌گرداند)
+  // همیشه اول پیام مستقیم بک‌اند (برای 400، 401 و غیره)
   const msg = data?.message;
   if (typeof msg === 'string' && msg.trim()) return msg.trim();
   if (Array.isArray(msg) && msg.length > 0) {
@@ -17,12 +17,15 @@ export function getAuthErrorMessage(err: any): string {
   if (typeof data === 'string' && data.trim()) return data.trim();
 
   const status = err?.response?.status;
+  if (status === 400) return 'درخواست نامعتبر. لطفاً اطلاعات را بررسی کنید.';
   if (status === 401) return 'کاربر ثبت‌نام نشده یا اطلاعات ورود اشتباه است.';
   if (status === 403) return 'دسترسی مجاز نیست.';
   if (status === 404) return 'سرویس در دسترس نیست.';
   if (status === 429) return 'درخواست زیاد. چند دقیقه دیگر تلاش کنید.';
   if (status >= 500) return 'مشکلی در سرور پیش آمده. کمی بعد دوباره تلاش کنید.';
 
-  if (err?.message && typeof err.message === 'string' && err.message.trim()) return err.message.trim();
+  // اگر response رسیده ولی message نبود، از error یا message سرور استفاده کن
+  if (data?.error && typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+  if (err?.message && typeof err.message === 'string' && err.message.trim() && err.message !== 'Network Error') return err.message.trim();
   return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
 }

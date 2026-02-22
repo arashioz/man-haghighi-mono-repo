@@ -932,7 +932,7 @@ const UserDashboard: React.FC = () => {
                         >
                           <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                              invoice.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600'
+                              invoice.status === 'PAID' ? 'bg-green-100 text-green-600' : 'bg-violet-100 text-violet-600'
                             }`}>
                               <span className="text-xl">
                                 {invoice.type === 'COURSE_PURCHASE' ? '📚' : invoice.type === 'WALLET_CHARGE' ? '💰' : '🔗'}
@@ -953,7 +953,7 @@ const UserDashboard: React.FC = () => {
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               invoice.status === 'PAID' ? 'bg-green-50 text-green-700 border border-green-100' : 
                               invoice.status === 'FAILED' ? 'bg-red-50 text-red-700 border border-red-100' :
-                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                              'bg-violet-50 text-violet-700 border border-violet-100'
                             }`}>
                               {invoice.status === 'PAID' ? 'پرداخت شده' : 
                                invoice.status === 'FAILED' ? 'ناموفق' : 'در انتظار'}

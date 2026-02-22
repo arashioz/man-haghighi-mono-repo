@@ -210,13 +210,13 @@ const Courses: React.FC = () => {
           >
             <motion.p
               variants={fadeUp}
-              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-6"
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400 mb-6"
             >
               دوره‌های آموزشی
             </motion.p>
             <motion.h1
               variants={fadeUp}
-              className="text-5xl font-black uppercase leading-tight sm:text-6xl lg:text-7xl mb-8 bg-gradient-to-r from-white via-yellow-400 to-white bg-clip-text text-transparent"
+              className="text-5xl font-black uppercase leading-tight sm:text-6xl lg:text-7xl mb-8 bg-gradient-to-r from-white via-violet-400 to-white bg-clip-text text-transparent"
             >
               برنامه‌های تحول
             </motion.h1>
@@ -258,7 +258,7 @@ const Courses: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="نام دوره، توضیحات یا مدرس را جستجو کنید..."
-                className="w-full px-6 py-4 pr-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all duration-300"
+                className="w-full px-6 py-4 pr-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400 transition-all duration-300"
                 dir="rtl"
               />
               <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
@@ -328,8 +328,8 @@ const Courses: React.FC = () => {
                   transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                   className="relative"
                 >
-                  <div className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full" />
-                  <div className="relative animate-spin rounded-full h-20 w-20 border-4 border-yellow-400/30 border-t-yellow-400 mx-auto mb-6" />
+                  <div className="absolute inset-0 bg-violet-400/20 blur-3xl rounded-full" />
+                  <div className="relative animate-spin rounded-full h-20 w-20 border-4 border-violet-400/30 border-t-violet-400 mx-auto mb-6" />
                 </motion.div>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -372,7 +372,7 @@ const Courses: React.FC = () => {
                 <motion.button
                   variants={fadeUp}
                   onClick={() => window.location.reload()}
-                  className="px-8 py-3 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-full text-yellow-400 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(250,204,21,0.3)]"
+                  className="px-8 py-3 bg-violet-400/20 hover:bg-violet-400/30 border border-violet-400/30 rounded-full text-violet-400 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(139,92,246,0.3)]"
                 >
                   تلاش مجدد
                 </motion.button>
@@ -401,7 +401,7 @@ const Courses: React.FC = () => {
                       variants={scaleIn}
                       whileHover={{ y: -12, scale: 1.03 }}
                       onClick={() => navigate(`/courses/${course.id}`)}
-                      className="group relative overflow-hidden rounded-[40px] border border-white/10 cursor-pointer transition-all duration-500 hover:border-yellow-500/50 hover:shadow-[0_30px_80px_-20px_rgba(250,204,21,0.4)]"
+                      className="group relative overflow-hidden rounded-[40px] border border-white/10 cursor-pointer transition-all duration-500 hover:border-violet-500/50 hover:shadow-[0_30px_80px_-20px_rgba(139,92,246,0.4)]"
                     >
                       {/* Blurred Background */}
                       <div
@@ -417,7 +417,7 @@ const Courses: React.FC = () => {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/80 to-black/60 group-hover:from-black/90 group-hover:via-black/70 group-hover:to-black/50 transition-all duration-700" />
                       
                       {/* Glow Effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/0 via-yellow-400/10 to-yellow-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-violet-400/0 via-violet-400/10 to-violet-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-2xl" />
                       
                       {/* Content */}
                       <div className="relative">
@@ -445,7 +445,7 @@ const Courses: React.FC = () => {
                             transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                             className="absolute top-6 right-6"
                           >
-                            <span className="px-4 py-2 bg-yellow-400/20 backdrop-blur-xl rounded-full text-xs font-bold text-yellow-400 uppercase tracking-wider border border-yellow-400/40 shadow-lg">
+                            <span className="px-4 py-2 bg-violet-400/20 backdrop-blur-xl rounded-full text-xs font-bold text-violet-400 uppercase tracking-wider border border-violet-400/40 shadow-lg">
                               دوره
                             </span>
                           </motion.div>
@@ -465,7 +465,7 @@ const Courses: React.FC = () => {
 
                         {/* Content Section */}
                         <div className="p-8">
-                          <h3 className="text-2xl font-black mb-4 text-white group-hover:text-yellow-400 transition-colors duration-300 line-clamp-2 min-h-[4rem]">
+                          <h3 className="text-2xl font-black mb-4 text-white group-hover:text-violet-400 transition-colors duration-300 line-clamp-2 min-h-[4rem]">
                             {course.title}
                           </h3>
                           
@@ -481,7 +481,7 @@ const Courses: React.FC = () => {
                               {videoCount > 0 && (
                                 <div className="flex items-center gap-2">
                                   <svg
-                                    className="w-5 h-5 text-yellow-400"
+                                    className="w-5 h-5 text-violet-400"
                                     fill="currentColor"
                                     viewBox="0 0 20 20"
                                   >
@@ -513,7 +513,7 @@ const Courses: React.FC = () => {
                             
                             {/* Arrow Icon */}
                             <motion.svg
-                              className="w-6 h-6 text-yellow-400"
+                              className="w-6 h-6 text-violet-400"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -585,7 +585,7 @@ const Courses: React.FC = () => {
                   <motion.button
                     variants={fadeUp}
                     onClick={() => navigate('/')}
-                    className="px-8 py-3 bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/30 rounded-full text-yellow-400 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(250,204,21,0.3)]"
+                    className="px-8 py-3 bg-violet-400/20 hover:bg-violet-400/30 border border-violet-400/30 rounded-full text-violet-400 text-sm font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(139,92,246,0.3)]"
                   >
                     بازگشت به صفحه اصلی
                   </motion.button>

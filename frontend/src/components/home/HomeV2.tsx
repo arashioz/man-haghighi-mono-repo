@@ -509,7 +509,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                     onClick={() => setCurrentSlide(index)}
                     className={`h-2 rounded-full transition-all ${
                       currentSlide === index
-                        ? 'w-8 bg-yellow-400'
+                        ? 'w-8 bg-violet-400'
                         : 'w-2 bg-white/30 hover:bg-white/50'
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
@@ -534,11 +534,11 @@ const HomeV2: React.FC<HomeV2Props> = ({
               return (
                 <>
                   <motion.span
-                    className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.6em] text-yellow-400"
+                    className="inline-flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.6em] text-violet-400"
                     variants={fadeUp}
                   >
                     <span>نسخه ۲</span>
-                    <span className="h-1 w-1 rounded-full bg-yellow-400" />
+                    <span className="h-1 w-1 rounded-full bg-violet-400" />
                     <span>Engine Transformation</span>
                   </motion.span>
                   <motion.h1
@@ -563,7 +563,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <motion.div className="mt-8 flex flex-wrap gap-4" variants={fadeUp}>
               <button
                 onClick={handlePrimaryCta}
-                className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                className="rounded-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] transition hover:scale-105"
               >
                 عضویت در من حقیقی
               </button>
@@ -588,7 +588,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 variants={fadeUp}
                 className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur"
               >
-                <p className="text-3xl font-black text-yellow-400">{stat.value}</p>
+                <p className="text-3xl font-black text-violet-400">{stat.value}</p>
                 <p className="mt-2 text-xs uppercase tracking-[0.4em] text-white/60">
                   {stat.label}
                 </p>
@@ -631,7 +631,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             >
               <motion.p
                 variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400 mb-4"
               >
                 رویدادها
               </motion.p>
@@ -685,8 +685,8 @@ const HomeV2: React.FC<HomeV2Props> = ({
                               transition={{ delay: 0.3 }}
                               className="space-y-6"
                             >
-                              <div className="inline-block px-4 py-2 bg-yellow-400/20 backdrop-blur rounded-full border border-yellow-400/30">
-                                <span className="text-sm font-semibold text-yellow-400 uppercase tracking-wider">
+                              <div className="inline-block px-4 py-2 bg-violet-400/20 backdrop-blur rounded-full border border-violet-400/30">
+                                <span className="text-sm font-semibold text-violet-400 uppercase tracking-wider">
                                   {workshop.isActive ? 'رویداد فعال' : 'رویداد آتی'}
                                 </span>
                               </div>
@@ -701,7 +701,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                               <div className="flex flex-wrap gap-4 pt-4">
                                 <button
                                   onClick={() => onOpenPreRegister(workshop)}
-                                  className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                                  className="rounded-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 px-8 py-4 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] transition hover:scale-105"
                                 >
                                   ثبت نام
                                 </button>
@@ -739,7 +739,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   <div className="flex items-center justify-center gap-4 mt-8">
                     <button
                       onClick={() => setCurrentEventIndex((prev) => (prev - 1 + featuredWorkshops.length) % featuredWorkshops.length)}
-                      className="p-3 rounded-full border border-white/20 hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-colors"
+                      className="p-3 rounded-full border border-white/20 hover:border-violet-400/50 hover:bg-violet-400/10 transition-colors"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -752,7 +752,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                           onClick={() => setCurrentEventIndex(index)}
                           className={`h-2 rounded-full transition-all ${
                             currentEventIndex === index
-                              ? 'w-8 bg-yellow-400'
+                              ? 'w-8 bg-violet-400'
                               : 'w-2 bg-white/30 hover:bg-white/50'
                           }`}
                         />
@@ -760,7 +760,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                     </div>
                     <button
                       onClick={() => setCurrentEventIndex((prev) => (prev + 1) % featuredWorkshops.length)}
-                      className="p-3 rounded-full border border-white/20 hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-colors"
+                      className="p-3 rounded-full border border-white/20 hover:border-violet-400/50 hover:bg-violet-400/10 transition-colors"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -781,7 +781,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400">
                 ویدیوپادکست‌ها
               </p>
               <h2 className="text-3xl sm:text-4xl font-black leading-tight text-right">
@@ -852,7 +852,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               >
                 <motion.p
                   variants={fadeUp}
-                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                  className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400"
                 >
                   درباره · ماموریت
                 </motion.p>
@@ -873,7 +873,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                       variants={fadeUp}
                       className="rounded-3xl border border-white/10 bg-white/5 p-6 text-center backdrop-blur"
                     >
-                      <p className="text-3xl font-black text-yellow-400">{item.value}</p>
+                      <p className="text-3xl font-black text-violet-400">{item.value}</p>
                       <p className="mt-2 text-xs uppercase tracking-[0.4em] text-white/60">
                         {item.label}
                       </p>
@@ -914,7 +914,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 </div>
               </div>
               <div className="absolute bottom-6 left-6 right-6 rounded-3xl border border-white/20 bg-black/50 p-6 backdrop-blur-md">
-                <p className="text-xs uppercase tracking-[0.5em] text-yellow-400">فراز قورچیان</p>
+                <p className="text-xs uppercase tracking-[0.5em] text-violet-400">فراز قورچیان</p>
                 <p className="mt-3 text-base leading-relaxed text-white/90 text-right">
                   فراز قورچیان به عنوان محقق، مدرس و سخنران در حوزه خودآگاهی، توسعه فردی و معنا فعالیت می‌کند. 
                   با مدیریت و راهبری تیم من حقیقی، مسیر رشد مخاطبان را با راهبردهای آموزشی و تجربه‌های عملی همراهی می‌کند.
@@ -929,13 +929,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
         <section className="relative border-t border-white/10 py-16 sm:py-24 overflow-hidden">
           {/* Soft background glows */}
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-yellow-400/10 blur-3xl" />
+            <div className="absolute -left-32 top-0 h-64 w-64 rounded-full bg-violet-400/10 blur-3xl" />
             <div className="absolute -right-32 bottom-0 h-72 w-72 rounded-full bg-purple-500/15 blur-3xl" />
           </div>
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-8 w-full">
             <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_25px_80px_rgba(0,0,0,0.35)]">
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-yellow-400/5 via-transparent to-purple-500/10" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-violet-400/5 via-transparent to-purple-500/10" />
 
               <div className="relative flex flex-col items-center gap-12 w-full p-6 sm:p-8">
                 {/* 3D globe - centered and larger */}
@@ -989,7 +989,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 >
                   <motion.p
                     variants={fadeUp}
-                    className="inline-block rounded-full border border-yellow-400/30 bg-yellow-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                    className="inline-block rounded-full border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.5em] text-violet-400"
                   >
                     شبکه جهانی من حقیقی
                   </motion.p>
@@ -1074,7 +1074,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               </div>
 
               {featuredPodcasts.length > 0 ? (
-                <ul className="grid grid-cols-1 items-stretch gap-10 rounded-3xl bg-yellow-400/10 backdrop-blur-sm border border-yellow-400/20 p-5 md:p-8 lg:[grid-template-columns:1.05fr_1.45fr]">
+                <ul className="grid grid-cols-1 items-stretch gap-10 rounded-3xl bg-violet-400/10 backdrop-blur-sm border border-violet-400/20 p-5 md:p-8 lg:[grid-template-columns:1.05fr_1.45fr]">
                   {/* Featured Player - First Podcast */}
                   <li className="mx-auto flex w-full max-w-xl flex-col items-center space-y-8 p-4">
                     {featuredPodcasts[0] && (() => {
@@ -1119,7 +1119,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                               }}
                               className="block"
                             >
-                              <h3 className="text-xl text-white hover:text-yellow-400 transition-colors text-right">
+                              <h3 className="text-xl text-white hover:text-violet-400 transition-colors text-right">
                                 {featuredPodcast.title}
                               </h3>
                             </a>
@@ -1132,7 +1132,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                                 max="100"
                                 value={isCurrentlyPlaying ? progressPercent : 0}
                                 onChange={handleSeek}
-                                className="related-podcasts-progress-bar rounded-full bg-white/10 w-full h-1 cursor-pointer accent-yellow-400"
+                                className="related-podcasts-progress-bar rounded-full bg-white/10 w-full h-1 cursor-pointer accent-violet-400"
                                 style={{
                                   background: `linear-gradient(to right, rgb(250, 204, 21) 0%, rgb(250, 204, 21) ${progressPercent}%, rgba(255, 255, 255, 0.1) ${progressPercent}%, rgba(255, 255, 255, 0.1) 100%)`
                                 }}
@@ -1172,7 +1172,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                               onClick={() => handlePlayPause(featuredPodcast)}
                               disabled={!audioUrl}
                               aria-label="Play"
-                              className={`relative h-[72px] w-[72px] rounded-full text-black hover:scale-105 transition-transform ${isCurrentlyPlaying && isPlaying ? 'bg-yellow-400' : 'bg-white'} ${!audioUrl ? 'opacity-15 cursor-not-allowed' : ''}`}
+                              className={`relative h-[72px] w-[72px] rounded-full text-black hover:scale-105 transition-transform ${isCurrentlyPlaying && isPlaying ? 'bg-violet-400' : 'bg-white'} ${!audioUrl ? 'opacity-15 cursor-not-allowed' : ''}`}
                             >
                               {isCurrentlyPlaying && isPlaying ? (
                                 <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 24 24" className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform h-8 w-8">
@@ -1217,7 +1217,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   </li>
 
                   {/* Other Podcasts List */}
-                  <div className="divide-y divide-yellow-400/20">
+                  <div className="divide-y divide-violet-400/20">
                     {featuredPodcasts.slice(1).map((podcast, index) => {
                       const coverImage = curatedAssets.podcastCovers[(index + 1) % curatedAssets.podcastCovers.length];
                       const audioUrl = podcast.streamUrl || (podcast.audioFile ? `${API_ORIGIN}/uploads/${podcast.audioFile}` : null);
@@ -1258,7 +1258,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                                 }}
                                 className="block"
                               >
-                                <h3 className="text-base leading-none tracking-tighter text-white hover:text-yellow-400 transition-colors text-right">
+                                <h3 className="text-base leading-none tracking-tighter text-white hover:text-violet-400 transition-colors text-right">
                                   {podcast.title}
                                 </h3>
                               </a>
@@ -1266,7 +1266,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                             <button
                               onClick={() => handlePlayPause(podcast)}
                               disabled={!audioUrl}
-                              className={`cursor-pointer group inline-flex items-center justify-center gap-2 font-medium text-center tracking-wide rounded-full duration-500 border border-yellow-400/30 bg-yellow-400/20 hover:bg-yellow-400/30 text-white w-auto text-sm py-2 px-4 transition-all ${!audioUrl ? 'opacity-30 cursor-not-allowed' : ''}`}
+                              className={`cursor-pointer group inline-flex items-center justify-center gap-2 font-medium text-center tracking-wide rounded-full duration-500 border border-violet-400/30 bg-violet-400/20 hover:bg-violet-400/30 text-white w-auto text-sm py-2 px-4 transition-all ${!audioUrl ? 'opacity-30 cursor-not-allowed' : ''}`}
                             >
                               <svg viewBox="0 0 24 24" fill="transparent" className="flex h-5 w-5 fill-current">
                                 <title>Play</title>
@@ -1287,7 +1287,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   <p className="text-white/60">پادکستی برای نمایش وجود ندارد</p>
                   <button
                     onClick={() => navigate('/podcasts')}
-                    className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                    className="mt-4 text-violet-400 hover:text-violet-500 text-sm uppercase tracking-wider"
                   >
                     مشاهده همه پادکست‌ها
                   </button>
@@ -1336,7 +1336,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
               <motion.div variants={fadeUp} className="space-y-6">
                 <motion.p
                   variants={fadeUp}
-                  className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                  className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400"
                 >
                   داستان فراز قورچیان
                 </motion.p>
@@ -1346,7 +1346,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 >
                   فراز قورچیان
                   <br />
-                  <span className="text-yellow-400">مربی تحول و رشد شخصی</span>
+                  <span className="text-violet-400">مربی تحول و رشد شخصی</span>
                 </motion.h2>
                 <motion.p 
                   variants={fadeUp} 
@@ -1367,7 +1367,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 <motion.div variants={fadeUp} className="flex flex-wrap gap-4 pt-4">
                   <button
                     onClick={() => navigate('/about')}
-                    className="rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                    className="rounded-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 px-8 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] transition hover:scale-105"
                   >
                     درباره مربی
                   </button>
@@ -1402,7 +1402,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       {idx === 0 && (
                         <div className="absolute bottom-4 left-4 right-4">
-                          <p className="text-xs uppercase tracking-[0.5em] text-yellow-400 mb-2">
+                          <p className="text-xs uppercase tracking-[0.5em] text-violet-400 mb-2">
                             چشم‌انداز و ماموریت
                           </p>
                           <p className="text-white/90 text-sm font-medium text-right">
@@ -1430,7 +1430,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <div className="mb-10 flex flex-col gap-4">
               <motion.p
                 variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400"
               >
                 دوره‌های آموزشی
               </motion.p>
@@ -1455,7 +1455,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                       variants={fadeUp}
                       whileHover={{ y: -8, scale: 1.02 }}
                       onClick={() => navigate(`/courses/${course.id}`)}
-                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                      className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-violet-500/30 hover:shadow-[0_25px_60px_-20px_rgba(139,92,246,0.3)]"
                     >
                       <div className="relative h-56 overflow-hidden">
                         <img
@@ -1465,7 +1465,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
                         <div className="absolute top-4 right-4">
-                          <span className="px-3 py-1 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                          <span className="px-3 py-1 bg-violet-400/20 backdrop-blur rounded-full text-xs font-semibold text-violet-400 uppercase tracking-wider">
                             دوره
                           </span>
                         </div>
@@ -1478,7 +1478,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                         )}
                       </div>
                       <div className="p-6">
-                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                        <h3 className="text-xl font-bold mb-3 text-white group-hover:text-violet-400 transition-colors line-clamp-2">
                           {course.title}
                         </h3>
                         {course.description && (
@@ -1496,7 +1496,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                             )}
                           </div>
                           <svg
-                            className="w-5 h-5 text-yellow-400 transform group-hover:translate-x-1 transition-transform"
+                            className="w-5 h-5 text-violet-400 transform group-hover:translate-x-1 transition-transform"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -1519,7 +1519,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 <p className="text-white/60">دوره‌ای برای نمایش وجود ندارد</p>
                 <button
                   onClick={() => navigate('/courses')}
-                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                  className="mt-4 text-violet-400 hover:text-violet-500 text-sm uppercase tracking-wider"
                 >
                   مشاهده همه دوره‌ها
                 </button>
@@ -1549,7 +1549,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             <div className="mb-10 flex flex-col gap-4">
               <motion.p
                 variants={fadeUp}
-                className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400"
+                className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400"
               >
                 مقالات
               </motion.p>
@@ -1563,7 +1563,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
             </div>
             {articlesLoading && articlesList.length === 0 ? (
               <div className="flex justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-2 border-yellow-400 border-t-transparent" />
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-violet-400 border-t-transparent" />
               </div>
             ) : articlesList.length > 0 ? (
               <>
@@ -1577,7 +1577,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                         variants={fadeUp}
                         whileHover={{ y: -8, scale: 1.02 }}
                         onClick={() => navigate(`/articles/${article.slug}`)}
-                        className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                        className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] cursor-pointer transition-all duration-300 hover:border-violet-500/30 hover:shadow-[0_25px_60px_-20px_rgba(139,92,246,0.3)]"
                       >
                         <div className="relative h-48 overflow-hidden">
                           <img
@@ -1591,13 +1591,13 @@ const HomeV2: React.FC<HomeV2Props> = ({
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
                           <div className="absolute top-3 right-3">
-                            <span className="px-2 py-0.5 bg-yellow-400/20 backdrop-blur rounded-full text-xs font-semibold text-yellow-400 uppercase tracking-wider">
+                            <span className="px-2 py-0.5 bg-violet-400/20 backdrop-blur rounded-full text-xs font-semibold text-violet-400 uppercase tracking-wider">
                               مقاله
                             </span>
                           </div>
                         </div>
                         <div className="p-4">
-                          <h3 className="text-base font-bold mb-2 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                          <h3 className="text-base font-bold mb-2 text-white group-hover:text-violet-400 transition-colors line-clamp-2">
                             {article.title}
                           </h3>
                           {article.excerpt && (
@@ -1606,10 +1606,10 @@ const HomeV2: React.FC<HomeV2Props> = ({
                             </p>
                           )}
                           <div className="flex items-center justify-between pt-3 border-t border-white/10 mt-2">
-                            <span className="text-xs uppercase tracking-[0.2em] text-yellow-400">
+                            <span className="text-xs uppercase tracking-[0.2em] text-violet-400">
                               بیشتر
                             </span>
-                            <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
                           </div>
@@ -1656,7 +1656,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 <p className="text-white/60">مقالاتی برای نمایش وجود ندارد</p>
                 <button
                   onClick={() => navigate('/articles')}
-                  className="mt-4 text-yellow-400 hover:text-yellow-500 text-sm uppercase tracking-wider"
+                  className="mt-4 text-violet-400 hover:text-violet-500 text-sm uppercase tracking-wider"
                 >
                   مشاهده همه مقالات
                 </button>
@@ -1667,7 +1667,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
 
         <section className="border-t border-white/10 py-12 sm:py-16">
           <div className="mb-10 flex flex-col gap-4">
-            <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
+            <p className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400">
               نظرات
             </p>
             <h2 className="text-4xl font-bold sm:text-5xl text-right">صداهای تحول</h2>
@@ -1685,7 +1685,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                 className="rounded-[32px] border border-white/10 bg-[#0a0a0a] p-8"
               >
                 <p className="text-sm leading-relaxed text-white/80">"{testimonial.quote}"</p>
-                <div className="mt-6 text-xs uppercase tracking-[0.5em] text-yellow-400">
+                <div className="mt-6 text-xs uppercase tracking-[0.5em] text-violet-400">
                   {testimonial.name}
                 </div>
                 <p className="mt-2 text-xs text-white/50">{testimonial.role}</p>
@@ -1702,9 +1702,9 @@ const HomeV2: React.FC<HomeV2Props> = ({
             viewport={{ once: true, amount: 0.3 }}
             className="relative overflow-hidden rounded-[40px] border border-white/10 bg-gradient-to-r from-black via-[#0b0b0b] to-black p-10"
           >
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-yellow-500/20 to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-violet-500/20 to-transparent" />
             <div className="relative space-y-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400">
+              <p className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400">
                 فراخوان نهایی · سفر تو از اینجا شروع می‌شود
               </p>
               <h2 className="text-4xl font-bold sm:text-5xl text-right">

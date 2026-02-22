@@ -48,7 +48,7 @@ const Podcasts: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-violet-400"></div>
       </div>
     );
   }
@@ -76,7 +76,7 @@ return (
           onChange={(e) => seek(parseFloat(e.target.value))}
           className="w-1/3"
         />
-        <button onClick={togglePlayPause} className="ml-4 px-4 py-2 bg-yellow-500">
+        <button onClick={togglePlayPause} className="ml-4 px-4 py-2 bg-violet-500">
           {isPlaying ? '⏸ توقف' : '▶ پخش'}
         </button>
       </div>
@@ -93,7 +93,7 @@ return (
           >
             <motion.p
               variants={fadeUp}
-              className="text-sm font-semibold uppercase tracking-[0.5em] text-yellow-400 mb-4"
+              className="text-sm font-semibold uppercase tracking-[0.5em] text-violet-400 mb-4"
             >
               پادکست‌ها
             </motion.p>
@@ -130,7 +130,7 @@ return (
                   key={podcast.id}
                   variants={fadeUp}
                   whileHover={{ y: -8, scale: 1.02 }}
-                  className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] transition-all duration-300 hover:border-yellow-500/30 hover:shadow-[0_25px_60px_-20px_rgba(250,204,21,0.3)]"
+                  className="group relative overflow-hidden rounded-[32px] border border-white/10 bg-[#0a0a0a] transition-all duration-300 hover:border-violet-500/30 hover:shadow-[0_25px_60px_-20px_rgba(139,92,246,0.3)]"
                 >
                   {podcast.thumbnail && (
                     <div className="relative h-48 w-full overflow-hidden">
@@ -147,7 +147,7 @@ return (
                     </div>
                   )}
                   <div className="p-6">
-                    <h3 className="text-xl font-bold mb-3 text-white group-hover:text-yellow-400 transition-colors line-clamp-2">
+                    <h3 className="text-xl font-bold mb-3 text-white group-hover:text-violet-400 transition-colors line-clamp-2">
                       {podcast.title}
                     </h3>
                     {podcast.description && (
@@ -157,7 +157,7 @@ return (
                     )}
                     <button
                       onClick={() => handlePlayPause(podcast)}
-                      className="w-full mt-4 rounded-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(250,204,21,0.8)] transition hover:scale-105"
+                      className="w-full mt-4 rounded-full bg-gradient-to-r from-violet-400 via-violet-500 to-violet-600 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-black shadow-[0_25px_60px_-20px_rgba(139,92,246,0.8)] transition hover:scale-105"
                     >
                       {currentPodcast?.id === podcast.id && isPlaying ? '⏸ توقف' : '▶ پخش'}
                     </button>

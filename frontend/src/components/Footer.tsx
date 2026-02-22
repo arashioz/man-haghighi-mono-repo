@@ -41,8 +41,8 @@ const Footer: React.FC = () => {
                 onClick={() => navigate(item.path)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   location.pathname === item.path
-                    ? 'text-yellow-400 bg-yellow-400/20 border border-yellow-400/30'
-                    : 'text-white/60 hover:text-yellow-400 hover:bg-white/5 border border-transparent hover:border-white/10'
+                    ? 'text-violet-400 bg-violet-400/20 border border-violet-400/30'
+                    : 'text-white/60 hover:text-violet-400 hover:bg-white/5 border border-transparent hover:border-white/10'
                 }`}
               >
                 {item.label}
@@ -53,7 +53,7 @@ const Footer: React.FC = () => {
           {/* Phone */}
           <a
             href={`tel:${CONTACT_PHONE_TEL}`}
-            className="flex items-center gap-2 text-white/80 hover:text-yellow-400 transition-colors text-sm"
+            className="flex items-center gap-2 text-white/80 hover:text-violet-400 transition-colors text-sm"
           >
             <svg 
               className="w-5 h-5" 
@@ -88,7 +88,7 @@ const Footer: React.FC = () => {
                 className="h-8 w-auto cursor-pointer"
               />
             </a>
-            <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-all cursor-pointer">
+            <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:border-violet-400/50 hover:bg-violet-400/10 transition-all cursor-pointer">
               {/* Placeholder for icon - replace with actual icon */}
               <svg 
                 className="w-4 h-4 text-white/60" 
@@ -98,7 +98,7 @@ const Footer: React.FC = () => {
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
             </div>
-            <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:border-yellow-400/50 hover:bg-yellow-400/10 transition-all cursor-pointer">
+            <div className="w-8 h-8 rounded-full border border-white/20 bg-white/5 flex items-center justify-center hover:border-violet-400/50 hover:bg-violet-400/10 transition-all cursor-pointer">
               {/* Placeholder for icon - replace with actual icon */}
               <svg 
                 className="w-4 h-4 text-white/60" 

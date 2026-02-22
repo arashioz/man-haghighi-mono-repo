@@ -71,7 +71,7 @@ const Home: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-yellow-400"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-violet-400"></div>
       </div>
     );
   }
