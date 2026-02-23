@@ -40,10 +40,33 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
-    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8082',
     'http://127.0.0.1:8080',
     'http://127.0.0.1:8081',
   ];
+
+  // CORS: اول این middleware تا برای OPTIONS (preflight) هدرها حتماً با PATCH و بقیه متدها برگردد
+  const CORS_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD';
+  const CORS_HEADERS = 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma';
+  app.use((req: any, res: any, next: () => void) => {
+    const origin = req.headers?.origin as string | undefined;
+    const allowOrigin =
+      origin &&
+      (allowedOrigins.includes(origin) ||
+        origin.includes('manehaghighi.com') ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin));
+    if (allowOrigin && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', CORS_METHODS);
+      res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS);
+      res.setHeader('Access-Control-Max-Age', '86400');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
 
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -76,26 +99,6 @@ async function bootstrap() {
   };
 
   app.enableCors(corsOptions);
-
-  // هدر CORS را روی همه پاسخ‌ها (از جمله ۴۰۱/۴۰۰) بگذار تا از مسدود شدن در مرورگر جلوگیری شود
-  app.use((req: any, res: any, next: () => void) => {
-    const origin = req.headers?.origin as string | undefined;
-    const allowOrigin =
-      origin &&
-      (allowedOrigins.includes(origin) ||
-        origin.includes('manehaghighi.com') ||
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin));
-    if (allowOrigin && origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma');
-    }
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    next();
-  });
 
   app.use(require('express').json({ limit: '20gb' }));
   app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
