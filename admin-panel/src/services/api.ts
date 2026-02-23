@@ -833,6 +833,12 @@ export const coursesService = {
     return response.data;
   },
 
+  /** همه دوره‌ها با همه ویدیوها و صداها (ادمین، برای خروجی) */
+  getExportFull: async (): Promise<Course[]> => {
+    const response = await api.get('/courses/export-full');
+    return response.data;
+  },
+
   getPublished: async (): Promise<Course[]> => {
     const response = await api.get('/courses/published');
     return response.data;

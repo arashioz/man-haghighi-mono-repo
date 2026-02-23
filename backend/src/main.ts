@@ -98,7 +98,7 @@ async function bootstrap() {
     maxAge: 86400,
   };
 
-  app.enableCors(corsOptions);
+  // app.enableCors(corsOptions);
 
   app.use(require('express').json({ limit: '20gb' }));
   app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
@@ -107,13 +107,13 @@ async function bootstrap() {
   // CSP temporarily disabled to allow app access
   // crossOriginResourcePolicy: cross-origin تا عکس/مدیا از API روی فرانت (دامنه دیگر) لود شود
   app.use(helmet({
-    contentSecurityPolicy: false, // Disabled temporarily
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    hsts: {
-      maxAge: 31536000, // 1 year
-      includeSubDomains: true,
-      preload: true,
-    },
+    contentSecurityPolicy: false, 
+    // crossOriginResourcePolicy: { policy: 'cross-origin' },
+    // hsts: {
+    //   maxAge: 31536000, // 1 year
+    //   includeSubDomains: true,
+    //   preload: true,
+    // },
   }));
   app.use(compression());
 

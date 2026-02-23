@@ -1,6 +1,7 @@
 /**
- * نرمال‌سازی شماره‌هایی که با +98 ذخیره شده‌اند
- * تبدیل +989385885965 → 09385885965
+ * نرمال‌سازی شماره‌های موبایل:
+ * - +989385885965 → 09385885965
+ * - 919064717587 یا 9064717587 (بدون صفر اول) → 09064717587
  *
  * Usage:
  *   npx ts-node scripts/normalize-phone-plus98.ts           # پیش‌نمایش
@@ -23,17 +24,23 @@ function normalizePhone(input: string | null | undefined): string | null {
   if (!digits) return null;
   if (digits.startsWith('+98')) digits = '0' + digits.slice(3);
   else if (digits.startsWith('98') && digits.length >= 11) digits = '0' + digits.slice(2);
-  else if (!digits.startsWith('0') && digits.length === 10) digits = '0' + digits;
+  else if (digits.startsWith('91') && digits.length === 12) digits = '0' + digits.slice(2); // 919064717587 → 09064717587
+  else if (!digits.startsWith('0') && digits.length === 10 && digits.startsWith('9')) digits = '0' + digits; // 9064717587 → 09064717587
   if (digits.length > 11) digits = digits.startsWith('0') ? digits.slice(0, 11) : digits.slice(-11);
   if (!/^0\d{9,10}$/.test(digits)) return null;
   return digits;
 }
 
-/** آیا شماره با +98 شروع می‌شود و نیاز به نرمال دارد؟ */
+/** آیا شماره نیاز به نرمال دارد؟ (+98، 98...، 91... بدون صفر، یا ۹رقمی بدون صفر) */
 function needsNormalize(phone: string | null): boolean {
   if (!phone || typeof phone !== 'string') return false;
   const t = phone.trim();
-  return t.startsWith('+98') || (t.startsWith('98') && /^\d{11,}$/.test(t.replace(/\D/g, '')));
+  const digits = t.replace(/[^\d+]/g, '');
+  if (t.startsWith('+98')) return true;
+  if (digits.startsWith('98') && digits.length >= 11) return true;
+  if (digits.startsWith('91') && digits.length === 12) return true;
+  if (digits.length === 10 && digits.startsWith('9') && !digits.startsWith('0')) return true;
+  return false;
 }
 
 async function main() {

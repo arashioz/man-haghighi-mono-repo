@@ -89,6 +89,16 @@ export class CoursesController {
     return this.coursesService.getUserCourses(req.user.id);
   }
 
+  @Get('export-full')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all courses with all videos and audios for export (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Courses with nested videos and audios' })
+  async exportFull() {
+    return this.coursesService.findAllForExport();
+  }
+
   @Get(':id/intro-video/stream')
   @ApiOperation({ summary: 'Stream course intro video (public access)' })
   @ApiResponse({ status: 200, description: 'Video stream' })

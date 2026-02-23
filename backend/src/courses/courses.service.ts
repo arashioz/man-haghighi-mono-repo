@@ -209,6 +209,19 @@ export class CoursesService {
     return this.urlService.processCoursesData(courses);
   }
 
+  /** برای ادمین: همه دوره‌ها با همه ویدیوها و صداها (منتشر و غیرمنتشر) برای خروجی */
+  async findAllForExport() {
+    const courses = await this.prisma.course.findMany({
+      include: {
+        videos: { orderBy: { order: 'asc' } },
+        audios: { orderBy: { order: 'asc' } },
+        _count: { select: { enrollments: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return this.urlService.processCoursesData(courses);
+  }
+
   async findPublished() {
     const courses = await this.prisma.course.findMany({
       where: { published: true },

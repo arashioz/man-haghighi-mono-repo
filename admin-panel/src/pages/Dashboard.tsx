@@ -97,6 +97,7 @@ const Dashboard: React.FC = () => {
   const [downloadLoading, setDownloadLoading] = useState({
     usersWithCourses: false,
     courses: false,
+    coursesWithContent: false,
   });
 
   useEffect(() => {
@@ -334,6 +335,40 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDownloadCoursesWithContent = async () => {
+    try {
+      setDownloadLoading((prev) => ({ ...prev, coursesWithContent: true }));
+      const courses = await coursesService.getExportFull();
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        totalCourses: courses.length,
+        courses: courses.map((c) => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          price: c.price,
+          published: c.published,
+          showOnHomepage: c.showOnHomepage,
+          thumbnail: c.thumbnail,
+          videoFile: c.videoFile,
+          attachments: c.attachments,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          videos: c.videos ?? [],
+          audios: c.audios ?? [],
+        })),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const date = new Date().toISOString().split('T')[0];
+      downloadBlobFile(blob, `courses_with_videos_audios_${date}.json`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'خطا در دانلود لیست دوره‌ها با ویدیو و صدا');
+      console.error('Download courses with content error:', err);
+    } finally {
+      setDownloadLoading((prev) => ({ ...prev, coursesWithContent: false }));
+    }
+  };
+
   const statCards = getStatCards();
 
   if (loading) {
@@ -407,6 +442,26 @@ const Dashboard: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
                   </svg>
                   <span>دانلود لیست دوره‌ها (CSV)</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadCoursesWithContent}
+              disabled={downloadLoading.coursesWithContent}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadLoading.coursesWithContent ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>در حال آماده‌سازی...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                  </svg>
+                  <span>دانلود لیست دوره‌ها با ویدیو و صدا (JSON)</span>
                 </>
               )}
             </button>
