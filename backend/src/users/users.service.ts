@@ -281,6 +281,42 @@ export class UsersService {
     });
   }
 
+  /** همان select دوره برای استفاده در purchasedCourses و دوره‌های تطبیق‌داده‌شده از محصولات قدیمی */
+  private courseSelectForUserProducts = {
+    id: true,
+    title: true,
+    description: true,
+    thumbnail: true,
+    price: true,
+    published: true,
+    attachments: true,
+    videos: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        thumbnail: true,
+        duration: true,
+        order: true,
+        published: true,
+      },
+      orderBy: { order: 'asc' as const },
+    },
+    audios: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        thumbnail: true,
+        audioFile: true,
+        duration: true,
+        order: true,
+        published: true,
+      },
+      orderBy: { order: 'asc' as const },
+    },
+  } as const;
+
   // Get user with their old products and purchased courses
   async getUserWithProducts(id: string) {
     const user = await this.prisma.user.findUnique({
@@ -299,44 +335,7 @@ export class UsersService {
         purchasedCourses: {
           include: {
             course: {
-              select: {
-                id: true,
-                title: true,
-                description: true,
-                thumbnail: true,
-                price: true,
-                published: true,
-                attachments: true,
-                videos: {
-                  select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    thumbnail: true,
-                    duration: true,
-                    order: true,
-                    published: true,
-                  },
-                  orderBy: {
-                    order: 'asc',
-                  },
-                },
-                audios: {
-                  select: {
-                    id: true,
-                    title: true,
-                    description: true,
-                    thumbnail: true,
-                    audioFile: true,
-                    duration: true,
-                    order: true,
-                    published: true,
-                  },
-                  orderBy: {
-                    order: 'asc',
-                  },
-                },
-              },
+              select: this.courseSelectForUserProducts,
             },
           },
           orderBy: {
@@ -350,12 +349,49 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+    const enrolledCourseIds = (user.purchasedCourses as any[]).map((e) => e.course.id);
+    const matchedCourseIds = new Set<string>();
+
+    for (const op of (user.oldProducts as any[])) {
+      const name = (op.productName || '').trim();
+      if (!name) continue;
+      const byTitle = await this.prisma.course.findFirst({
+        where: {
+          published: true,
+          id: enrolledCourseIds.length ? { notIn: enrolledCourseIds } : undefined,
+          title: { contains: name, mode: 'insensitive' },
+        },
+        select: { id: true },
+      });
+      if (byTitle && !matchedCourseIds.has(byTitle.id)) matchedCourseIds.add(byTitle.id);
+      if (byTitle) continue;
+      if (op.productId && !enrolledCourseIds.includes(op.productId)) {
+        const byId = await this.prisma.course.findFirst({
+          where: { published: true, id: op.productId },
+          select: { id: true },
+        });
+        if (byId) matchedCourseIds.add(byId.id);
+      }
+    }
+
+    let matchedCoursesFromOldProducts: any[] = [];
+    if (matchedCourseIds.size > 0) {
+      const courses = await this.prisma.course.findMany({
+        where: { id: { in: [...matchedCourseIds] } },
+        select: this.courseSelectForUserProducts,
+      });
+      matchedCoursesFromOldProducts = courses.map((course) =>
+        this.urlService.processCourseData(course),
+      );
+    }
+
     return {
       ...user,
-      purchasedCourses: user.purchasedCourses.map((enrollment) => ({
+      purchasedCourses: (user.purchasedCourses as any[]).map((enrollment) => ({
         ...enrollment,
         course: this.urlService.processCourseData(enrollment.course),
       })),
+      matchedCoursesFromOldProducts,
     };
   }
 

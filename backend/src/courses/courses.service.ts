@@ -684,7 +684,64 @@ export class CoursesService {
       },
     });
 
-    return enrollments.map(enrollment => this.urlService.processCourseData(enrollment.course));
+    const enrolledIds = enrollments.map((e) => e.course.id);
+    const matchedIds = new Set<string>();
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        oldProducts: {
+          select: { productId: true, productName: true },
+        },
+      },
+    });
+
+    if (user?.oldProducts?.length) {
+      for (const op of user.oldProducts) {
+        const name = (op.productName || '').trim();
+        if (name) {
+          const byTitle = await this.prisma.course.findFirst({
+            where: {
+              published: true,
+              ...(enrolledIds.length ? { id: { notIn: enrolledIds } } : {}),
+              title: { contains: name, mode: 'insensitive' },
+            },
+            select: { id: true },
+          });
+          if (byTitle) matchedIds.add(byTitle.id);
+        }
+        if (op.productId && !enrolledIds.includes(op.productId)) {
+          const byId = await this.prisma.course.findFirst({
+            where: { published: true, id: op.productId },
+            select: { id: true },
+          });
+          if (byId) matchedIds.add(byId.id);
+        }
+      }
+    }
+
+    const result = enrollments.map((e) => this.urlService.processCourseData(e.course));
+
+    if (matchedIds.size > 0) {
+      const matched = await this.prisma.course.findMany({
+        where: { id: { in: [...matchedIds] } },
+        include: {
+          videos: {
+            where: { published: true },
+            orderBy: { order: 'asc' },
+          },
+          audios: {
+            where: { published: true },
+            orderBy: { order: 'asc' },
+          },
+        },
+      });
+      for (const c of matched) {
+        result.push(this.urlService.processCourseData(c));
+      }
+    }
+
+    return result;
   }
 
   async getCourseEnrollments(courseId: string) {
