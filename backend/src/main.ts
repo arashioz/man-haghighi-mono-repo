@@ -31,23 +31,30 @@ async function bootstrap() {
 
 
 
-  const allowedOriginPatterns = [
-    /^https:\/\/(www\.)?manehaghighi\.com$/,
-    /^https:\/\/admin\.manehaghighi\.com$/,
-    /^https:\/\/sales\.manehaghighi\.com$/,
-    /^https:\/\/api\.manehaghighi\.com$/,
-    /^http:\/\/localhost(:\d+)?$/,
-    /^http:\/\/127\.0\.0\.1(:\d+)?$/,
-    /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
-    /^https?:\/\/localhost(:\d+)?$/,
+  const allowedOrigins = [
+    'https://manehaghighi.com',
+    'https://www.manehaghighi.com',
+    'https://admin.manehaghighi.com',
+    'https://sales.manehaghighi.com',
+    'https://api.manehaghighi.com',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:8081',
   ];
 
-  app.enableCors({
-    origin: (origin, callback) => {
+  const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
-      const normalized = origin.replace(/\/$/, '');
-      const allowed = allowedOriginPatterns.some((re) => re.test(normalized));
-      return callback(null, allowed);
+      const normalized = origin.replace(/\/$/, '').toLowerCase();
+      const allowed = allowedOrigins.some((o) => o.replace(/\/$/, '').toLowerCase() === normalized);
+      const allowedPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+      if (allowed || allowedPattern.test(normalized) || normalized.includes('manehaghighi.com')) {
+        return callback(null, true);
+      }
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
@@ -66,6 +73,28 @@ async function bootstrap() {
     exposedHeaders: ['Content-Length', 'Content-Type', 'Content-Range', 'Accept-Ranges'],
     optionsSuccessStatus: 204,
     maxAge: 86400,
+  };
+
+  app.enableCors(corsOptions);
+
+  // هدر CORS را روی همه پاسخ‌ها (از جمله ۴۰۱/۴۰۰) بگذار تا از مسدود شدن در مرورگر جلوگیری شود
+  app.use((req: any, res: any, next: () => void) => {
+    const origin = req.headers?.origin as string | undefined;
+    const allowOrigin =
+      origin &&
+      (allowedOrigins.includes(origin) ||
+        origin.includes('manehaghighi.com') ||
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin));
+    if (allowOrigin && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma');
+    }
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
   });
 
   app.use(require('express').json({ limit: '20gb' }));

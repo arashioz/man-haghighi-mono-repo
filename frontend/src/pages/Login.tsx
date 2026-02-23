@@ -306,14 +306,14 @@ const Login: React.FC = () => {
           {mode === 'password' ? (
             <form onSubmit={handlePasswordLogin} className="space-y-5">
               <div>
-                <label htmlFor="login" className="sr-only">ایمیل یا نام کاربری</label>
+                <label htmlFor="login" className="sr-only">ایمیل یا تلفن همراه</label>
                 <input
                   id="login"
                   type="text"
                   autoComplete="username"
                   required
                   className={inputGlass}
-                  placeholder="ایمیل یا نام کاربری"
+                  placeholder="ایمیل یا تلفن همراه"
                   value={loginInput}
                   onChange={(e) => setLoginInput(e.target.value)}
                   disabled={loading}
