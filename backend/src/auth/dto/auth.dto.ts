@@ -101,14 +101,6 @@ export class SendOtpDto {
   phone: string;
 }
 
-export class CheckSessionByPhoneDto {
-  @ApiProperty({ example: '09123456789' })
-  @IsString()
-  @IsNotEmpty()
-  @Matches(/^09\d{9}$/, { message: 'Phone number must be in format 09xxxxxxxxx' })
-  phone: string;
-}
-
 export class VerifyOtpDto {
   @ApiProperty({ example: '09123456789' })
   @IsString()
@@ -127,35 +119,6 @@ export class VerifyOtpDto {
   @IsString()
   @IsIn(DEVICE_TYPES, { message: 'deviceType must be ANDROID, IOS or DESKTOP' })
   deviceType?: DeviceType;
-}
-
-export class ForceLogoutAllDto {
-  @ApiProperty({ description: 'توکن یک‌بارمصرف برگشتی همراه خطای 409 (فقط دکمه بزن، بدون OTP/رمز)' })
-  @IsOptional()
-  @IsString()
-  forceLogoutToken?: string;
-
-  @ApiProperty({ example: 'john@example.com or 09123456789', description: 'When not using forceLogoutToken' })
-  @IsOptional()
-  @IsString()
-  login?: string;
-
-  @ApiProperty({ example: 'password123' })
-  @IsOptional()
-  @IsString()
-  password?: string;
-
-  @ApiProperty({ example: '09123456789' })
-  @IsOptional()
-  @IsString()
-  @Matches(/^09\d{9}$/, { message: 'Phone must be 09xxxxxxxxx' })
-  phone?: string;
-
-  @ApiProperty({ example: '123456' })
-  @IsOptional()
-  @IsString()
-  @Matches(/^\d{6}$/, { message: 'OTP must be 6 digits' })
-  otp?: string;
 }
 
 export class UpdateProfileDto {

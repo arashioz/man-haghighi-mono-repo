@@ -187,7 +187,6 @@ async function main() {
           else await tx.oldProduct.update({ where: { id: p.id }, data: { userId: keepUser.id } });
         }
 
-        await tx.userSession.deleteMany({ where: { userId: dup.id } });
         if (dupWallet) await tx.wallet.delete({ where: { id: dupWallet.id } });
         await tx.user.delete({ where: { id: dup.id } });
       });

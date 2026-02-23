@@ -72,7 +72,6 @@ api.interceptors.request.use((config) => {
     '/auth/register',
     '/auth/send-otp',
     '/auth/verify-otp',
-    '/auth/sessions/check-by-phone',
   ];
   
   // Check if the current request is to a public endpoint
@@ -137,9 +136,6 @@ api.interceptors.response.use(
       const text = typeof message === 'string' && message.trim() ? message.trim() : 'کاربر وجود ندارد';
       try {
         sessionStorage.setItem('login_401_message', text);
-        if (data?.session && typeof data.session === 'object') {
-          sessionStorage.setItem('login_401_session', JSON.stringify(data.session));
-        }
       } catch (_) {}
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -152,9 +148,8 @@ api.interceptors.response.use(
 );
 
 export const authService = {
-  login: async (credentials: LoginCredentials & { deviceType?: string }): Promise<AuthResponse> => {
-    const payload = { ...credentials, deviceType: credentials.deviceType ?? 'DESKTOP' };
-    const response = await api.post('/auth/login', payload);
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login', credentials);
     return response.data;
   },
 
@@ -163,23 +158,13 @@ export const authService = {
     return response.data;
   },
 
-  checkSessionByPhone: async (phone: string): Promise<{ hasSession: boolean; session?: { deviceType: string; updatedAt: string } }> => {
-    const response = await api.post('/auth/sessions/check-by-phone', { phone });
-    return response.data;
-  },
-
   sendOtp: async (phone: string): Promise<{ message: string }> => {
     const response = await api.post('/auth/send-otp', { phone });
     return response.data;
   },
 
-  verifyOtp: async (phone: string, otp: string, deviceType: string = 'DESKTOP'): Promise<AuthResponse> => {
-    const response = await api.post('/auth/verify-otp', { phone, otp, deviceType });
-    return response.data;
-  },
-
-  forceLogoutAll: async (payload: { forceLogoutToken?: string; login?: string; password?: string; phone?: string; otp?: string }): Promise<{ success: boolean; message: string }> => {
-    const response = await api.post('/auth/force-logout-all', payload);
+  verifyOtp: async (phone: string, otp: string): Promise<AuthResponse> => {
+    const response = await api.post('/auth/verify-otp', { phone, otp });
     return response.data;
   },
 

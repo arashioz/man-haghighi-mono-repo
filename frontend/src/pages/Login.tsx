@@ -5,12 +5,6 @@ import { authService } from '../services/api';
 import { normalizePhoneNumber } from '../utils/phoneUtils';
 import { getAuthErrorMessage } from '../utils/authErrorUtils';
 
-const deviceTypeLabel: Record<string, string> = {
-  ANDROID: 'اندروید',
-  IOS: 'آی‌او‌اس',
-  DESKTOP: 'دسکتاپ',
-};
-
 const Login: React.FC = () => {
   const [loginInput, setLoginInput] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -22,13 +16,6 @@ const Login: React.FC = () => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [mode, setMode] = useState<'otp' | 'password'>('otp');
-  const [sessionOnlineModal, setSessionOnlineModal] = useState<{
-    message: string;
-    deviceType: string;
-    forceLogoutToken: string;
-    retryKind: 'password' | 'otp';
-  } | null>(null);
-  const [forceLogoutLoading, setForceLogoutLoading] = useState(false);
   const navigate = useNavigate();
   const { login: authLogin, setSession } = useAuth();
 
@@ -36,7 +23,6 @@ const Login: React.FC = () => {
     try {
       const message = sessionStorage.getItem('login_401_message');
       sessionStorage.removeItem('login_401_message');
-      sessionStorage.removeItem('login_401_session');
       if (message && message.trim()) {
         setError(message.trim());
         setShowErrorModal(true);
@@ -84,18 +70,7 @@ const Login: React.FC = () => {
       setSession(response);
       navigate('/dashboard');
     } catch (err: any) {
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-      if (status === 409 && data?.code === 'LOGGED_IN_ELSEWHERE' && data?.forceLogoutToken) {
-        setSessionOnlineModal({
-          message: typeof data.message === 'string' ? data.message : 'این اکانت روی دستگاه دیگری فعال است.',
-          deviceType: data.deviceType || 'DESKTOP',
-          forceLogoutToken: data.forceLogoutToken,
-          retryKind: 'otp',
-        });
-      } else {
-        setErrorAndShow(getAuthErrorMessage(err));
-      }
+      setErrorAndShow(getAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -104,7 +79,6 @@ const Login: React.FC = () => {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorAndShow(null);
-    setSessionOnlineModal(null);
     setLoading(true);
     try {
       const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
@@ -113,47 +87,9 @@ const Login: React.FC = () => {
       await authLogin({ login: normalizedLogin, password: loginPassword });
       navigate('/dashboard');
     } catch (err: any) {
-      const status = err?.response?.status;
-      const data = err?.response?.data;
-      if (status === 409 && data?.code === 'LOGGED_IN_ELSEWHERE' && data?.forceLogoutToken) {
-        setSessionOnlineModal({
-          message: typeof data.message === 'string' ? data.message : 'این اکانت روی دستگاه دیگری فعال است.',
-          deviceType: data.deviceType || 'DESKTOP',
-          forceLogoutToken: data.forceLogoutToken,
-          retryKind: 'password',
-        });
-      } else {
-        setErrorAndShow(getAuthErrorMessage(err));
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReplaceSessionAndLogin = async () => {
-    if (!sessionOnlineModal) return;
-    const token = sessionOnlineModal.forceLogoutToken;
-    const { retryKind } = sessionOnlineModal;
-    setForceLogoutLoading(true);
-    setErrorAndShow(null);
-    try {
-      await authService.forceLogoutAll({ forceLogoutToken: token });
-      setSessionOnlineModal(null);
-      if (retryKind === 'otp') {
-        const normalizedPhone = normalizePhoneNumber(phone);
-        const response = await authService.verifyOtp(normalizedPhone, otp);
-        setSession(response);
-      } else {
-        const normalizedLogin = /^[\d۰-۹٠-٩+\s-]+$/.test(loginInput)
-          ? normalizePhoneNumber(loginInput)
-          : loginInput;
-        await authLogin({ login: normalizedLogin, password: loginPassword });
-      }
-      navigate('/dashboard');
-    } catch (err: any) {
       setErrorAndShow(getAuthErrorMessage(err));
     } finally {
-      setForceLogoutLoading(false);
+      setLoading(false);
     }
   };
 
@@ -207,55 +143,6 @@ const Login: React.FC = () => {
             >
               متوجه شدم
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* پاپ‌آپ: اکانت روی دستگاه دیگری فعال است */}
-      {sessionOnlineModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="session-online-title"
-        >
-          <div className={`${glassCard} max-w-md w-full`}>
-            <div className="flex items-start gap-3 mb-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-violet-500/20 flex items-center justify-center">
-                <svg className="w-5 h-5 text-violet-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 id="session-online-title" className="text-lg font-semibold text-white mb-1">
-                  این اکانت الان آنلاین است
-                </h2>
-                <p className="text-white/90 text-right text-sm leading-relaxed">
-                  {sessionOnlineModal.message}
-                </p>
-                <p className="text-white/70 text-right text-sm mt-2">
-                  این اکانت روی دستگاه دیگری ({deviceTypeLabel[sessionOnlineModal.deviceType] || sessionOnlineModal.deviceType}) لاگین است. با زدن «ورود از اینجا» سشن آن دستگاه پاک می‌شود و از اینجا وارد می‌شوید.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={handleReplaceSessionAndLogin}
-                disabled={forceLogoutLoading}
-                className={btnPrimary}
-              >
-                {forceLogoutLoading ? 'در حال انجام...' : 'ورود از اینجا (پاک کردن سشن قبلی)'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSessionOnlineModal(null)}
-                disabled={forceLogoutLoading}
-                className="w-full py-2.5 text-sm text-white/80 hover:text-white disabled:opacity-50 transition-colors"
-              >
-                انصراف
-              </button>
-            </div>
           </div>
         </div>
       )}

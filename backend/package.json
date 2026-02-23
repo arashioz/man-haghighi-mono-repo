@@ -39,6 +39,8 @@
     "import:old-users-csv": "ts-node scripts/import-old-users-csv.ts",
     "import:merged": "ts-node scripts/import-merged-to-production.ts",
     "assign-courses-from-old-products": "ts-node scripts/assign-courses-from-old-products.ts",
+    "export:users-no-phone-no-email": "ts-node scripts/export-users-no-phone-no-email.ts",
+    "normalize:phone-plus98": "ts-node scripts/normalize-phone-plus98.ts",
     "clean": "./clean.sh",
     "clean:all": "rm -rf dist uploads/*",
     "clean:build": "rm -rf dist",

@@ -2,7 +2,7 @@ import { Controller, Post, Body, UseGuards, Get, Request, Patch } from '@nestjs/
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, ForceLogoutAllDto, CheckSessionByPhoneDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, UpdateProfileDto, SendOtpDto, VerifyOtpDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
 
@@ -44,30 +44,8 @@ export class AuthController {
   })
   @ApiResponse({ status: 200, description: 'User logged in successfully (password) or OTP sent successfully (OTP flow)' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  @ApiResponse({ status: 409, description: 'Already logged in on another device' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
-  }
-
-  @Post('force-logout-all')
-  @Public()
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
-  @ApiOperation({ summary: 'Log out from all devices (requires login+password or phone+otp)' })
-  @ApiResponse({ status: 200, description: 'Logged out from all devices' })
-  @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async forceLogoutAll(@Body() dto: ForceLogoutAllDto) {
-    return this.authService.forceLogoutAll(dto);
-  }
-
-  @Post('sessions/check-by-phone')
-  @Public()
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 30, ttl: 60000 } })
-  @ApiOperation({ summary: 'Check if user has active session in DB (by phone)' })
-  @ApiResponse({ status: 200, description: 'hasSession and optional session (deviceType, updatedAt)' })
-  async checkSessionByPhone(@Body() dto: CheckSessionByPhoneDto) {
-    return this.authService.checkSessionByPhone(dto.phone);
   }
 
   @Post('send-otp')
@@ -88,7 +66,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify OTP and login (for regular users)' })
   @ApiResponse({ status: 200, description: 'OTP verified and user logged in successfully' })
   @ApiResponse({ status: 401, description: 'Invalid OTP or expired' })
-  @ApiResponse({ status: 409, description: 'Already logged in on another device' })
   async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOtp(verifyOtpDto);
   }

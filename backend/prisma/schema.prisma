@@ -64,23 +64,8 @@ model User {
   messagesReceived          UserMessage[]
   messagesSent              Message[]                   @relation("MessagesSent")
   posts                     Post[]                     @relation("UserPosts")
-  activeSession              UserSession?
 
   @@map("users")
-}
-
-model UserSession {
-  id         String   @id @default(cuid())
-  userId     String   @unique
-  sessionId  String   @unique
-  deviceType String   // ANDROID | IOS | DESKTOP
-  userAgent  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_sessions")
 }
 
 model Message {
