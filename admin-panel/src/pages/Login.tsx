@@ -52,9 +52,11 @@ const Login: React.FC = () => {
           ? normalizePhoneNumber(credentials.login)
           : credentials.login,
       };
+      console.log(normalizedCredentials)
       await login(normalizedCredentials);
       navigate('/dashboard');
     } catch (err: any) {
+      console.log("err", err)
       setErrorModalMessage(getBackendErrorMessage(err));
       setShowErrorModal(true);
     } finally {
