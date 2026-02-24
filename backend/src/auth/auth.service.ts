@@ -193,7 +193,7 @@ export class AuthService {
     const loginInput = login.trim();
     const normalizedEmail = loginInput.includes('@') ? loginInput.toLowerCase() : null;
     const normalizedPhone = normalizePhone(loginInput);
-
+console.log( "login DTO" , loginDto)
     const orConditions: Prisma.UserWhereInput[] = [
       {
         username: {
