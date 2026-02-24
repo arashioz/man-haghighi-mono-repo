@@ -100,6 +100,7 @@ async function bootstrap() {
 
   // app.enableCors(corsOptions);
 
+  // آپلود تا ۲۰ گیگ — nginx هم باید client_max_body_size 20G و proxy timeouts بالا داشته باشد
   app.use(require('express').json({ limit: '20gb' }));
   app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
 

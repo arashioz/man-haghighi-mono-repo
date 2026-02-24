@@ -1,0 +1,98 @@
+# دیپلوی پروداکشن با nginx داخل Docker
+# دامنه‌ها: manehaghighi.com, admin.manehaghighi.com, api.manehaghighi.com
+# قبل از بالا آوردن: گواهی SSL را روی سرور بگیرید (راهنما در DEPLOY.md)
+
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: haghighi_postgres
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-haghighi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: haghighi_backend
+    env_file: .env
+    volumes:
+      - ./uploads:/app/uploads
+      - ./moc-old-data:/app/moc-old-data
+    networks:
+      - app_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: https://api.manehaghighi.com/api
+    container_name: haghighi_frontend
+    networks:
+      - app_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  admin:
+    build:
+      context: ./admin-panel
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: https://api.manehaghighi.com/api
+    container_name: haghighi_admin
+    networks:
+      - app_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: haghighi_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./server-config/nginx-docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./server-config/nginx-docker/conf.d:/etc/nginx/conf.d:ro
+      - ./server-config/nginx-docker/options-ssl-nginx.conf:/etc/nginx/ssl-options.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot-webroot:/var/www/certbot:ro
+    networks:
+      - app_network
+    depends_on:
+      - backend
+      - frontend
+      - admin
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
