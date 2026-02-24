@@ -106,6 +106,30 @@ services:
       start_period: 10s
 
   # -------------------------------
+  # Nginx (پروکسی و SSL — دامنه‌ها: manehaghighi.com, admin.manehaghighi.com, api.manehaghighi.com)
+  # کانفیگ: server-config/nginx-docker/
+  # -------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: haghighi_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./server-config/nginx-docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./server-config/nginx-docker/conf.d:/etc/nginx/conf.d:ro
+      - ./server-config/nginx-docker/options-ssl-nginx.conf:/etc/nginx/ssl-options.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot-webroot:/var/www/certbot:ro
+    networks:
+      - frontend_network
+    depends_on:
+      - backend
+      - frontend
+      - admin
+    restart: unless-stopped
+
+  # -------------------------------
   # Prisma Studio (Dev only)
   # -------------------------------
   prisma-studio:
