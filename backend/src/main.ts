@@ -105,7 +105,6 @@ async function bootstrap() {
     }),
   );
 
-  // Handle root path before setting global prefix
   app.getHttpAdapter().get('/', (req: Request, res: Response) => {
     res.json({
       message: 'Haghighi Platform API',
