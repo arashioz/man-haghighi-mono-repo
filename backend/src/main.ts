@@ -45,7 +45,7 @@ async function bootstrap() {
     'http://127.0.0.1:8081',
   ];
 
-  // CORS با Nest داخلی تا روی همهٔ پاسخ‌ها (از جمله 400/401 لاگین) هدر بیاید و فرانت از manehaghighi.com خطا نگیرد
+  // CORS فقط اینجا — nginx فقط proxy است، OPTIONS و همهٔ پاسخ‌ها (از جمله 400/401) از Nest هدر می‌گیرند
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
