@@ -130,7 +130,7 @@ services:
     #   - backend
     #   - frontend
     #   - admin
-    restart: unless-stopped
+    # restart: unless-stopped
 
   # -------------------------------
   # Prisma Studio (Dev only)
