@@ -36,6 +36,7 @@ services:
     env_file: .env
     environment:
       - API_BASE_URL=https://api.manehaghighi.com
+      - RESET_DB=false   # اگر true باشد دیتابیس قبل از migration پاک می‌شود (برای production باید false باشد)
     ports:
       - "127.0.0.1:8080:3000"
     volumes:
@@ -48,8 +49,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      RESET_DB: "false"   # اگر true باشد دیتابیس قبل از migration پاک می‌شود (برای production باید false باشد)
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
