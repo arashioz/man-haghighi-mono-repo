@@ -135,23 +135,23 @@ services:
   # -------------------------------
   # Prisma Studio (Dev only)
   # -------------------------------
-  prisma-studio:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: haghighi_prisma_studio
-    env_file: .env
-    ports:
-      - "5555:5555"
-    volumes:
-      - ./backend:/app
-    networks:
-      - backend_network
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: npx prisma studio
-    restart: unless-stopped
+  # prisma-studio:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: haghighi_prisma_studio
+  #   env_file: .env
+  #   ports:
+  #     - "5555:5555"
+  #   volumes:
+  #     - ./backend:/app
+  #   networks:
+  #     - backend_network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   command: npx prisma studio
+  #   restart: unless-stopped
 
 # -------------------------------
 # Volumes & Networks
