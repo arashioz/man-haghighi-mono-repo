@@ -77,10 +77,17 @@ async function bootstrap() {
   };
   app.enableCors(corsOptions);
 
-  // آپلود تا ۲۰ گیگ — nginx هم باید client_max_body_size 20G و proxy timeouts بالا داشته باشد
-  app.use(require('express').json({ limit: '20gb' }));
-  app.use(require('express').urlencoded({ limit: '20gb', extended: true }));
+  const rawBodyParser = require('express').raw({ type: '*/*', limit: '20gb' });
+  app.use(rawBodyParser);
 
+  app.use((req: Request, res: Response, next: () => void) => {
+    if (req.originalUrl.startsWith('/api/courses/')) { // یا مسیر دقیق آپلود شما
+        require('express')
+            .raw({ limit: '20gb' })(req, res, next);
+    } else {
+        next();
+    }
+  });
   // Apply helmet with proper security configuration
   // CSP temporarily disabled to allow app access
   // crossOriginResourcePolicy: cross-origin تا عکس/مدیا از API روی فرانت (دامنه دیگر) لود شود
