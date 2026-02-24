@@ -117,11 +117,11 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./server-config/nginx-docker/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./server-config/nginx-docker/conf.d:/etc/nginx/conf.d:ro
-      - ./server-config/nginx-docker/options-ssl-nginx.conf:/etc/nginx/ssl-options.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./certbot-webroot:/var/www/certbot:ro
+      - ./server-config/nginx-docker/nginx.conf:/etc/nginx/nginx.conf:rw
+      - ./server-config/nginx-docker/conf.d:/etc/nginx/conf.d:rw
+      - ./server-config/nginx-docker/options-ssl-nginx.conf:/etc/nginx/ssl-options.conf:rw
+      - /etc/letsencrypt:/etc/letsencrypt:rw
+      - ./certbot-webroot:/var/www/certbot:rw
       - ./path/to/live/certs:/etc/letsencrypt/live:rw
       - ./path/to/archive/certs:/etc/letsencrypt/archive:rw
     networks:
