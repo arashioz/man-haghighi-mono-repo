@@ -97,11 +97,13 @@ async function bootstrap() {
   }));
   app.use(compression());
 
-  app.useGlobalPipes(new ValidationPipe({
-    transform: true, 
-    whitelist: true, 
-    disableErrorMessages: false, 
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true, // این پارامتر بسیار مهم است
+    }),
+  );
 
   // Handle root path before setting global prefix
   app.getHttpAdapter().get('/', (req: Request, res: Response) => {
