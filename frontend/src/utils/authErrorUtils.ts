@@ -27,7 +27,7 @@ export function getAuthErrorMessage(err: any): string {
   // اگر response رسیده ولی message نبود، از error یا message سرور استفاده کن
   if (data?.error && typeof data.error === 'string' && data.error.trim()) return data.error.trim();
   if (err?.message && typeof err.message === 'string' && err.message.trim() && err.message !== 'Network Error') return err.message.trim();
-  console.log(err.response, data)
+  console.log(err, data)
   if (!err?.response) return 'نام کاربری یا رمز عبور اشتباه میباشد';
   return 'کاربر ثبت نام نشده';
 }
