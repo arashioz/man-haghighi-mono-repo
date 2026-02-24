@@ -115,59 +115,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // Ensure CORS headers are always set, even on errors
-    const origin = request.headers.origin;
-    let allowedOrigins: string[] = [];
-    
-    // Try to get allowed origins from ConfigService or process.env
-    try {
-      const configService = this.moduleRef.get(ConfigService, { strict: false });
-      const corsOriginsEnv = configService?.get<string>('CORS_ORIGINS') || '';
-      if (corsOriginsEnv) {
-        this.logger.debug(`🔍 CORS_ORIGINS from ConfigService: "${corsOriginsEnv}"`);
-        allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
-      }
-    } catch {
-      const corsOriginsEnv = process.env.CORS_ORIGINS || '';
-      this.logger.debug(`🔍 CORS_ORIGINS from process.env: "${corsOriginsEnv}"`);
-      allowedOrigins = corsOriginsEnv.split(',').map(o => o.trim()).filter(Boolean);
-    }
-    
-    // Fallback to defaults if empty
-    if (allowedOrigins.length === 0) {
-      allowedOrigins = [
-        'https://admin.manehaghighi.com',
-        'https://sales.manehaghighi.com',
-        'https://manehaghighi.com',
-        'https://www.manehaghighi.com',
-        'https://api.manehaghighi.com',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:3002',
-      ];
-    }
+    // CORS روی همهٔ پاسخ‌های خطا (از جمله 400 لاگین) تا فرانت بتواند پیام را بخواند
+    const origin = (request.headers.origin as string) || '';
+    const normalized = origin.replace(/\/$/, '').toLowerCase();
+    const isOurDomain =
+      /^https?:\/\/(www\.)?manehaghighi\.com$/i.test(normalized) ||
+      /^https?:\/\/[a-z0-9-]+\.manehaghighi\.com$/i.test(normalized) ||
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalized);
 
-    if (origin) {
-      const normalizedOrigin = origin.replace(/\/$/, '').toLowerCase();
-      const isSubdomain = /^https?:\/\/[a-z0-9-]+\.manehaghighi\.com$/i.test(normalizedOrigin);
-
-      const isAllowed = allowedOrigins.some(allowed => {
-        const normalizedAllowed = allowed.replace(/\/$/, '').toLowerCase();
-        return normalizedAllowed === normalizedOrigin;
-      }) || isSubdomain || normalizedOrigin === 'https://manehaghighi.com' || normalizedOrigin === 'http://manehaghighi.com';
-      
-      this.logger.debug(`CORS Check: origin=${origin}, isAllowed=${isAllowed}`);
-      
-      if (isAllowed) {
-        response.setHeader('Access-Control-Allow-Origin', origin);
-        response.setHeader('Access-Control-Allow-Credentials', 'true');
-        response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-        response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Access-Control-Allow-Headers, Access-Control-Allow-Origin, Access-Control-Allow-Credentials, Cache-Control, Pragma, Expires, X-HTTP-Method-Override');
-        response.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges, Content-Location');
-      } else {
-        this.logger.warn(`CORS Check FAILED for origin: ${origin}`);
-        this.logger.debug(`Allowed origins: ${allowedOrigins.join(', ')}`);
-      }
+    if (origin && isOurDomain) {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+      response.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma');
+      response.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges');
     }
 
     response.status(status).json(responseBody);

@@ -34,6 +34,8 @@ services:
     # Required Gateway variables: GATEWAY_TERMINAL_ID, GATEWAY_USERNAME, GATEWAY_PASSWORD
     # Optional Gateway variables: GATEWAY_MODE, GATEWAY_CALLBACK_URL, GATEWAY_AUTO_VERIFY, GATEWAY_AUTO_SETTLE
     env_file: .env
+    environment:
+      - API_BASE_URL=https://api.manehaghighi.com
     ports:
       - "127.0.0.1:8080:3000"
     volumes:

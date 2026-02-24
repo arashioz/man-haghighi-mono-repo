@@ -27,6 +27,8 @@ services:
       dockerfile: Dockerfile
     container_name: haghighi_backend
     env_file: .env
+    environment:
+      - API_BASE_URL=https://api.manehaghighi.com
     volumes:
       - ./uploads:/app/uploads
       - ./moc-old-data:/app/moc-old-data
