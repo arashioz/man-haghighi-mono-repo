@@ -289,7 +289,7 @@ const args = process.argv.slice(2);
 const updateOnly = args.includes('--update-only');
 const enrollmentsOnly = args.includes('--enrollments-only');
 const filePathArg = args.find((a) => !a.startsWith('--'));
-const defaultPath = path.join(process.cwd(), 'moc-old-data/users_with_courses_2025-12-23.json');
+const defaultPath = path.join(process.cwd(), 'moc-old-data/users_with_courses_2026-02-23.json');
 const filePath = filePathArg || defaultPath;
 
 async function main() {
