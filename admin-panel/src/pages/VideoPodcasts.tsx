@@ -415,6 +415,7 @@ const VideoPodcasts: React.FC = () => {
                               src={videoPodcast.thumbnail}
                               alt={videoPodcast.title}
                               className="h-full w-full object-cover"
+                              crossOrigin="anonymous"
                             />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center bg-indigo-500 text-white font-semibold text-lg">

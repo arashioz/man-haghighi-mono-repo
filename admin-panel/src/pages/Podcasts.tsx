@@ -350,7 +350,7 @@ const Podcasts: React.FC = () => {
                               {truncateWords(podcast.description, 20)}
                             </div>
                           )}
-                          <audio controls className="w-full">
+                          <audio controls className="w-full" crossOrigin="anonymous">
                             <source src={podcast.streamUrl || podcast.audioFile || undefined} />
                             مرورگر شما از پخش صدا پشتیبانی نمی‌کند.
                           </audio>
@@ -706,6 +706,7 @@ const Podcasts: React.FC = () => {
                   src={editingPodcast.thumbnail}
                   alt="Current thumbnail"
                   className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                  crossOrigin="anonymous"
                 />
                 <p className="mt-1 text-xs text-blue-600">
                   تصویر فعلی

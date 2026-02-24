@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const prisma = new PrismaClient();
+export const prisma = new PrismaClient();
 const BATCH_SIZE = 100;
 const UPDATE_BATCH_SIZE = 500;
 
@@ -30,15 +30,30 @@ interface ImportUser {
   audioAccessIds: string[];
 }
 
+/**
+ * نرمال‌سازی شماره: فقط یک شماره. اگر با -- دو شماره چسبیده (مثل 09127076128--09197777506)
+ * فقط اولین شماره به‌عنوان username و phone استفاده می‌شود.
+ */
 function normalizePhone(phone: string | null | undefined): string {
   if (!phone) return '';
-  return phone.replace(/\s/g, '').trim();
+  const cleaned = phone.replace(/\s/g, '').trim();
+  if (cleaned.includes('--')) {
+    return cleaned.split('--')[0].trim() || '';
+  }
+  return cleaned;
 }
 
 function normalizeEmail(email: string | null | undefined): string {
   if (!email) return '';
   return email.trim().toLowerCase();
 }
+
+/**
+ * ایمپورت کاربران و دوره‌های آن‌ها از فایل JSON به سایت فعلی.
+ * - id های کاربران در فایل استفاده نمی‌شوند؛ برای هر کاربر جدید در زمان ایجاد، دیتابیس یک id جدید (cuid) می‌سازد.
+ * - اطلاعات کاربر: phone, email, firstName, lastName استفاده می‌شود؛ username از شماره یا ایمیل ساخته می‌شود.
+ * - دوره‌ها: فقط دوره‌هایی که در دیتابیس وجود دارند به عنوان CourseEnrollment برای همان کاربر اضافه می‌شوند.
+ */
 
 /**
  * برای همهٔ کاربران: شناسه ورود (username) را از شماره همراه یا در نبود آن از ایمیل تنظیم می‌کند.
@@ -106,7 +121,10 @@ async function setLoginUsernameForAllUsers() {
   console.log(`  تعداد به‌روزرسانی‌شده: ${updated}, بدون تغییر: ${skipped}`);
 }
 
-/** یک کاربر و در صورت وجود دوره‌هاش را در یک تراکنش جدا وارد می‌کند تا خطا در یکی باعث 25P02 برای بقیه نشود. */
+/**
+ * یک کاربر و دوره‌هایش را وارد می‌کند. id کاربر از فایل استفاده نمی‌شود؛ برای کاربر جدید دیتابیس id می‌سازد.
+ * اگر کاربر با همین phone/email از قبل وجود داشته باشد، فقط دوره‌های فایل برایش اضافه می‌شود.
+ */
 async function importOneUser(userData: ImportUser): Promise<{ userCreated: boolean; enrollmentsCreated: number }> {
   const normalizedPhone = normalizePhone(userData.phone);
   const normalizedEmail = normalizeEmail(userData.email);
@@ -125,21 +143,23 @@ async function importOneUser(userData: ImportUser): Promise<{ userCreated: boole
       : null;
     const existingUser = existingByPhone || existingByEmail;
 
+    let userId: string;
     if (existingUser) {
-      return { userCreated: false, enrollmentsCreated: 0 };
+      userId = existingUser.id;
+    } else {
+      const user = await tx.user.create({
+        data: {
+          phone: normalizedPhone || null,
+          email: normalizedEmail || userData.email?.trim() || null,
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          username: loginId,
+          role: 'USER',
+          isOld: true,
+        },
+      });
+      userId = user.id;
     }
-
-    const user = await tx.user.create({
-      data: {
-        phone: normalizedPhone || null,
-        email: normalizedEmail || userData.email?.trim() || null,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        username: loginId,
-        role: 'USER',
-        isOld: true,
-      },
-    });
 
     let enrollmentsCreated = 0;
     if (userData.purchasedCourses && Array.isArray(userData.purchasedCourses)) {
@@ -148,17 +168,24 @@ async function importOneUser(userData: ImportUser): Promise<{ userCreated: boole
         if (!courseId) continue;
         const courseExists = await tx.course.findUnique({ where: { id: courseId } });
         if (!courseExists) continue;
-        await tx.courseEnrollment.create({
-          data: {
-            userId: user.id,
+        await tx.courseEnrollment.upsert({
+          where: {
+            userId_courseId: { userId, courseId },
+          },
+          create: {
+            userId,
             courseId,
             enrolledAt: new Date(courseData.enrolledAt || courseData.createdAt || new Date()),
           },
+          update: {},
         });
         enrollmentsCreated++;
       }
     }
-    return { userCreated: true, enrollmentsCreated };
+    return {
+      userCreated: !existingUser,
+      enrollmentsCreated,
+    };
   });
 }
 
@@ -233,7 +260,60 @@ async function addEnrollmentsOnly(filePath: string) {
   console.log(`- Course not found in DB: ${courseNotFound}`);
 }
 
-async function importUsers(filePath: string) {
+/**
+ * کاربران قبلی که شمارهٔ آن‌ها دو قسمت با -- بوده (مثل 09127076128--09197777506) را
+ * به‌روز می‌کند: فقط اولین شماره به‌عنوان phone و username.
+ */
+export async function fixExistingUsersWithDoublePhone(): Promise<{ updated: number; skipped: number; conflicted: number }> {
+  const users = await prisma.user.findMany({
+    where: { phone: { not: null } },
+    select: { id: true, phone: true, username: true },
+  });
+  const withDouble = users.filter((u) => u.phone && u.phone.includes('--'));
+  if (withDouble.length === 0) {
+    console.log('هیچ کاربری با شمارهٔ دوگانه (--) یافت نشد.');
+    return { updated: 0, skipped: 0, conflicted: 0 };
+  }
+  console.log(`\n--- به‌روزرسانی ${withDouble.length} کاربر با شمارهٔ دوگانه (فقط اولین شماره) ---`);
+  let updated = 0;
+  let skipped = 0;
+  let conflicted = 0;
+  const usedPhones = new Set<string>(users.filter((u) => u.phone && !u.phone.includes('--')).map((u) => u.phone!));
+  for (const u of withDouble) {
+    const firstNumber = normalizePhone(u.phone);
+    if (!firstNumber) {
+      skipped++;
+      continue;
+    }
+    let targetPhone = firstNumber;
+    let targetUsername = firstNumber;
+    if (usedPhones.has(firstNumber)) {
+      targetPhone = `${firstNumber}_${u.id.slice(-6)}`;
+      targetUsername = `${firstNumber}_${u.id.slice(-6)}`;
+      conflicted++;
+      console.log(`  تداخل: ${u.phone} -> phone/username: ${targetPhone} (شمارهٔ ${firstNumber} قبلاً استفاده شده)`);
+    } else {
+      usedPhones.add(firstNumber);
+    }
+    try {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { phone: targetPhone, username: targetUsername },
+      });
+      updated++;
+      if (updated <= 5 || updated % 200 === 0) {
+        console.log(`  به‌روز شد: ${u.phone} -> ${targetPhone}`);
+      }
+    } catch (e) {
+      console.error(`  خطا برای user ${u.id}:`, e);
+      skipped++;
+    }
+  }
+  console.log(`  به‌روزرسانی‌شده: ${updated}, رد شده: ${skipped}, تداخل (شماره تکراری): ${conflicted}`);
+  return { updated, skipped, conflicted };
+}
+
+export async function importUsers(filePath: string) {
   console.log(`Reading user data from: ${filePath}`);
   const fileContent = fs.readFileSync(filePath, 'utf8');
   const usersData: ImportUser[] = JSON.parse(fileContent);
@@ -258,13 +338,13 @@ async function importUsers(filePath: string) {
       const result = await importOneUser(userData);
       if (result.userCreated) {
         importedUsers++;
-        importedEnrollments += result.enrollmentsCreated;
         if (importedUsers <= 5 || importedUsers % 500 === 0) {
           console.log(`  imported user ${i + 1}/${usersData.length}: ${loginId} (${result.enrollmentsCreated} courses)`);
         }
       } else {
         skippedUsers++;
       }
+      importedEnrollments += result.enrollmentsCreated;
     } catch (error) {
       failedUsers++;
       console.error(`Error importing user at index ${i} (${loginId}):`, error);
@@ -284,13 +364,13 @@ async function importUsers(filePath: string) {
 // آرگومان‌ها:
 //   --update-only       فقط username تمام کاربران را اپدیت کن (شماره یا ایمیل)
 //   --enrollments-only  فقط دوره‌ها را برای کاربران موجود از فایل اضافه کن (بدون ساخت کاربر جدید)
-//   [مسیر فایل JSON]   مسیر فایل؛ پیش‌فرض: moc-old-data/users_with_courses_2025-12-23.json
+//   [مسیر فایل JSON]   مسیر فایل (مثلاً moc-old-data/users_import_1403_1404.json). پیش‌فرض: moc-old-data/users_with_courses_2026-02-23.json
 const args = process.argv.slice(2);
 const updateOnly = args.includes('--update-only');
 const enrollmentsOnly = args.includes('--enrollments-only');
 const filePathArg = args.find((a) => !a.startsWith('--'));
 const defaultPath = path.join(process.cwd(), 'moc-old-data/users_with_courses_2026-02-23.json');
-const filePath = filePathArg || defaultPath;
+const filePath = filePathArg ? path.resolve(process.cwd(), filePathArg) : defaultPath;
 
 async function main() {
   if (updateOnly) {
@@ -315,11 +395,13 @@ async function main() {
   await importUsers(filePath);
 }
 
-main()
-  .catch((e) => {
-    console.error('Import failed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error('Import failed:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

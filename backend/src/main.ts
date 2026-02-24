@@ -108,13 +108,8 @@ async function bootstrap() {
   // CSP temporarily disabled to allow app access
   // crossOriginResourcePolicy: cross-origin تا عکس/مدیا از API روی فرانت (دامنه دیگر) لود شود
   app.use(helmet({
-    contentSecurityPolicy: false, 
-    // crossOriginResourcePolicy: { policy: 'cross-origin' },
-    // hsts: {
-    //   maxAge: 31536000, // 1 year
-    //   includeSubDomains: true,
-    //   preload: true,
-    // },
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   }));
   app.use(compression());
 
@@ -155,10 +150,13 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Serve static uploads
+  // Serve static uploads — هدر CORP برای لود عکس/صدا از دامنهٔ دیگر (مثلاً پنل ادمین)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
     fallthrough: true,
+    setHeaders: (res) => {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
   });
 
   const port = configService.get<number>('PORT', 3000);

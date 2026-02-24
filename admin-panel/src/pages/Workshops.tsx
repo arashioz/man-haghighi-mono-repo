@@ -451,6 +451,7 @@ const Workshops: React.FC = () => {
                               src={workshop.thumbnail.startsWith('http') ? workshop.thumbnail : `${API_ORIGIN}/uploads/${workshop.thumbnail}`}
                               alt={workshop.title}
                               className="h-10 w-10 rounded-lg object-cover"
+                              crossOrigin="anonymous"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
                                 (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
@@ -842,6 +843,7 @@ const Workshops: React.FC = () => {
                   src={editingWorkshop.thumbnail.startsWith('http') ? editingWorkshop.thumbnail : `${API_ORIGIN}/uploads/${editingWorkshop.thumbnail}`}
                   alt={editingWorkshop.title}
                   className="h-20 w-20 rounded-lg object-cover border border-gray-300"
+                  crossOrigin="anonymous"
                 />
               </div>
             )}

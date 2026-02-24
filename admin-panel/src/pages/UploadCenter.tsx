@@ -340,6 +340,7 @@ const UploadCenter: React.FC = () => {
                     src={getFileUrl(file.filename)}
                     alt={file.filename}
                     className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
                   />
                 ) : (
                   getFileIcon(file.type)
@@ -537,6 +538,7 @@ const UploadCenter: React.FC = () => {
                     controls
                     className="w-full max-w-md"
                     autoPlay
+                    crossOrigin="anonymous"
                   />
                 </div>
               )}
@@ -545,6 +547,7 @@ const UploadCenter: React.FC = () => {
                   src={getFileUrl(previewFile.filename)}
                   alt={previewFile.filename}
                   className="max-w-full max-h-full object-contain"
+                  crossOrigin="anonymous"
                 />
               )}
               {previewFile.type !== 'video' && previewFile.type !== 'audio' && previewFile.type !== 'image' && (

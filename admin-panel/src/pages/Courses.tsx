@@ -73,7 +73,7 @@ const AudioPlayerComponent: React.FC<{ audioUrl: string }> = ({ audioUrl }) => {
 
   return (
     <div className="bg-white border border-purple-200 rounded-lg p-3">
-      <audio ref={audioRef} src={audioUrl} preload="metadata" className="hidden" />
+      <audio ref={audioRef} src={audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
       
       {/* Progress Bar */}
       <div className="mb-2">
@@ -1064,6 +1064,7 @@ const Courses: React.FC = () => {
                               src={course.thumbnail}
                               alt={course.title}
                               className="h-10 w-10 rounded-lg object-cover"
+                              crossOrigin="anonymous"
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-lg bg-blue-500 flex items-center justify-center text-white font-medium">                            
@@ -1569,6 +1570,7 @@ const Courses: React.FC = () => {
                   src={editingCourse.thumbnail}
                   alt={editingCourse.title || 'Course thumbnail'}
                   className="h-16 w-16 rounded-lg object-cover border border-gray-200"
+                  crossOrigin="anonymous"
                 />
                 <a
                   href={editingCourse.thumbnail}

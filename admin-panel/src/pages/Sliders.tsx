@@ -505,6 +505,7 @@ const Sliders: React.FC = () => {
                     src={getImageUrl(editingSlider.image) || editingSlider.image || ''}
                     alt={editingSlider.title}
                     className="w-full h-40 object-cover"
+                    crossOrigin="anonymous"
                   />
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs text-gray-600">
@@ -528,6 +529,7 @@ const Sliders: React.FC = () => {
                     controls
                     className="w-full h-40 object-cover"
                     src={getImageUrl(editingSlider.videoFile) || editingSlider.videoFile || ''}
+                    crossOrigin="anonymous"
                   />
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs text-gray-600">

@@ -294,7 +294,7 @@ const Articles: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           {article.featuredImage ? (
-                            <img src={getFeaturedImageUrl(article.featuredImage) || article.featuredImage} alt={article.title} className="h-10 w-10 rounded-lg object-cover" />
+                            <img src={getFeaturedImageUrl(article.featuredImage) || article.featuredImage} alt={article.title} className="h-10 w-10 rounded-lg object-cover" crossOrigin="anonymous" />
                           ) : (
                             <div className="h-10 w-10 rounded-lg bg-purple-500 flex items-center justify-center text-white">
                               {article.title?.[0] || 'A'}
@@ -670,7 +670,7 @@ const Articles: React.FC = () => {
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   />
                   {(editImagePreview || editingArticle.featuredImage) && (
-                    <img src={editImagePreview || getFeaturedImageUrl(editingArticle.featuredImage) || ''} alt="پیش‌نمایش" className="mt-2 h-24 rounded object-cover" />
+                    <img src={editImagePreview || getFeaturedImageUrl(editingArticle.featuredImage) || ''} alt="پیش‌نمایش" className="mt-2 h-24 rounded object-cover" crossOrigin="anonymous" />
                   )}
                 </div>
                 <div>
