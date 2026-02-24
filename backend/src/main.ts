@@ -77,8 +77,7 @@ async function bootstrap() {
   };
   app.enableCors(corsOptions);
 
-  const rawBodyParser = require('express').raw({ type: '*/*', limit: '20gb' });
-  app.use(rawBodyParser);
+
 
   app.use((req: Request, res: Response, next: () => void) => {
     if (req.originalUrl.startsWith('/api/courses/')) { // یا مسیر دقیق آپلود شما
