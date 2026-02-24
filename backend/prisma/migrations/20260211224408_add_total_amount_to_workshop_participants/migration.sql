@@ -21,10 +21,10 @@ ALTER TYPE "PaymentStatus" ADD VALUE 'PAYMENT_TIMEOUT';
 ALTER TABLE "payment_links" ADD COLUMN     "aggregateCount" INTEGER,
 ADD COLUMN     "isAggregate" BOOLEAN NOT NULL DEFAULT false;
 
--- AlterTable
-ALTER TABLE "workshop_participants" DROP COLUMN "prepaymentAmount",
-ADD COLUMN     "paidAmount" DECIMAL(10,2) NOT NULL DEFAULT 0,
-ADD COLUMN     "totalAmount" DECIMAL(10,2) NOT NULL;
+-- AlterTable (totalAmount با DEFAULT تا روی دیتابیس دارای داده هم اجرا شود)
+ALTER TABLE "workshop_participants" ADD COLUMN IF NOT EXISTS "paidAmount" DECIMAL(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE "workshop_participants" ADD COLUMN IF NOT EXISTS "totalAmount" DECIMAL(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE "workshop_participants" DROP COLUMN IF EXISTS "prepaymentAmount";
 
 -- CreateTable
 CREATE TABLE "workshop_payments" (
