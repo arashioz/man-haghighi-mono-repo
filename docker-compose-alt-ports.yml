@@ -110,7 +110,7 @@ services:
   # Nginx (پروکسی و SSL — دامنه‌ها: manehaghighi.com, admin.manehaghighi.com, api.manehaghighi.com)
   # کانفیگ: server-config/nginx-docker/
   # -------------------------------
-  nginx:
+  # nginx:
     image: nginx:alpine
     container_name: haghighi_nginx
     ports:
