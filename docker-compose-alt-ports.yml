@@ -122,6 +122,8 @@ services:
       - ./server-config/nginx-docker/options-ssl-nginx.conf:/etc/nginx/ssl-options.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./certbot-webroot:/var/www/certbot:ro
+      - ./path/to/live/certs:/etc/letsencrypt/live:rw
+      - ./path/to/archive/certs:/etc/letsencrypt/archive:rw
     networks:
       - frontend_network
     depends_on:
