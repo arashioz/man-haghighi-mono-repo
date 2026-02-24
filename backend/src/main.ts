@@ -45,29 +45,7 @@ async function bootstrap() {
     'http://127.0.0.1:8081',
   ];
 
-  // CORS: اول این middleware تا برای OPTIONS (preflight) هدرها حتماً با PATCH و بقیه متدها برگردد
-  const CORS_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD';
-  const CORS_HEADERS = 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma';
-  app.use((req: any, res: any, next: () => void) => {
-    const origin = req.headers?.origin as string | undefined;
-    const allowOrigin =
-      origin &&
-      (allowedOrigins.includes(origin) ||
-        origin.includes('manehaghighi.com') ||
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin));
-    if (allowOrigin && origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', CORS_METHODS);
-      res.setHeader('Access-Control-Allow-Headers', CORS_HEADERS);
-      res.setHeader('Access-Control-Max-Age', '86400');
-    }
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    next();
-  });
-
+  // CORS با Nest داخلی تا روی همهٔ پاسخ‌ها (از جمله 400/401 لاگین) هدر بیاید و فرانت از manehaghighi.com خطا نگیرد
   const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       if (!origin) return callback(null, true);
@@ -97,8 +75,7 @@ async function bootstrap() {
     optionsSuccessStatus: 204,
     maxAge: 86400,
   };
-
-  // app.enableCors(corsOptions);
+  app.enableCors(corsOptions);
 
   // آپلود تا ۲۰ گیگ — nginx هم باید client_max_body_size 20G و proxy timeouts بالا داشته باشد
   app.use(require('express').json({ limit: '20gb' }));
