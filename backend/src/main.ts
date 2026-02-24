@@ -98,13 +98,9 @@ async function bootstrap() {
   app.use(compression());
 
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-    forbidUnknownValues: true,
-    transformOptions: {
-      enableImplicitConversion: true,
-    },
+    transform: true, 
+    whitelist: true, 
+    disableErrorMessages: false, 
   }));
 
   // Handle root path before setting global prefix

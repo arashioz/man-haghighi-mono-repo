@@ -27,16 +27,6 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(LOGIN_401_KEY);
-      if (stored && stored.trim()) {
-        sessionStorage.removeItem(LOGIN_401_KEY);
-        setErrorModalMessage(stored.trim());
-        setShowErrorModal(true);
-      }
-    } catch (_) {}
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
