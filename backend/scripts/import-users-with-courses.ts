@@ -31,15 +31,17 @@ interface ImportUser {
 }
 
 /**
- * نرمال‌سازی شماره: فقط یک شماره. اگر با -- دو شماره چسبیده (مثل 09127076128--09197777506)
- * فقط اولین شماره به‌عنوان username و phone استفاده می‌شود.
+ * نرمال‌سازی شماره: فقط یک شماره. اگر با -- یا / یا - دو شماره جدا شده باشند
+ * (مثل 09127076128--09197777506 یا 0912/0919 یا 0912 - 0919) فقط اولین شماره استفاده می‌شود.
  */
 function normalizePhone(phone: string | null | undefined): string {
   if (!phone) return '';
   const cleaned = phone.replace(/\s/g, '').trim();
-  if (cleaned.includes('--')) {
-    return cleaned.split('--')[0].trim() || '';
-  }
+  // جداکننده: یک یا چند تا از - یا / (با فاصله اختیاری دورش)
+  const parts = cleaned.split(/\s*[-/]+\s*/).map((p) => p.replace(/\s/g, '').trim()).filter(Boolean);
+  const first = parts[0] || '';
+  // اگر قسمت اول حداقل ۱۰ رقم دارد (شمارهٔ معتبر) همان را برگردان؛ وگرنه کل خروجی بدون فاصله
+  if (first.length >= 10) return first;
   return cleaned;
 }
 
@@ -261,7 +263,7 @@ async function addEnrollmentsOnly(filePath: string) {
 }
 
 /**
- * کاربران قبلی که شمارهٔ آن‌ها دو قسمت با -- بوده (مثل 09127076128--09197777506) را
+ * کاربران قبلی که شمارهٔ آن‌ها با -- یا / یا - دو قسمت شده را
  * به‌روز می‌کند: فقط اولین شماره به‌عنوان phone و username.
  */
 export async function fixExistingUsersWithDoublePhone(): Promise<{ updated: number; skipped: number; conflicted: number }> {
@@ -269,16 +271,19 @@ export async function fixExistingUsersWithDoublePhone(): Promise<{ updated: numb
     where: { phone: { not: null } },
     select: { id: true, phone: true, username: true },
   });
-  const withDouble = users.filter((u) => u.phone && u.phone.includes('--'));
+  const cleaned = (p: string) => p.replace(/\s/g, '').trim();
+  const withDouble = users.filter((u) => u.phone && normalizePhone(u.phone) !== cleaned(u.phone));
   if (withDouble.length === 0) {
-    console.log('هیچ کاربری با شمارهٔ دوگانه (--) یافت نشد.');
+    console.log('هیچ کاربری با شمارهٔ دوگانه (-- یا / یا -) یافت نشد.');
     return { updated: 0, skipped: 0, conflicted: 0 };
   }
   console.log(`\n--- به‌روزرسانی ${withDouble.length} کاربر با شمارهٔ دوگانه (فقط اولین شماره) ---`);
   let updated = 0;
   let skipped = 0;
   let conflicted = 0;
-  const usedPhones = new Set<string>(users.filter((u) => u.phone && !u.phone.includes('--')).map((u) => u.phone!));
+  const usedPhones = new Set<string>(
+    users.filter((u) => u.phone && normalizePhone(u.phone) === cleaned(u.phone)).map((u) => normalizePhone(u.phone!)),
+  );
   for (const u of withDouble) {
     const firstNumber = normalizePhone(u.phone);
     if (!firstNumber) {

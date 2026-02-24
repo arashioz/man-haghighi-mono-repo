@@ -27,5 +27,8 @@ export function getAuthErrorMessage(err: any): string {
   // اگر response رسیده ولی message نبود، از error یا message سرور استفاده کن
   if (data?.error && typeof data.error === 'string' && data.error.trim()) return data.error.trim();
   if (err?.message && typeof err.message === 'string' && err.message.trim() && err.message !== 'Network Error') return err.message.trim();
+
+  // وقتی به خاطر CORS یا قطع شبکه پاسخ سرور به فرانت نرسیده (err.response وجود ندارد)
+  if (!err?.response) return 'اتصال به سرور برقرار نشد. لطفاً اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.';
   return 'خطایی رخ داد. لطفاً دوباره تلاش کنید.';
 }
