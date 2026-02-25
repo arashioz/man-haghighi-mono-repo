@@ -24,8 +24,7 @@ ENV PATH=/app/node_modules/.bin:$PATH
 RUN npm run build
 
 # Production stage with nginx
-FROM docker.arvancloud.ir/nginx:alpine
-
+FROM nginx:alpine
 # Copy built files with correct ownership
 COPY --from=builder --chown=nginx:nginx /app/build /usr/share/nginx/html
 
