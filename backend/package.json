@@ -42,6 +42,7 @@
     "export:users-no-phone-no-email": "ts-node scripts/export-users-no-phone-no-email.ts",
     "normalize:phone-plus98": "ts-node scripts/normalize-phone-plus98.ts",
     "import:users-1403-1404": "ts-node scripts/import-users-1403-1404.ts",
+    "sync:users-1403-1404": "ts-node scripts/sync-users-1403-1404.ts",
     "clean": "./clean.sh",
     "clean:all": "rm -rf dist uploads/*",
     "clean:build": "rm -rf dist",
