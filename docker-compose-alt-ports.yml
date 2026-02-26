@@ -40,8 +40,7 @@ services:
     ports:
       - "127.0.0.1:8080:3000"
     volumes:
-    
-      - ./uploads:/app/uploads
+      - uploads_data:/app/uploads
       - ./moc-old-data:/app/moc-old-data
       - ./backend/scripts:/app/scripts
     networks:
@@ -157,6 +156,10 @@ services:
 # -------------------------------
 # Volumes & Networks
 # -------------------------------
+
+volumes:
+  uploads_data:
+    driver: local
 
 networks:
   backend_network:
