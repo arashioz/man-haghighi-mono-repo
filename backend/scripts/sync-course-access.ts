@@ -76,7 +76,7 @@ async function syncCourseAccess() {
       phone: true,
       firstName: true,
       lastName: true,
-      courseEnrollments: {
+      purchasedCourses: {
         select: {
           id: true,
           courseId: true,
@@ -123,7 +123,7 @@ async function syncCourseAccess() {
     const jsonCourses = jsonPhoneToCourses.get(normalizedDbPhone) || [];
 
     // دوره‌های دیتابیس
-    const dbCourses = dbUser.courseEnrollments.map(e => ({
+    const dbCourses = dbUser.purchasedCourses.map(e => ({
       id: e.id,
       courseId: e.courseId,
       title: e.course?.title || 'Unknown',

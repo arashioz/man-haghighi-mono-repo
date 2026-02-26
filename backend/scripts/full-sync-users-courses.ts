@@ -251,8 +251,6 @@ async function createNewUser(jsonUser: JsonUser) {
       job: jsonUser.job,
       state: jsonUser.state,
       gender: jsonUser.gender,
-      emailVerified: false,
-      phoneVerified: true,
     },
   });
 
@@ -264,8 +262,6 @@ async function createNewUser(jsonUser: JsonUser) {
           data: {
             userId: user.id,
             courseId: courseId,
-            progress: 0,
-            completedVideos: [],
           },
         });
       } catch (e) {
@@ -343,8 +339,8 @@ async function syncExistingUser(
   });
 
   // === همگام‌سازی دوره‌ها ===
-  const jsonCourseIds = new Set(jsonUser.purchasedCourses || []);
-  const dbCourseIds = new Set(dbUser.purchasedCourses.map((e: any) => e.courseId));
+  const jsonCourseIds = new Set<string>(jsonUser.purchasedCourses || []);
+  const dbCourseIds = new Set<string>(dbUser.purchasedCourses.map((e: any) => e.courseId));
 
   // دوره‌هایی که باید اضافه بشن (توی JSON هستن ولی توی DB نیستن)
   const toAdd = Array.from(jsonCourseIds).filter(id => !dbCourseIds.has(id));
@@ -392,11 +388,11 @@ async function syncExistingUser(
   }
 
   // === همگام‌سازی Video Access ===
-  const jsonVideoIds = new Set(jsonUser.videoAccessIds || []);
-  const dbVideoIds = new Set(dbUser.videoAccess.map((v: any) => v.videoId));
+  const jsonVideoIds = new Set<string>(jsonUser.videoAccessIds || []);
+  const dbVideoIds = new Set<string>(dbUser.videoAccess.map((v: any) => v.videoId));
 
   const videosToAdd = Array.from(jsonVideoIds).filter(id => !dbVideoIds.has(id));
-  const videosToRemove = Array.from(dbVideoIds).filter(id => !jsonVideoIds.has(id));
+  const videosToRemove = Array.from(dbVideoIds).filter(id => !jsonVideoIds.has(id)) as string[];
 
   if (videosToRemove.length > 0) {
     await prisma.videoAccess.deleteMany({
@@ -425,11 +421,11 @@ async function syncExistingUser(
   }
 
   // === همگام‌سازی Audio Access ===
-  const jsonAudioIds = new Set(jsonUser.audioAccessIds || []);
-  const dbAudioIds = new Set(dbUser.audioAccess.map((a: any) => a.audioId));
+  const jsonAudioIds = new Set<string>(jsonUser.audioAccessIds || []);
+  const dbAudioIds = new Set<string>(dbUser.audioAccess.map((a: any) => a.audioId));
 
   const audiosToAdd = Array.from(jsonAudioIds).filter(id => !dbAudioIds.has(id));
-  const audiosToRemove = Array.from(dbAudioIds).filter(id => !jsonAudioIds.has(id));
+  const audiosToRemove = Array.from(dbAudioIds).filter(id => !jsonAudioIds.has(id)) as string[];
 
   if (audiosToRemove.length > 0) {
     await prisma.audioAccess.deleteMany({
