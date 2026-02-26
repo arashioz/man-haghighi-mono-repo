@@ -5,11 +5,11 @@ const prisma = new PrismaClient();
 async function deleteUsersWithConcatenatedPhones() {
   console.log('🔍 Finding users with concatenated phone numbers...\n');
 
-  // Find users where username or phone contains - or /
+  // Find users where username or phone contains - or / or _
   const usersToDelete = await prisma.user.findMany({
     where: {
       OR: [
-        // Username contains - or /
+        // Username contains - or / or _
         {
           username: {
             contains: '-',
@@ -20,7 +20,12 @@ async function deleteUsersWithConcatenatedPhones() {
             contains: '/',
           },
         },
-        // Phone contains - or /
+        {
+          username: {
+            contains: '_',
+          },
+        },
+        // Phone contains - or / or _
         {
           phone: {
             contains: '-',
@@ -29,6 +34,11 @@ async function deleteUsersWithConcatenatedPhones() {
         {
           phone: {
             contains: '/',
+          },
+        },
+        {
+          phone: {
+            contains: '_',
           },
         },
       ],
