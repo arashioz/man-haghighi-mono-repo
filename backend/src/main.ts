@@ -130,14 +130,21 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Serve static uploads — هدر CORP برای لود عکس/صدا از دامنهٔ دیگر (مثلاً پنل ادمین)
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-    fallthrough: true,
-    setHeaders: (res) => {
-      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    },
-  });
+  // ⚠️ STATIC FILE SERVING DISABLED FOR SECURITY
+  // Files are now served through authenticated endpoints in UploadsController
+  // This prevents unauthorized access to uploaded files
+  // If you need to serve static files, use the API endpoints with proper authentication:
+  // - GET /api/uploads/:filename - Download file (requires authentication)
+  // - GET /api/uploads/stream/:filename - Stream media (public, path-validated)
+  // 
+  // OLD CODE (DISABLED):
+  // app.useStaticAssets(join(process.cwd(), 'uploads'), {
+  //   prefix: '/uploads/',
+  //   fallthrough: true,
+  //   setHeaders: (res) => {
+  //     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  //   },
+  // });
 
   const port = configService.get<number>('PORT', 3000);
   

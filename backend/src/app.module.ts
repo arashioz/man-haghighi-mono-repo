@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
+import { ThrottlerModule } from '@nestjs/throttler';
+// import { ServeStaticModule } from '@nestjs/serve-static';
+// import { join } from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -52,10 +52,15 @@ import { APP_FILTER, APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
       }),
       inject: [ConfigService],
     }),
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'uploads'),
-      serveRoot: '/uploads',
-    }),
+    // ⚠️ ServeStaticModule DISABLED FOR SECURITY
+    // Files are now served through authenticated endpoints in UploadsController
+    // This prevents unauthorized access to uploaded files
+    // 
+    // OLD CODE (DISABLED):
+    // ServeStaticModule.forRoot({
+    //   rootPath: join(process.cwd(), 'uploads'),
+    //   serveRoot: '/uploads',
+    // }),
     PrismaModule,
     LogsModule,
     AdminModule,

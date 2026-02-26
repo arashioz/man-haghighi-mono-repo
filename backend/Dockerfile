@@ -42,8 +42,7 @@ USER root
 # ساخت مسیرهای مورد نیاز و مالکیت مناسب
 RUN mkdir -p /app/moc-old-data /app/uploads
 RUN chown -R nestjs:nodejs /app/moc-old-data /app/uploads
-RUN chown -R /app/uploads
-RUN chown -R appuser:appuser /app/uploads
+
 
 # کپی build از stage اول با مالکیت درست
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist

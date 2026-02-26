@@ -1,4 +1,4 @@
-import { Controller, Post, Get, UseInterceptors, UploadedFile, UseGuards, Res, Param, Req, Body } from '@nestjs/common';
+import { Controller, Post, Get, Delete, UseInterceptors, UploadedFile, UseGuards, Res, Param, Req, Body, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { UploadsService } from './uploads.service';
@@ -7,10 +7,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { extname, join, resolve, normalize } from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
 import { log } from 'console';
+import { Public } from '../auth/public.decorator';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 enum FileType {
   VIDEO = 'video',
   AUDIO = 'audio',
@@ -18,10 +20,18 @@ enum FileType {
   OTHER = 'other'
 }
 
+// لیست پسوندهای خطرناک که نباید آپلود شوند
+const DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.cmd', '.sh', '.php', '.jsp', '.asp', '.aspx', '.py', '.rb', '.pl', '.cgi', '.dll', '.so', '.jar', '.war', '.ps1', '.vbs', '.js', '.ts'];
+
+// لیست MIME types مجاز
+const ALLOWED_MIME_TYPES = {
+  image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'],
+  video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/x-flv', 'video/x-ms-wmv'],
+  audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac', 'audio/flac', 'audio/mp4', 'audio/x-m4a'],
+};
+
 @ApiTags('Upload Center')
 @Controller('uploads')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
 @ApiBearerAuth()
 export class UploadsController {
   constructor(
@@ -29,9 +39,38 @@ export class UploadsController {
     private readonly prisma: PrismaService
   ) {}
 
+  // متد کمکی برای اعتبارسنجی مسیر فایل و جلوگیری از Path Traversal
+  private validateFilePath(filename: string, subDirectory?: string): string {
+    // حذف کاراکترهای خطرناک از نام فایل
+    const sanitizedFilename = filename.replace(/[<>:"|?*]/g, '').replace(/\.\./g, '');
+    
+    if (!sanitizedFilename || sanitizedFilename.trim() === '') {
+      throw new BadRequestException('Invalid filename');
+    }
+
+    // ساخت مسیر مطلق
+    const basePath = subDirectory 
+      ? join(process.cwd(), 'uploads', subDirectory)
+      : join(process.cwd(), 'uploads');
+    
+    const filePath = resolve(join(basePath, sanitizedFilename));
+    const resolvedBase = resolve(basePath);
+
+    // اطمینان از اینکه فایل داخل دایرکتوری مجاز است
+    if (!filePath.startsWith(resolvedBase)) {
+      throw new BadRequestException('Access denied: Invalid file path');
+    }
+
+    return filePath;
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all uploaded files' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Get all uploaded files (Admin only)' })
   @ApiResponse({ status: 200, description: 'Files retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   async getAllFiles() {
     const uploadPath = join(process.cwd(), 'uploads');
     if (!fs.existsSync(uploadPath)) {
@@ -51,38 +90,98 @@ export class UploadsController {
     });
   }
 
+  @Delete(':filename')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Delete an uploaded file (Admin only)' })
+  @ApiResponse({ status: 200, description: 'File deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 404, description: 'File not found' })
+  async deleteFile(@Param('filename') filename: string) {
+    const filePath = this.validateFilePath(filename);
+    
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('File not found');
+    }
+
+    // چک کردن اینکه فایل یک فایل عادی است (نه دایرکتوری)
+    const stats = fs.statSync(filePath);
+    if (!stats.isFile()) {
+      throw new BadRequestException('Cannot delete directories');
+    }
+
+    fs.unlinkSync(filePath);
+    return { success: true, message: 'File deleted successfully' };
+  }
+
   @Get(':filename')
-  @ApiOperation({ summary: 'Download a file' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Download a file (Authenticated users only)' })
   @ApiResponse({ status: 200, description: 'File downloaded successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'File not found' })
   async downloadFile(@Param('filename') filename: string, @Res() res: Response) {
-    const filePath = join(process.cwd(), 'uploads', filename);
+    const filePath = this.validateFilePath(filename);
+    
     if (!fs.existsSync(filePath)) {
-      throw new Error('File not found');
+      throw new NotFoundException('File not found');
     }
+
+    // اضافه کردن هدرهای امنیتی
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    
     return res.download(filePath);
   }
 
   @Get('stream/:filename')
-  @ApiOperation({ summary: 'Stream a media file' })
+  @Public() // عمومی برای استریم ویدیو/صوت دوره‌ها - فقط مسیر مجاز
+  @SkipThrottle() // استریم نباید توسط ریت لیمیتینگ قطع بشه
+  @ApiOperation({ summary: 'Stream a media file (Public - with path validation)' })
   @ApiResponse({ status: 200, description: 'File stream started' })
   @ApiResponse({ status: 404, description: 'File not found' })
+  @ApiResponse({ status: 400, description: 'Invalid file path' })
   async streamFile(@Req() req: Request, @Param('filename') filename: string, @Res() res: Response) {
+    // اعتبارسنجی نام فایل
+    const sanitizedFilename = filename.replace(/[<>:"|?*]/g, '').replace(/\.\./g, '');
+    
+    if (!sanitizedFilename) {
+      throw new BadRequestException('Invalid filename');
+    }
+
     // Check if file exists in uploads directory
-    const filePath = join(process.cwd(), 'uploads', filename);
+    const filePath = join(process.cwd(), 'uploads', sanitizedFilename);
+    
+    // اطمینان از اینکه فایل داخل دایرکتوری uploads است
+    const resolvedFilePath = resolve(filePath);
+    const resolvedUploadsPath = resolve(join(process.cwd(), 'uploads'));
+    
+    if (!resolvedFilePath.startsWith(resolvedUploadsPath)) {
+      throw new BadRequestException('Access denied: Invalid file path');
+    }
+
     if (!fs.existsSync(filePath)) {
       // If not found in uploads, check if it's a course video in courseVideos subdirectory
-      const courseVideoPath = join(process.cwd(), 'uploads', 'courseVideos', filename);
-      log("/uploads/" , courseVideoPath)
+      const courseVideoPath = join(process.cwd(), 'uploads', 'courseVideos', sanitizedFilename);
+      const resolvedCourseVideoPath = resolve(courseVideoPath);
+      const resolvedCourseVideosBase = resolve(join(process.cwd(), 'uploads', 'courseVideos'));
+      
+      // اعتبارسنجی مسیر subdirectory
+      if (!resolvedCourseVideoPath.startsWith(resolvedCourseVideosBase)) {
+        throw new BadRequestException('Access denied: Invalid file path');
+      }
+      
+      log("/uploads/", courseVideoPath);
       if (!fs.existsSync(courseVideoPath)) {
-        throw new Error('File not found'  );
+        throw new NotFoundException('File not found');
       }
       // Use course video path instead
-      this.streamFileFromPath(req, res, courseVideoPath, filename);
+      this.streamFileFromPath(req, res, courseVideoPath, sanitizedFilename);
       return;
     }
 
-    this.streamFileFromPath(req, res, filePath, filename);
+    this.streamFileFromPath(req, res, filePath, sanitizedFilename);
   }
 
   private streamFileFromPath(req: Request, res: Response, filePath: string, filename: string) {
@@ -147,6 +246,8 @@ export class UploadsController {
   }
 
   @Post('image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -158,15 +259,28 @@ export class UploadsController {
       },
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = extname(file.originalname);
+        const ext = extname(file.originalname).toLowerCase();
+        
+        // چک کردن پسوند خطرناک
+        if (DANGEROUS_EXTENSIONS.includes(ext)) {
+          return cb(new Error('File type not allowed for security reasons'), '');
+        }
+        
         cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(jpg|jpeg|png|gif|webp|bmp)$/)) {
+      // چک کردن MIME type
+      if (ALLOWED_MIME_TYPES.image.includes(file.mimetype)) {
+        // چک کردن magic bytes یا پسوند فایل
+        const ext = extname(file.originalname).toLowerCase();
+        const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+        if (!allowedExts.includes(ext)) {
+          return cb(new Error('Invalid file extension'), false);
+        }
         cb(null, true);
       } else {
-        cb(new Error('Only image files are allowed (jpg, jpeg, png, gif, webp, bmp)'), false);
+        cb(new Error('Only image files are allowed (jpg, jpeg, png, gif, webp, bmp, svg)'), false);
       }
     },
     limits: {
@@ -177,16 +291,18 @@ export class UploadsController {
   @ApiOperation({ summary: 'Upload image file (Admin only)' })
   @ApiResponse({ status: 201, description: 'Image uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 500, description: 'Upload failed' })
   async uploadImage(@UploadedFile() file: Express.Multer.File) {
     try {
       if (!file) {
-        throw new Error('No file uploaded');
+        throw new BadRequestException('No file uploaded');
       }
 
       const maxSize = 50 * 1024 * 1024;
       if (file.size > maxSize) {
-        throw new Error('File size exceeds 50MB limit');
+        throw new BadRequestException('File size exceeds 50MB limit');
       }
 
       const processedKey = await this.uploadsService.processImage(file.path);
@@ -200,11 +316,13 @@ export class UploadsController {
         mimetype: file.mimetype,
       };
     } catch (error) {
-      throw new Error(`Image upload failed: ${error.message}`);
+      throw new BadRequestException(`Image upload failed: ${error.message}`);
     }
   }
 
   @Post('video')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -216,12 +334,25 @@ export class UploadsController {
       },
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = extname(file.originalname);
+        const ext = extname(file.originalname).toLowerCase();
+        
+        // چک کردن پسوند خطرناک
+        if (DANGEROUS_EXTENSIONS.includes(ext)) {
+          return cb(new Error('File type not allowed for security reasons'), '');
+        }
+        
         cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(mp4|webm|mov|avi|mkv|flv|wmv)$/)) {
+      // چک کردن MIME type
+      if (ALLOWED_MIME_TYPES.video.includes(file.mimetype)) {
+        // چک کردن پسوند فایل
+        const ext = extname(file.originalname).toLowerCase();
+        const allowedExts = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.flv', '.wmv'];
+        if (!allowedExts.includes(ext)) {
+          return cb(new Error('Invalid file extension'), false);
+        }
         cb(null, true);
       } else {
         cb(new Error('Only video files are allowed (mp4, webm, mov, avi, mkv, flv, wmv)'), false);
@@ -235,16 +366,18 @@ export class UploadsController {
   @ApiOperation({ summary: 'Upload video file (Admin only)' })
   @ApiResponse({ status: 201, description: 'Video uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 500, description: 'Upload failed' })
   async uploadVideo(@UploadedFile() file: Express.Multer.File) {
     try {
       if (!file) {
-        throw new Error('No file uploaded');
+        throw new BadRequestException('No file uploaded');
       }
 
       const maxSize = 2 * 1024 * 1024 * 1024;
       if (file.size > maxSize) {
-        throw new Error('File size exceeds 2GB limit');
+        throw new BadRequestException('File size exceeds 2GB limit');
       }
 
       // For videos we keep only the filename; UploadCenter + streaming use it as key under videos/
@@ -255,11 +388,13 @@ export class UploadsController {
         mimetype: file.mimetype,
       };
     } catch (error) {
-      throw new Error(`Video upload failed: ${error.message}`);
+      throw new BadRequestException(`Video upload failed: ${error.message}`);
     }
   }
 
   @Post('audio')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
       destination: (req, file, cb) => {
@@ -271,12 +406,25 @@ export class UploadsController {
       },
       filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = extname(file.originalname);
+        const ext = extname(file.originalname).toLowerCase();
+        
+        // چک کردن پسوند خطرناک
+        if (DANGEROUS_EXTENSIONS.includes(ext)) {
+          return cb(new Error('File type not allowed for security reasons'), '');
+        }
+        
         cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
       },
     }),
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.match(/\/(mp3|wav|ogg|aac|flac|m4a)$/)) {
+      // چک کردن MIME type
+      if (ALLOWED_MIME_TYPES.audio.includes(file.mimetype)) {
+        // چک کردن پسوند فایل
+        const ext = extname(file.originalname).toLowerCase();
+        const allowedExts = ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.m4a'];
+        if (!allowedExts.includes(ext)) {
+          return cb(new Error('Invalid file extension'), false);
+        }
         cb(null, true);
       } else {
         cb(new Error('Only audio files are allowed (mp3, wav, ogg, aac, flac, m4a)'), false);
@@ -290,16 +438,18 @@ export class UploadsController {
   @ApiOperation({ summary: 'Upload audio file (Admin only)' })
   @ApiResponse({ status: 201, description: 'Audio uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 500, description: 'Upload failed' })
   async uploadAudio(@UploadedFile() file: Express.Multer.File) {
     try {
       if (!file) {
-        throw new Error('No file uploaded');
+        throw new BadRequestException('No file uploaded');
       }
 
       const maxSize = 200 * 1024 * 1024;
       if (file.size > maxSize) {
-        throw new Error('File size exceeds 200MB limit');
+        throw new BadRequestException('File size exceeds 200MB limit');
       }
 
       // For audios we keep only the filename; UploadCenter + streaming use it as key under audios/
@@ -310,23 +460,27 @@ export class UploadsController {
         mimetype: file.mimetype,
       };
     } catch (error) {
-      throw new Error(`Audio upload failed: ${error.message}`);
+      throw new BadRequestException(`Audio upload failed: ${error.message}`);
     }
   }
 
   @Post(':filename/assign')
-  @ApiOperation({ summary: 'Assign an audio file to a course' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Assign an audio file to a course (Admin only)' })
   @ApiResponse({ status: 201, description: 'Audio assigned to course successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 404, description: 'File or course not found' })
   async assignAudioToCourse(
     @Param('filename') filename: string,
     @Body() body: { courseId: string }
   ) {
-    // Check if file exists
-    const filePath = join(process.cwd(), 'uploads', filename);
+    // Check if file exists with path validation
+    const filePath = this.validateFilePath(filename);
     if (!fs.existsSync(filePath)) {
-      throw new Error('File not found');
+      throw new NotFoundException('File not found');
     }
 
     // Check if course exists
@@ -334,7 +488,7 @@ export class UploadsController {
       where: { id: body.courseId }
     });
     if (!course) {
-      throw new Error('Course not found');
+      throw new NotFoundException('Course not found');
     }
 
     // Check audio count limit (max 50 per course)
@@ -342,7 +496,7 @@ export class UploadsController {
       where: { courseId: body.courseId }
     });
     if (existingAudioCount >= 50) {
-      throw new Error('Maximum 50 audio files per course');
+      throw new BadRequestException('Maximum 50 audio files per course');
     }
 
     // Create audio record
@@ -366,18 +520,22 @@ export class UploadsController {
   }
 
   @Post(':filename/assign-video')
-  @ApiOperation({ summary: 'Assign a video file to a course' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Assign a video file to a course (Admin only)' })
   @ApiResponse({ status: 201, description: 'Video assigned to course successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
   @ApiResponse({ status: 404, description: 'File or course not found' })
   async assignVideoToCourse(
     @Param('filename') filename: string,
     @Body() body: { courseId: string }
   ) {
-    // Check if file exists
-    const filePath = join(process.cwd(), 'uploads', filename);
+    // Check if file exists with path validation
+    const filePath = this.validateFilePath(filename);
     if (!fs.existsSync(filePath)) {
-      throw new Error('File not found');
+      throw new NotFoundException('File not found');
     }
 
     // Check if course exists
@@ -385,7 +543,7 @@ export class UploadsController {
       where: { id: body.courseId }
     });
     if (!course) {
-      throw new Error('Course not found');
+      throw new NotFoundException('Course not found');
     }
 
     // Check video count limit (max 20 per course)
@@ -393,7 +551,7 @@ export class UploadsController {
       where: { courseId: body.courseId }
     });
     if (existingVideoCount >= 20) {
-      throw new Error('Maximum 20 video files per course');
+      throw new BadRequestException('Maximum 20 video files per course');
     }
 
     // Create video record
