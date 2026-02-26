@@ -46,12 +46,14 @@ export class UrlService {
       return filePath;
     }
     
+    // Use the streaming API endpoint for all files (public access with path validation)
     if (filePath.startsWith('/uploads/')) {
-      return `${this.baseUrl}${filePath}`;
+      const filename = filePath.replace('/uploads/', '');
+      return `${this.baseUrl}/api/uploads/stream/${filename}`;
     }
 
-    // Cloud objects: برای سازگاری، اگر شبیه کلید ساده است، آن را به /uploads نگاشت می‌کنیم
-    return `${this.baseUrl}/uploads/${filePath}`;
+    // Cloud objects: use streaming API endpoint
+    return `${this.baseUrl}/api/uploads/stream/${filePath}`;
   }
 
   
