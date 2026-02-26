@@ -342,6 +342,32 @@ export class UsersService {
             enrolledAt: 'desc',
           },
         },
+        videoAccess: {
+          select: {
+            id: true,
+            videoId: true,
+            video: {
+              select: {
+                id: true,
+                title: true,
+                courseId: true,
+              },
+            },
+          },
+        },
+        audioAccess: {
+          select: {
+            id: true,
+            audioId: true,
+            audio: {
+              select: {
+                id: true,
+                title: true,
+                courseId: true,
+              },
+            },
+          },
+        },
       } as any,
     });
 
@@ -374,6 +400,23 @@ export class UsersService {
       }
     }
 
+    // Find courses from videoAccess and audioAccess
+    const courseIdsFromAccess = new Set<string>();
+    
+    // Get course IDs from video access
+    for (const va of (user.videoAccess as any[])) {
+      if (va.video?.courseId && !enrolledCourseIds.includes(va.video.courseId)) {
+        courseIdsFromAccess.add(va.video.courseId);
+      }
+    }
+    
+    // Get course IDs from audio access
+    for (const aa of (user.audioAccess as any[])) {
+      if (aa.audio?.courseId && !enrolledCourseIds.includes(aa.audio.courseId)) {
+        courseIdsFromAccess.add(aa.audio.courseId);
+      }
+    }
+
     let matchedCoursesFromOldProducts: any[] = [];
     if (matchedCourseIds.size > 0) {
       const courses = await this.prisma.course.findMany({
@@ -385,6 +428,18 @@ export class UsersService {
       );
     }
 
+    // Get courses from video/audio access
+    let coursesFromAccess: any[] = [];
+    if (courseIdsFromAccess.size > 0) {
+      const accessCourses = await this.prisma.course.findMany({
+        where: { id: { in: [...courseIdsFromAccess] } },
+        select: this.courseSelectForUserProducts,
+      });
+      coursesFromAccess = accessCourses.map((course) =>
+        this.urlService.processCourseData(course),
+      );
+    }
+
     return {
       ...user,
       purchasedCourses: (user.purchasedCourses as any[]).map((enrollment) => ({
@@ -392,6 +447,7 @@ export class UsersService {
         course: this.urlService.processCourseData(enrollment.course),
       })),
       matchedCoursesFromOldProducts,
+      coursesFromAccess, // Courses from video/audio access
     };
   }
 

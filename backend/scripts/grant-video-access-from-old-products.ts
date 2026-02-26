@@ -8,6 +8,8 @@ interface GrantReport {
   totalOldProducts: number;
   videosGranted: number;
   videosAlreadyHad: number;
+  coursesEnrolled: number;
+  coursesAlreadyEnrolled: number;
   coursesMapped: number;
   coursesNotFound: number;
   errors: string[];
@@ -19,6 +21,7 @@ interface GrantReport {
     courseId: string | null;
     courseTitle: string | null;
     videosGranted: number;
+    enrolled: boolean;
   }>;
 }
 
@@ -31,6 +34,8 @@ async function grantVideoAccessFromOldProducts() {
     totalOldProducts: 0,
     videosGranted: 0,
     videosAlreadyHad: 0,
+    coursesEnrolled: 0,
+    coursesAlreadyEnrolled: 0,
     coursesMapped: 0,
     coursesNotFound: 0,
     errors: [],
@@ -47,6 +52,11 @@ async function grantVideoAccessFromOldProducts() {
     },
     include: {
       oldProducts: true,
+      purchasedCourses: {
+        select: {
+          courseId: true,
+        },
+      },
       videoAccess: {
         select: {
           videoId: true,
@@ -103,7 +113,9 @@ async function grantVideoAccessFromOldProducts() {
       console.log(`👤 User: ${user.phone || user.username} (${user.oldProducts.length} old products)`);
       
       const existingVideoIds = new Set(user.videoAccess.map(va => va.videoId));
+      const existingCourseIds = new Set(user.purchasedCourses.map(pc => pc.courseId));
       let userVideosGranted = 0;
+      let userCoursesEnrolled = 0;
 
       for (const oldProduct of user.oldProducts) {
         report.totalOldProducts++;
@@ -139,6 +151,33 @@ async function grantVideoAccessFromOldProducts() {
         console.log(`   📹 Course: ${course.title} (${course.videos.length} videos)`);
         
         let productVideosGranted = 0;
+        let enrolled = false;
+
+        // ALSO ENROLL USER IN THE COURSE (if not already enrolled)
+        if (!existingCourseIds.has(courseId)) {
+          try {
+            await prisma.courseEnrollment.create({
+              data: {
+                userId: user.id,
+                courseId: courseId,
+              },
+            });
+            existingCourseIds.add(courseId);
+            report.coursesEnrolled++;
+            userCoursesEnrolled++;
+            enrolled = true;
+            console.log(`   📝 Enrolled in course: ${course.title}`);
+          } catch (e: any) {
+            if (!e.message?.includes('Unique constraint')) {
+              report.errors.push(`Error enrolling user ${user.id} in course ${courseId}: ${e.message}`);
+            } else {
+              report.coursesAlreadyEnrolled++;
+            }
+          }
+        } else {
+          report.coursesAlreadyEnrolled++;
+          enrolled = true;
+        }
 
         // Grant access to all videos in the course
         for (const video of course.videos) {
@@ -179,13 +218,14 @@ async function grantVideoAccessFromOldProducts() {
           courseId: course.id,
           courseTitle: course.title,
           videosGranted: productVideosGranted,
+          enrolled,
         });
       }
 
-      if (userVideosGranted > 0) {
-        console.log(`   📊 Total videos granted: ${userVideosGranted}\n`);
+      if (userVideosGranted > 0 || userCoursesEnrolled > 0) {
+        console.log(`   📊 Videos granted: ${userVideosGranted}, Courses enrolled: ${userCoursesEnrolled}\n`);
       } else {
-        console.log(`   ℹ️ No new videos granted\n`);
+        console.log(`   ℹ️ No new videos or courses\n`);
       }
 
     } catch (error: any) {
@@ -203,6 +243,8 @@ async function grantVideoAccessFromOldProducts() {
   console.log(`Old products checked: ${report.totalOldProducts}`);
   console.log(`Courses mapped: ${report.coursesMapped}`);
   console.log(`Courses not found: ${report.coursesNotFound}`);
+  console.log(`Courses enrolled: ${report.coursesEnrolled}`);
+  console.log(`Courses already enrolled: ${report.coursesAlreadyEnrolled}`);
   console.log(`Videos granted: ${report.videosGranted}`);
   console.log(`Videos already had: ${report.videosAlreadyHad}`);
   console.log(`Errors: ${report.errors.length}`);
