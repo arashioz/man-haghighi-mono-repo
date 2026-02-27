@@ -268,7 +268,15 @@ async function diagnoseDuplicateUsers() {
 
   // Save report
   const fs = require('fs');
-  const reportPath = `./diagnose-duplicates-${new Date().toISOString().split('T')[0]}.json`;
+  const path = require('path');
+  
+  // Ensure output directory exists (mounted in Docker)
+  const outputDir = '/app/scripts-output';
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+  
+  const reportPath = path.join(outputDir, `diagnose-duplicates-${new Date().toISOString().split('T')[0]}.json`);
   fs.writeFileSync(reportPath, JSON.stringify({
     summary: {
       totalDuplicates: results.length,

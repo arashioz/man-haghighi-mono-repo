@@ -158,10 +158,18 @@ async function fixAllUsersCourseAccess() {
   console.log(`Total audio access removed: ${totalRemovedAudioAccess}`);
   console.log(`Total orphaned records removed: ${totalRemovedVideoAccess + totalRemovedAudioAccess}`);
 
-  if (fixResults.length > 0) {
+    if (fixResults.length > 0) {
     // Save detailed results to JSON
     const fs = require('fs');
-    const outputPath = `./fix-results-${new Date().toISOString().split('T')[0]}.json`;
+    const path = require('path');
+    
+    // Ensure output directory exists (mounted in Docker)
+    const outputDir = '/app/scripts-output';
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+    
+    const outputPath = path.join(outputDir, `fix-results-${new Date().toISOString().split('T')[0]}.json`);
     fs.writeFileSync(outputPath, JSON.stringify({
       summary: {
         totalUsers: users.length,
