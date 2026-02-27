@@ -7,9 +7,9 @@ const prisma = new PrismaClient();
 interface JsonUser {
   id: string;
   phone: string | null;
-  purchasedCourses: string[];
-  videoAccessIds: string[];
-  audioAccessIds: string[];
+  purchasedCourses: (string | { id: string } | any)[];
+  videoAccessIds: (string | { id: string } | any)[];
+  audioAccessIds: (string | { id: string } | any)[];
 }
 
 async function assignCoursesToAllUsers() {
@@ -82,8 +82,10 @@ async function assignCoursesToAllUsers() {
 
       // Add courses
       if (jsonUser.purchasedCourses?.length > 0) {
-        for (const courseId of jsonUser.purchasedCourses) {
-          if (!existingCourseIds.has(courseId)) {
+        for (const course of jsonUser.purchasedCourses) {
+          // Handle both string IDs and object { id: "..." } formats
+          const courseId = typeof course === 'string' ? course : course?.id;
+          if (courseId && !existingCourseIds.has(courseId)) {
             try {
               await prisma.courseEnrollment.create({
                 data: {
@@ -104,8 +106,10 @@ async function assignCoursesToAllUsers() {
 
       // Add video access
       if (jsonUser.videoAccessIds?.length > 0) {
-        for (const videoId of jsonUser.videoAccessIds) {
-          if (!existingVideoIds.has(videoId)) {
+        for (const video of jsonUser.videoAccessIds) {
+          // Handle both string IDs and object formats
+          const videoId = typeof video === 'string' ? video : video?.id;
+          if (videoId && !existingVideoIds.has(videoId)) {
             try {
               await prisma.videoAccess.create({
                 data: {
@@ -125,8 +129,10 @@ async function assignCoursesToAllUsers() {
 
       // Add audio access
       if (jsonUser.audioAccessIds?.length > 0) {
-        for (const audioId of jsonUser.audioAccessIds) {
-          if (!existingAudioIds.has(audioId)) {
+        for (const audio of jsonUser.audioAccessIds) {
+          // Handle both string IDs and object formats
+          const audioId = typeof audio === 'string' ? audio : audio?.id;
+          if (audioId && !existingAudioIds.has(audioId)) {
             try {
               await prisma.audioAccess.create({
                 data: {
