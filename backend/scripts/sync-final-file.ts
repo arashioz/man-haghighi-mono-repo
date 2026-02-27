@@ -263,6 +263,20 @@ async function createNewUser(jsonUser: JsonUser) {
     (jsonUser.firstName + ' ' + jsonUser.lastName).trim() || 
     'user-' + (jsonUser.phone || Date.now());
 
+  const normalizedPhone = normalizePhone(jsonUser.phone);
+
+  // Check if phone already exists (any role)
+  if (normalizedPhone) {
+    const existingUser = await prisma.user.findFirst({
+      where: { phone: normalizedPhone },
+      select: { id: true, phone: true, role: true },
+    });
+
+    if (existingUser) {
+      throw new Error(`Phone ${normalizedPhone} already exists (user ID: ${existingUser.id}, role: ${existingUser.role})`);
+    }
+  }
+
   const randomPassword = Math.random().toString(36).slice(-8);
   const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -270,7 +284,7 @@ async function createNewUser(jsonUser: JsonUser) {
     data: {
       id: jsonUser.id,
       email: jsonUser.email,
-      phone: normalizePhone(jsonUser.phone),
+      phone: normalizedPhone,
       username: username,
       password: hashedPassword,
       firstName: jsonUser.firstName,

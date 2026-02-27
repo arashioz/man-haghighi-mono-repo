@@ -38,6 +38,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./moc-old-data:/app/moc-old-data
+      - ./scripts-output:/app/scripts-output
     networks:
       - backend_network
       - frontend_network
