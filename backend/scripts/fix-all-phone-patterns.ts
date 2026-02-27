@@ -25,28 +25,58 @@ function extractCleanPhone(phone: string): { clean: string | null; pattern: stri
     return { clean: match1[1], pattern: '0XX_suffix' };
   }
 
-  // Pattern 2: 9XXXXXXXXX_suffix (10 digits starting with 9, add 0)
-  const match2 = phone.match(/^(9\d{9})_/);
+  // Pattern 2: suffix_0XXXXXXXXXX (prefix before 11 digits)
+  const match2 = phone.match(/_(0\d{10})$/);
   if (match2) {
-    return { clean: '0' + match2[1], pattern: '9XX_suffix' };
+    return { clean: match2[1], pattern: 'prefix_0XX' };
   }
 
-  // Pattern 3: +98XXXXXXXXXX_suffix (with +98 prefix)
-  const match3 = phone.match(/^\+98(\d{10})_/);
+  // Pattern 3: 9XXXXXXXXX_suffix (10 digits starting with 9, add 0)
+  const match3 = phone.match(/^(9\d{9})_/);
   if (match3) {
-    return { clean: '0' + match3[1], pattern: '+98_suffix' };
+    return { clean: '0' + match3[1], pattern: '9XX_suffix' };
   }
 
-  // Pattern 4: 98XXXXXXXXXX_suffix (with 98 prefix)
-  const match4 = phone.match(/^98(\d{10})_/);
+  // Pattern 4: suffix_9XXXXXXXXX (prefix before 10 digits starting with 9)
+  const match4 = phone.match(/_(9\d{9})$/);
   if (match4) {
-    return { clean: '0' + match4[1], pattern: '98_suffix' };
+    return { clean: '0' + match4[1], pattern: 'prefix_9XX' };
   }
 
-  // Pattern 5: Just underscore somewhere (try to extract first 11 digits starting with 0)
-  const match5 = phone.match(/^(0\d{10})[^0-9]/);
+  // Pattern 5: +98XXXXXXXXXX_suffix (with +98 prefix)
+  const match5 = phone.match(/^\+98(\d{10})_/);
   if (match5) {
-    return { clean: match5[1], pattern: '0XX_other' };
+    return { clean: '0' + match5[1], pattern: '+98_suffix' };
+  }
+
+  // Pattern 6: suffix_+98XXXXXXXXXX (prefix before +98)
+  const match6 = phone.match(/_\+98(\d{10})$/);
+  if (match6) {
+    return { clean: '0' + match6[1], pattern: 'prefix_+98' };
+  }
+
+  // Pattern 7: 98XXXXXXXXXX_suffix (with 98 prefix)
+  const match7 = phone.match(/^98(\d{10})_/);
+  if (match7) {
+    return { clean: '0' + match7[1], pattern: '98_suffix' };
+  }
+
+  // Pattern 8: suffix_98XXXXXXXXXX (prefix before 98)
+  const match8 = phone.match(/_98(\d{10})$/);
+  if (match8) {
+    return { clean: '0' + match8[1], pattern: 'prefix_98' };
+  }
+
+  // Pattern 9: Try to find 11 digits starting with 0 anywhere
+  const match9 = phone.match(/(0\d{10})/);
+  if (match9) {
+    return { clean: match9[1], pattern: 'contains_0XX' };
+  }
+
+  // Pattern 10: Try to find 10 digits starting with 9 anywhere (add 0)
+  const match10 = phone.match(/(9\d{9})/);
+  if (match10) {
+    return { clean: '0' + match10[1], pattern: 'contains_9XX' };
   }
 
   return { clean: null, pattern: 'unknown' };
