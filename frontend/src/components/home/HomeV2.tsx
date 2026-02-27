@@ -168,7 +168,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
           article.excerpt ??
           'این مسیر ذهنم را بازنویسی کرد و جسارت تصمیم‌گیری مرا چند برابر نمود.',
         name: article.title ?? `شرکت‌کننده ${index + 1}`,
-        role: 'عضو Engine Transformation',
+        role: 'عضو مجموعه من حقیقی',
       }));
     }
 
@@ -183,7 +183,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
         quote:
           'من یاد گرفتم رشد را انتخاب کنم و برایش سیستم بسازم. این شروع دوباره من است.',
         name: 'کاوه — کارآفرین تکنولوژی',
-        role: 'عضو Inner Circle',
+        role: 'شرکت کننده کارگاه',
       },
       {
         quote:
@@ -1353,7 +1353,7 @@ const HomeV2: React.FC<HomeV2Props> = ({
                   className="text-lg leading-relaxed text-white/80 text-right"
                 >
                   با بیش از یک دهه تجربه در زمینه کوچینگ، روانشناسی تحول و مهندسی رشد شخصی، 
-                  فراز قورچیان خالق Engine Transformation است. رویکرد او ترکیبی از علم، 
+                  فراز قورچیان خالق است. رویکرد او ترکیبی از علم، 
                   تجربه و انرژی است که به هزاران نفر کمک کرده تا نسخه بهتری از خودشان بسازند.
                 </motion.p>
                 <motion.p 
