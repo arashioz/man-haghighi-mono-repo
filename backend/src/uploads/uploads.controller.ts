@@ -150,38 +150,36 @@ export class UploadsController {
       throw new BadRequestException('Invalid filename');
     }
 
-    // Check if file exists in uploads directory
-    const filePath = join(process.cwd(), 'uploads', sanitizedFilename);
+    const baseUploadsPath = resolve(join(process.cwd(), 'uploads'));
+    let foundFilePath: string | null = null;
     
-    // اطمینان از اینکه فایل داخل دایرکتوری uploads است
-    const resolvedFilePath = resolve(filePath);
-    const resolvedUploadsPath = resolve(join(process.cwd(), 'uploads'));
+    // Search in multiple locations
+    const searchPaths = [
+      join(process.cwd(), 'uploads', sanitizedFilename),                      // main uploads
+      join(process.cwd(), 'uploads', 'courseVideos', sanitizedFilename),     // course videos
+      join(process.cwd(), 'uploads', 'images', sanitizedFilename),            // images
+      join(process.cwd(), 'uploads', 'thumbnails', sanitizedFilename),         // thumbnails
+    ];
     
-    if (!resolvedFilePath.startsWith(resolvedUploadsPath)) {
-      throw new BadRequestException('Access denied: Invalid file path');
-    }
-
-    if (!fs.existsSync(filePath)) {
-      // If not found in uploads, check if it's a course video in courseVideos subdirectory
-      const courseVideoPath = join(process.cwd(), 'uploads', 'courseVideos', sanitizedFilename);
-      const resolvedCourseVideoPath = resolve(courseVideoPath);
-      const resolvedCourseVideosBase = resolve(join(process.cwd(), 'uploads', 'courseVideos'));
-      
-      // اعتبارسنجی مسیر subdirectory
-      if (!resolvedCourseVideoPath.startsWith(resolvedCourseVideosBase)) {
-        throw new BadRequestException('Access denied: Invalid file path');
+    for (const searchPath of searchPaths) {
+      const resolvedPath = resolve(searchPath);
+      // Security check: ensure path is within uploads directory
+      if (!resolvedPath.startsWith(baseUploadsPath)) {
+        continue;
       }
       
-      log("/uploads/", courseVideoPath);
-      if (!fs.existsSync(courseVideoPath)) {
-        throw new NotFoundException('File not found');
+      if (fs.existsSync(resolvedPath)) {
+        foundFilePath = resolvedPath;
+        break;
       }
-      // Use course video path instead
-      this.streamFileFromPath(req, res, courseVideoPath, sanitizedFilename);
-      return;
+    }
+    
+    if (!foundFilePath) {
+      log(`File not found: ${sanitizedFilename}. Searched in:`, searchPaths);
+      throw new NotFoundException('File not found');
     }
 
-    this.streamFileFromPath(req, res, filePath, sanitizedFilename);
+    this.streamFileFromPath(req, res, foundFilePath, sanitizedFilename);
   }
 
   private streamFileFromPath(req: Request, res: Response, filePath: string, filename: string) {
@@ -199,6 +197,12 @@ export class UploadsController {
       contentType = 'image/' + ext.substring(1);
     }
 
+    // Add CORS headers for images to prevent ERR_BLOCKED_BY_ORB
+    const corsHeaders = {
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'Access-Control-Allow-Origin': '*',
+    };
+
     if (range) {
       const parts = range.replace(/bytes=/, "").split("-");
       const start = parseInt(parts[0], 10);
@@ -210,6 +214,7 @@ export class UploadsController {
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
         'Content-Type': contentType,
+        ...corsHeaders,
       };
       res.writeHead(206, head);
       file.pipe(res);
@@ -217,6 +222,7 @@ export class UploadsController {
       const head = {
         'Content-Length': fileSize,
         'Content-Type': contentType,
+        ...corsHeaders,
       };
       res.writeHead(200, head);
       fs.createReadStream(filePath).pipe(res);
