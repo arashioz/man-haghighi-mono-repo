@@ -83,7 +83,7 @@ async function fullSync() {
     details: [],
   };
 
-  const jsonPath = path.join(process.cwd(), '..', 'moc-old-data', 'users_with_courses_full_update_2026-02-26.json');
+  const jsonPath = path.join(process.cwd(), 'moc-old-data', 'users_with_courses_full_update_2026-02-26.json');
   console.log('Reading JSON file: ' + jsonPath);
 
   if (!fs.existsSync(jsonPath)) {
