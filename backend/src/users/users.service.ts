@@ -935,6 +935,55 @@ export class UsersService {
     });
   }
 
+  // Assign ALL courses to a user (Complete Pack)
+  async assignAllCourses(userId: string) {
+    // Ensure user exists
+    await this.findOne(userId);
+
+    // Get all published courses
+    const allCourses = await this.prisma.course.findMany({
+      where: { published: true },
+      select: { id: true, title: true },
+    });
+
+    // Get user's current enrollments
+    const currentEnrollments = await this.prisma.courseEnrollment.findMany({
+      where: { userId },
+      select: { courseId: true },
+    });
+    const enrolledCourseIds = new Set(currentEnrollments.map(e => e.courseId));
+
+    // Find courses not yet enrolled
+    const newCourses = allCourses.filter(c => !enrolledCourseIds.has(c.id));
+
+    if (newCourses.length === 0) {
+      return {
+        assigned: 0,
+        total: allCourses.length,
+        message: 'کاربر قبلاً به همه دوره‌ها دسترسی دارد',
+      };
+    }
+
+    // Create enrollments for all new courses
+    const enrollments = newCourses.map((course) => ({
+      userId,
+      courseId: course.id,
+      enrolledAt: new Date(),
+    }));
+
+    const result = await this.prisma.courseEnrollment.createMany({
+      data: enrollments,
+      skipDuplicates: true,
+    });
+
+    return {
+      assigned: result.count,
+      total: allCourses.length,
+      newCourses: newCourses.map(c => c.title),
+      message: `${result.count} دوره جدید به کاربر اختصاص داده شد`,
+    };
+  }
+
   async getSalesPersons(includeInactive = false) {
     return this.prisma.user.findMany({
       where: {

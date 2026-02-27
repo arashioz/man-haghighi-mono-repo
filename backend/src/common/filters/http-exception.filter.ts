@@ -118,10 +118,25 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // CORS روی همهٔ پاسخ‌های خطا (از جمله 400 لاگین) تا فرانت بتواند پیام را بخواند
     const origin = (request.headers.origin as string) || '';
     const normalized = origin.replace(/\/$/, '').toLowerCase();
-    const isOurDomain =
-      /^https?:\/\/(www\.)?manehaghighi\.com$/i.test(normalized) ||
-      /^https?:\/\/[a-z0-9-]+\.manehaghighi\.com$/i.test(normalized) ||
-      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(normalized);
+    
+    // Same logic as main.ts CORS configuration
+    const allowedOrigins = [
+      'https://manehaghighi.com',
+      'https://www.manehaghighi.com',
+      'https://admin.manehaghighi.com',
+      'https://sales.manehaghighi.com',
+      'https://api.manehaghighi.com',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://127.0.0.1:8082',
+      'http://127.0.0.1:8080',
+      'http://127.0.0.1:8081',
+    ];
+    
+    const allowed = allowedOrigins.some((o) => o.replace(/\/$/, '').toLowerCase() === normalized);
+    const allowedPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+    const isOurDomain = allowed || allowedPattern.test(normalized) || normalized.includes('manehaghighi.com');
 
     if (origin && isOurDomain) {
       response.setHeader('Access-Control-Allow-Origin', origin);

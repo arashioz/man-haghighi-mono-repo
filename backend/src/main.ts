@@ -77,7 +77,30 @@ async function bootstrap() {
   };
   app.enableCors(corsOptions);
 
-
+  // Manual CORS middleware to ensure headers are on ALL responses
+  app.use((req: Request, res: Response, next: () => void) => {
+    const origin = req.headers.origin as string;
+    if (origin) {
+      const normalized = origin.replace(/\/$/, '').toLowerCase();
+      const allowed = allowedOrigins.some((o) => o.replace(/\/$/, '').toLowerCase() === normalized);
+      const allowedPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+      
+      if (allowed || allowedPattern.test(normalized) || normalized.includes('manehaghighi.com')) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Range, Accept-Ranges, Content-Range, Cache-Control, Pragma');
+        res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type, Content-Range, Accept-Ranges');
+      }
+    }
+    
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      return res.status(204).send();
+    }
+    
+    next();
+  });
 
   app.use((req: Request, res: Response, next: () => void) => {
     if (req.originalUrl.startsWith('/api/courses/')) { // یا مسیر دقیق آپلود شما

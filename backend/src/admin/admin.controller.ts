@@ -1,7 +1,8 @@
-import { Controller, Get, UseGuards, Res, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Res, HttpException, HttpStatus, Query, Param } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
+import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -21,6 +22,7 @@ const execAsync = promisify(exec);
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -80,6 +82,14 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Stats retrieved successfully' })
   async getStats() {
     return this.adminService.getStats();
+  }
+
+  @Post('users/:userId/assign-all-courses')
+  @ApiOperation({ summary: 'Assign all courses to a user - Complete Pack (Admin only)' })
+  @ApiResponse({ status: 200, description: 'All courses assigned successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async assignAllCourses(@Param('userId') userId: string) {
+    return this.usersService.assignAllCourses(userId);
   }
 }
 
