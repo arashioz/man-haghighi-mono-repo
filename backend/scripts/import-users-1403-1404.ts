@@ -20,8 +20,8 @@ async function main() {
   await fixExistingUsersWithDoublePhone();
 
   // ۲) مسیر فایل و اجرای ایمپورت (در فایل هم فقط اولین شماره استفاده می‌شود)
-  const projectRoot = path.resolve(__dirname, '..', '..');
-  const filePath = path.join(projectRoot, 'moc-old-data', FILE_NAME);
+  // For Docker: use process.cwd() which is /app
+  const filePath = path.join(process.cwd(), 'moc-old-data', FILE_NAME);
 
   if (!fs.existsSync(filePath)) {
     console.error(`Error: File not found at ${filePath}`);

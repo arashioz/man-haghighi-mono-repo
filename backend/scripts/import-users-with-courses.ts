@@ -149,13 +149,18 @@ async function importOneUser(userData: ImportUser): Promise<{ userCreated: boole
     if (existingUser) {
       userId = existingUser.id;
     } else {
+      // Generate truly unique username using userData.id suffix (always unique)
+      // This prevents any race condition issues
+      const uniqueSuffix = userData.id.slice(-8);
+      const username = `${loginId}_${uniqueSuffix}`;
+
       const user = await tx.user.create({
         data: {
           phone: normalizedPhone || null,
           email: normalizedEmail || userData.email?.trim() || null,
           firstName: userData.firstName,
           lastName: userData.lastName,
-          username: loginId,
+          username: username,
           role: 'USER',
           isOld: true,
         },
