@@ -913,13 +913,53 @@ export class UsersService {
     const safeIds = Array.isArray(courseIds) ? courseIds : [];
     const uniqueCourseIds = [...new Set(safeIds.map((id) => String(id).trim()).filter(Boolean))];
 
+    // Get current enrollments BEFORE deleting them (to find removed courses)
+    const currentEnrollments = await this.prisma.courseEnrollment.findMany({
+      where: { userId },
+      select: { courseId: true },
+    });
+    const currentCourseIds = currentEnrollments.map(e => e.courseId);
+
+    // Find courses that are being removed
+    const removedCourseIds = currentCourseIds.filter(id => !uniqueCourseIds.includes(id));
+
     // Delete existing enrollments for this user
     await this.prisma.courseEnrollment.deleteMany({
       where: { userId },
     });
 
+    // Clean up video/audio access for removed courses
+    if (removedCourseIds.length > 0) {
+      // Get all videos and audios from removed courses
+      const videosFromRemovedCourses = await this.prisma.video.findMany({
+        where: { courseId: { in: removedCourseIds } },
+        select: { id: true },
+      });
+      const audiosFromRemovedCourses = await this.prisma.audio.findMany({
+        where: { courseId: { in: removedCourseIds } },
+        select: { id: true },
+      });
+
+      const videoIds = videosFromRemovedCourses.map(v => v.id);
+      const audioIds = audiosFromRemovedCourses.map(a => a.id);
+
+      // Delete video access for removed courses
+      if (videoIds.length > 0) {
+        await this.prisma.videoAccess.deleteMany({
+          where: { userId, videoId: { in: videoIds } },
+        });
+      }
+
+      // Delete audio access for removed courses
+      if (audioIds.length > 0) {
+        await this.prisma.audioAccess.deleteMany({
+          where: { userId, audioId: { in: audioIds } },
+        });
+      }
+    }
+
     if (uniqueCourseIds.length === 0) {
-      return { count: 0 };
+      return { count: 0, removedCourses: removedCourseIds.length };
     }
 
     // Create enrollments with skipDuplicates to handle any race conditions
@@ -929,10 +969,15 @@ export class UsersService {
       enrolledAt: new Date(),
     }));
 
-    return this.prisma.courseEnrollment.createMany({
+    const result = await this.prisma.courseEnrollment.createMany({
       data: enrollments,
       skipDuplicates: true, // Skip if duplicate key constraint is violated
     });
+
+    return {
+      count: result.count,
+      removedCourses: removedCourseIds.length,
+    };
   }
 
   // Assign ALL courses to a user (Complete Pack)
