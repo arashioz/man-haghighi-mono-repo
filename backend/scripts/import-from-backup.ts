@@ -259,9 +259,6 @@ async function importFromBackup() {
   console.log('═'.repeat(70));
 
   // Save report
-  const fs = require('fs');
-  const path = require('path');
-
   const outputDir = '/app/scripts-output';
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
