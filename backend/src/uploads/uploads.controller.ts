@@ -157,6 +157,7 @@ export class UploadsController {
     const searchPaths = [
       join(process.cwd(), 'uploads', sanitizedFilename),                      // main uploads
       join(process.cwd(), 'uploads', 'courseVideos', sanitizedFilename),     // course videos
+      join(process.cwd(), 'uploads', 'course-videos', sanitizedFilename),    // course-videos (dash)
       join(process.cwd(), 'uploads', 'images', sanitizedFilename),            // images
       join(process.cwd(), 'uploads', 'thumbnails', sanitizedFilename),         // thumbnails
     ];
@@ -174,8 +175,25 @@ export class UploadsController {
       }
     }
     
+    // If not found in standard paths, try recursive search
     if (!foundFilePath) {
-      log(`File not found: ${sanitizedFilename}. Searched in:`, searchPaths);
+      try {
+        const files = fs.readdirSync(join(process.cwd(), 'uploads'), { recursive: true }) as string[];
+        const matchedFile = files.find(f => f.endsWith(sanitizedFilename));
+        if (matchedFile) {
+          const fullPath = join(process.cwd(), 'uploads', matchedFile);
+          const resolvedPath = resolve(fullPath);
+          if (resolvedPath.startsWith(baseUploadsPath)) {
+            foundFilePath = resolvedPath;
+          }
+        }
+      } catch (e) {
+        // Directory might not exist
+      }
+    }
+    
+    if (!foundFilePath) {
+      log(`File not found: ${sanitizedFilename}`);
       throw new NotFoundException('File not found');
     }
 
